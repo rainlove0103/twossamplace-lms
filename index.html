@@ -620,7 +620,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 <div id="cookie-dash" class="page t-dash">
   <header class="t-header">
     <div class="t-header-brand"><span style="font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3">아이들과 꿈을 만드는 공간</span>투쌤플레이스</div>
-    <div class="t-header-user"><div class="t-chip chip-cookie"><span class="t-chip-face">🍪</span><span class="t-chip-name">쿠키쌤</span></div><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
+    <div class="t-header-user"><div class="t-chip chip-cookie"><span class="t-chip-face">🍪</span><span class="t-chip-name">쿠키쌤</span></div><button onclick="renderGuideEditor('cookie',document.getElementById('cookie-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">📖 설명서 편집</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
   </header>
   <div class="t-body">
     <div class="t-banner banner-cookie"><div class="t-banner-text"><h2>안녕하세요, 쿠키쌤! 👋</h2><p>오늘도 파이팅!</p></div><div class="t-banner-face">🍪</div></div>
@@ -633,7 +633,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 <div id="butter-dash" class="page t-dash">
   <header class="t-header">
     <div class="t-header-brand"><span style="font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3">아이들과 꿈을 만드는 공간</span>투쌤플레이스</div>
-    <div class="t-header-user"><div class="t-chip chip-butter"><span class="t-chip-face">🧈</span><span class="t-chip-name">버터쌤</span></div><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
+    <div class="t-header-user"><div class="t-chip chip-butter"><span class="t-chip-face">🧈</span><span class="t-chip-name">버터쌤</span></div><button onclick="renderGuideEditor('butter',document.getElementById('butter-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">📖 설명서 편집</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
   </header>
   <div class="t-body">
     <div class="t-banner banner-butter"><div class="t-banner-text"><h2>안녕하세요, 버터쌤! 👋</h2><p>오늘도 파이팅!</p></div><div class="t-banner-face">🧈</div></div>
@@ -1682,10 +1682,7 @@ function renderReportPanel(who, el) {
     '<div class="att-sub-tab'+(reportTab==='daily'?' active':'')+'" onclick="setReportTab(\'daily\',\''+who+'\')">📋 데일리 리포트</div>' +
     '<div class="att-sub-tab'+(reportTab==='monthly'?' active':'')+'" onclick="setReportTab(\'monthly\',\''+who+'\')">📅 먼슬리 리포트</div>' +
     '</div>';
-  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
-    '<div class="t-section-title" style="margin-bottom:0">📊 리포트 관리</div>' +
-    '<button onclick="renderGuideEditor(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">📖 설명서 편집</button>' +
-    '</div>' + tabs;
+  var html = '<div class="t-section-title">📊 리포트 관리</div>' + tabs;
   html += reportTab==='daily' ? renderDailyReport(who) : renderMonthlyReport(who);
   el.innerHTML = html;
 }
@@ -1711,28 +1708,28 @@ function renderDailyReport(who) {
     '</div>';
 
   if(!reportSelClass) {
-    // 클래스 카드 목록
-    var cdKeys = CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, [])
-      .filter(function(k){return classStudents[k]&&classStudents[k].length>0;});
-
+    // 클래스 카드 목록 - 항상 전체 표시, 정원 6명
+    var MAX_CAP = 6;
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
-    cdKeys.forEach(function(k){
-      var stuList = classStudents[k]||[];
-      var clsName = k.split('-')[0], dayName = k.split('-').slice(1).join('-');
-      var writtenCount = stuList.filter(function(n){
-        var r = getDailyReport(who,dk,n);
-        return r.lesson||r.review||r.homework||r.feedback;
-      }).length;
-      html += '<div class="class-mgmt-card" style="cursor:pointer;transition:transform .15s,box-shadow .15s" ' +
-        'onclick="reportSelClass=\''+k+'\';reportSelStu=null;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
-        'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 6px 20px rgba(180,120,40,.15)\'" ' +
-        'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
-        '<div class="class-mgmt-card-header" style="margin-bottom:8px">' +
-        '<div class="class-mgmt-card-name">'+clsName+'<span class="class-mgmt-badge">'+clsName+'</span><span class="class-mgmt-badge day-badge">'+dayName+'</span></div>' +
-        '<span class="class-mgmt-stu-count">'+stuList.length+'명</span></div>' +
-        '<div style="font-size:.72rem;color:'+(writtenCount>0?'#2e7d32':'var(--text-soft)')+'">'+
-        (writtenCount>0?'✅ '+writtenCount+'/'+stuList.length+'명 작성됨':'리포트 미작성')+'</div>' +
-        '</div>';
+    CLASSES.forEach(function(cls){
+      DAY_GROUPS.forEach(function(day){
+        var k = cls+'-'+day;
+        var stuList = classStudents[k]||[];
+        var writtenCount = stuList.filter(function(n){
+          var r = getDailyReport(who,dk,n);
+          return r.lesson||r.review||r.homework||r.leddi||r.feedback;
+        }).length;
+        html += '<div class="class-mgmt-card" style="cursor:pointer;transition:transform .15s,box-shadow .15s" ' +
+          'onclick="reportSelClass=\''+k+'\';reportSelStu=null;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+          'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 6px 20px rgba(180,120,40,.15)\'" ' +
+          'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
+          '<div class="class-mgmt-card-header" style="margin-bottom:8px">' +
+          '<div class="class-mgmt-card-name">'+cls+'<span class="class-mgmt-badge">'+cls+'</span><span class="class-mgmt-badge day-badge">'+day+'</span></div>' +
+          '<span class="class-mgmt-stu-count">'+stuList.length+'/'+MAX_CAP+'명</span></div>' +
+          '<div style="font-size:.72rem;color:'+(stuList.length===0?'#ccc':writtenCount>0?'#2e7d32':'var(--text-soft)')+'">'+
+          (stuList.length===0?'등록된 학생 없음':writtenCount>0?'✅ '+writtenCount+'/'+stuList.length+'명 작성됨':'리포트 미작성')+'</div>' +
+          '</div>';
+      });
     });
     html += '</div>';
 
@@ -1864,12 +1861,10 @@ function moveReportDate(dir, who) {
 function renderMonthlyReport(who) {
   var now = new Date();
   var y = now.getFullYear(), m = now.getMonth();
-  // 지난 달 기준
   var prevM = m===0?11:m-1, prevY = m===0?y-1:y;
   var monthLabel = prevY+'년 '+(prevM+1)+'월';
   var daysInMonth = new Date(prevY,prevM+1,0).getDate();
 
-  // 지난달 리포트 작성 학생 수 집계
   var roster = memberRoster[who]||[];
   var active = roster.filter(function(s){return s.status==='active';});
   var totalEntries = 0;
@@ -1877,7 +1872,7 @@ function renderMonthlyReport(who) {
     for(var d=1;d<=daysInMonth;d++){
       var dk = fmtDate(prevY,prevM,d);
       var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][s.name];
-      if(r&&(r.lesson||r.review||r.homework||r.feedback)) totalEntries++;
+      if(r&&(r.lesson||r.review||r.homework||r.leddi||r.feedback)) totalEntries++;
     }
   });
 
@@ -1886,27 +1881,57 @@ function renderMonthlyReport(who) {
     '<div style="font-size:.95rem;font-weight:700;color:var(--brown)">📅 '+monthLabel+' 먼슬리 리포트</div>' +
     '<span style="font-size:.72rem;color:var(--cookie);font-weight:700;background:#fff0dc;padding:2px 10px;border-radius:100px">데일리 '+totalEntries+'건 기록</span>' +
     '</div>' +
-    '<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:14px">지난 달 데일리 리포트를 바탕으로 학생별 먼슬리 리포트를 확인할 수 있어요.</div>' +
-    '<div style="display:flex;flex-direction:column;gap:8px">';
+    '<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:14px">지난 달 데일리 리포트를 바탕으로 학생별 먼슬리 리포트를 확인할 수 있어요.</div>';
 
-  active.forEach(function(s, i){
-    var col = avatarPalette[i%7];
-    var entries = 0;
-    for(var d=1;d<=daysInMonth;d++){
-      var dk = fmtDate(prevY,prevM,d);
-      var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][s.name];
-      if(r&&(r.lesson||r.review||r.homework||r.feedback)) entries++;
-    }
-    html += '<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:white;border-radius:12px;border:1.5px solid #f0e8dc;cursor:pointer" onclick="openMonthlyDetail(\''+who+'\',\''+s.name+'\','+prevY+','+prevM+')">' +
-      '<div style="width:30px;height:30px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:900;color:white;flex-shrink:0">'+s.name[0]+'</div>' +
-      '<div style="flex:1"><div style="font-size:.86rem;font-weight:700;color:var(--brown)">'+s.name+'</div>' +
-      '<div style="font-size:.7rem;color:var(--text-soft)">'+s.class+' · '+s.day+'</div></div>' +
-      '<span style="font-size:.72rem;font-weight:700;color:'+(entries>0?'#2e7d32':'var(--text-soft)')+';background:'+(entries>0?'#e8f5e9':'#f5f5f5')+';padding:2px 9px;border-radius:100px">'+entries+'회 기록</span>' +
-      '<span style="font-size:.75rem;color:var(--cookie)">보기 →</span>' +
-      '</div>';
+  // 클래스-요일 2열 그리드
+  var MAX_CAPACITY = 6;
+  CLASSES.forEach(function(cls){
+    var rowHtml = '';
+    DAY_GROUPS.forEach(function(day){
+      var k = cls+'-'+day;
+      var stuList = (classStudents[k]||[]).filter(function(n){
+        return active.some(function(s){return s.name===n;});
+      });
+
+      rowHtml += '<div style="background:white;border-radius:12px;border:1.5px solid #f0e8dc;padding:10px 12px">';
+      rowHtml += '<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">';
+      rowHtml += '<span style="font-size:.8rem;font-weight:700;color:var(--brown)">'+cls+'</span>';
+      rowHtml += '<span class="class-mgmt-badge day-badge">'+day+'</span>';
+      rowHtml += '<span style="font-size:.68rem;color:var(--text-soft);margin-left:auto">'+stuList.length+'/'+MAX_CAPACITY+'명</span>';
+      rowHtml += '</div>';
+      rowHtml += '<div style="display:flex;flex-direction:column;gap:5px">';
+
+      // 등록된 학생
+      stuList.forEach(function(name, i){
+        var col = avatarPalette[i%7];
+        var entries = 0;
+        for(var d=1;d<=daysInMonth;d++){
+          var dk = fmtDate(prevY,prevM,d);
+          var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
+          if(r&&(r.lesson||r.review||r.homework||r.leddi||r.feedback)) entries++;
+        }
+        rowHtml += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fffbf5;border-radius:9px;border:1px solid #f0e8dc;cursor:pointer" onclick="openMonthlyDetail(\''+who+'\',\''+name+'\','+prevY+','+prevM+')">' +
+          '<div style="width:26px;height:26px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:.7rem;font-weight:900;color:white;flex-shrink:0">'+name[0]+'</div>' +
+          '<div style="flex:1;font-size:.84rem;font-weight:700;color:var(--brown)">'+name+'</div>' +
+          '<span style="font-size:.68rem;font-weight:700;color:'+(entries>0?'#2e7d32':'var(--text-soft)')+';background:'+(entries>0?'#e8f5e9':'#f5f5f5')+';padding:1px 7px;border-radius:100px">'+entries+'건</span>' +
+          '<span style="font-size:.7rem;color:var(--cookie)">→</span>' +
+          '</div>';
+      });
+
+      // 빈 자리
+      for(var e=stuList.length; e<MAX_CAPACITY; e++){
+        rowHtml += '<div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#fafafa;border-radius:9px;border:1px dashed #e0e0e0">' +
+          '<div style="width:26px;height:26px;border-radius:50%;background:#f0f0f0;flex-shrink:0"></div>' +
+          '<div style="font-size:.78rem;color:#ccc">빈 자리</div>' +
+          '</div>';
+      }
+
+      rowHtml += '</div></div>';
+    });
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">'+rowHtml+'</div>';
   });
 
-  html += '</div></div>';
+  html += '</div>';
   return html;
 }
 
@@ -2220,8 +2245,22 @@ function renderLectureDetail(lec, who, el) {
     '<div><div class="form-label">강의 제목 *</div><input class="register-input" id="lec-title-'+lec.id+'" placeholder="예: 1강. be동사란?"></div>' +
     '<div><div class="form-label">유튜브 링크 *</div><input class="register-input" id="lec-url-'+lec.id+'" placeholder="https://youtu.be/..."></div>' +
     '</div>' +
-    '<div><div class="form-label">설명 (선택)</div><input class="register-input" id="lec-desc-'+lec.id+'" placeholder="강의 간단 설명" style="margin-bottom:0"></div>' +
-    '<div class="register-form-actions" style="margin-top:10px">' +
+    '<div><div class="form-label">설명 (선택)</div><input class="register-input" id="lec-desc-'+lec.id+'" placeholder="강의 간단 설명"></div>' +
+
+    // 문제 추가 섹션
+    '<div style="border-top:2px dashed #f0e8dc;padding-top:12px;margin-top:4px">' +
+    '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:10px">📝 문제 추가 (선택)</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:10px">' +
+    '<button id="new-quiz-type-mc-'+lec.id+'" onclick="setNewLecQuizType(\'mc\','+lec.id+')" style="flex:1;padding:7px;border-radius:10px;border:2px solid #42a5f5;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#e3f4fb;color:#1565c0">객관식</button>' +
+    '<button id="new-quiz-type-sa-'+lec.id+'" onclick="setNewLecQuizType(\'sa\','+lec.id+')" style="flex:1;padding:7px;border-radius:10px;border:2px solid #e0d0c0;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#fafafa;color:#aaa">주관식</button>' +
+    '</div>' +
+    '<div><div class="form-label">문제</div><input class="register-input" id="new-quiz-q-'+lec.id+'" placeholder="문제를 입력해요" style="margin-bottom:8px"></div>' +
+    '<div id="new-quiz-options-area-'+lec.id+'">'+renderNewLecMcOptions(lec.id)+'</div>' +
+    '<div id="new-lec-quiz-list-'+lec.id+'" style="margin-top:8px"></div>' +
+    '<button onclick="addNewLecQuiz('+lec.id+')" style="background:var(--cookie-bg);border:1.5px solid var(--cookie-lt);border-radius:8px;padding:5px 14px;font-size:.75rem;font-weight:700;color:var(--cookie);cursor:pointer;font-family:inherit;margin-top:4px">+ 문제 추가</button>' +
+    '</div>' +
+
+    '<div class="register-form-actions" style="margin-top:12px">' +
     '<button class="btn-reg-submit" style="font-size:.8rem;padding:6px 14px" onclick="addLectureVideo('+lec.id+',\''+who+'\')">+ 강의 추가</button>' +
     '</div></div>';
 
@@ -2576,6 +2615,86 @@ function clearAssign(lecId, vIdx, who) {
   renderVideoDetail(lec, lec.videos[vIdx], vIdx, who);
 }
 
+var newLecQuizType = {};  // lecId → 'mc' | 'sa'
+var newLecQuizzes = {};   // lecId → [{type, question, options, answer}]
+
+function setNewLecQuizType(t, lecId) {
+  newLecQuizType[lecId] = t;
+  var mc = document.getElementById('new-quiz-type-mc-'+lecId);
+  var sa = document.getElementById('new-quiz-type-sa-'+lecId);
+  if(mc && sa) {
+    if(t==='mc'){
+      mc.style.cssText='flex:1;padding:7px;border-radius:10px;border:2px solid #42a5f5;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#e3f4fb;color:#1565c0';
+      sa.style.cssText='flex:1;padding:7px;border-radius:10px;border:2px solid #e0d0c0;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#fafafa;color:#aaa';
+    } else {
+      sa.style.cssText='flex:1;padding:7px;border-radius:10px;border:2px solid #ffb347;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#fff3e0;color:#e65100';
+      mc.style.cssText='flex:1;padding:7px;border-radius:10px;border:2px solid #e0d0c0;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:#fafafa;color:#aaa';
+    }
+  }
+  var area = document.getElementById('new-quiz-options-area-'+lecId);
+  if(area) area.innerHTML = t==='mc' ? renderNewLecMcOptions(lecId) : '<div class="form-label">정답</div><input class="register-input" id="new-quiz-ans-'+lecId+'" placeholder="정답을 입력해요" style="margin-bottom:0">';
+}
+
+function renderNewLecMcOptions(lecId) {
+  var html = '';
+  for(var i=0;i<4;i++){
+    html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">'+
+      '<span style="font-size:.75rem;color:var(--text-soft);width:16px;flex-shrink:0">'+'①②③④'[i]+'</span>'+
+      '<input class="register-input" id="new-quiz-opt-'+lecId+'-'+i+'" placeholder="보기 '+(i+1)+'" style="margin-bottom:0;flex:1">'+
+      '<input type="radio" name="new-quiz-ans-'+lecId+'" value="'+i+'" id="new-quiz-ans-'+lecId+'-'+i+'">'+
+      '<label for="new-quiz-ans-'+lecId+'-'+i+'" style="font-size:.72rem;color:var(--text-soft)">정답</label>'+
+    '</div>';
+  }
+  return html;
+}
+
+function addNewLecQuiz(lecId) {
+  var t = newLecQuizType[lecId]||'mc';
+  var q = (document.getElementById('new-quiz-q-'+lecId)||{value:''}).value.trim();
+  if(!q) { document.getElementById('new-quiz-q-'+lecId).focus(); return; }
+  if(!newLecQuizzes[lecId]) newLecQuizzes[lecId]=[];
+  if(t==='mc'){
+    var opts=[];
+    for(var i=0;i<4;i++){
+      var v=(document.getElementById('new-quiz-opt-'+lecId+'-'+i)||{value:''}).value.trim();
+      if(v) opts.push(v);
+    }
+    var ansEl=document.querySelector('input[name="new-quiz-ans-'+lecId+'"]:checked');
+    var ans=ansEl?parseInt(ansEl.value):0;
+    newLecQuizzes[lecId].push({type:'mc',question:q,options:opts,answer:ans});
+  } else {
+    var ans2=(document.getElementById('new-quiz-ans-'+lecId)||{value:''}).value.trim();
+    newLecQuizzes[lecId].push({type:'sa',question:q,answer:ans2});
+  }
+  // 목록 갱신
+  var listEl=document.getElementById('new-lec-quiz-list-'+lecId);
+  if(listEl){
+    listEl.innerHTML=newLecQuizzes[lecId].map(function(qz,qi){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fffbf5;border-radius:8px;margin-bottom:4px;border:1px solid #f0e8dc">'+
+        '<span style="font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:100px;background:'+(qz.type==='mc'?'#e3f4fb':'#fff3e0')+';color:'+(qz.type==='mc'?'#1565c0':'#e65100')+'">'+(qz.type==='mc'?'객관식':'주관식')+'</span>'+
+        '<span style="font-size:.78rem;color:var(--brown);flex:1">'+qz.question+'</span>'+
+        '<button onclick="removeNewLecQuiz('+lecId+','+qi+')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem">🗑️</button>'+
+      '</div>';
+    }).join('');
+  }
+  // 입력 초기화
+  document.getElementById('new-quiz-q-'+lecId).value='';
+}
+
+function removeNewLecQuiz(lecId, qi) {
+  if(newLecQuizzes[lecId]) newLecQuizzes[lecId].splice(qi,1);
+  var listEl=document.getElementById('new-lec-quiz-list-'+lecId);
+  if(listEl){
+    listEl.innerHTML=(newLecQuizzes[lecId]||[]).map(function(qz,i){
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:#fffbf5;border-radius:8px;margin-bottom:4px;border:1px solid #f0e8dc">'+
+        '<span style="font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:100px;background:'+(qz.type==='mc'?'#e3f4fb':'#fff3e0')+';color:'+(qz.type==='mc'?'#1565c0':'#e65100')+'">'+(qz.type==='mc'?'객관식':'주관식')+'</span>'+
+        '<span style="font-size:.78rem;color:var(--brown);flex:1">'+qz.question+'</span>'+
+        '<button onclick="removeNewLecQuiz('+lecId+','+i+')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem">🗑️</button>'+
+      '</div>';
+    }).join('');
+  }
+}
+
 function addLectureVideo(id, who) {
   var lec = lectures.find(function(l){return l.id===id;});
   if(!lec) return;
@@ -2584,7 +2703,10 @@ function addLectureVideo(id, who) {
   var desc  = (document.getElementById('lec-desc-'+id)||{value:''}).value.trim();
   if(!title){document.getElementById('lec-title-'+id).focus();return;}
   if(!url){document.getElementById('lec-url-'+id).focus();return;}
-  lec.videos.push({title:title,url:url,desc:desc,quizzes:[],assigned:[]});
+  var quizzes = newLecQuizzes[id] || [];
+  lec.videos.push({title:title,url:url,desc:desc,quizzes:quizzes,assigned:[]});
+  newLecQuizzes[id] = [];
+  newLecQuizType[id] = 'mc';
   renderLectureDetail(lec, who, document.getElementById(who+'-main-content'));
 }
 
@@ -3062,6 +3184,10 @@ function renderHwCalDetail(who) {
           html+=(h.done?'✓':'')+'</div>';
           html+='<span style="font-size:.8rem;color:var(--brown);flex:1;'+(h.done?'text-decoration:line-through;opacity:.5':'')+'">'+h.ico+' '+h.name+'</span>';
           html+='<span style="font-size:.65rem;color:'+(h.done?'#2e7d32':'var(--text-soft)')+'">'+(h.done?'완료 ✓':'미완료')+'</span>';
+          if(!isBuiltin) {
+            html+='<button onclick="editHwFromCal(\''+r.name+'\','+h.id+',\''+who+'\')" style="background:#fff8e1;border:none;border-radius:6px;padding:2px 8px;font-size:.68rem;font-weight:700;color:#e65100;cursor:pointer;font-family:inherit;flex-shrink:0">수정</button>';
+            html+='<button onclick="deleteHwFromCal(\''+r.name+'\','+h.id+',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem;padding:2px 4px;flex-shrink:0">🗑️</button>';
+          }
           html+='</div>';
         });
         html+='</div>';
@@ -3073,6 +3199,22 @@ function renderHwCalDetail(who) {
 
   if(!hasAny) html+='<div class="t-att-detail-empty">이 날 마감 과제가 없어요.</div>';
   return html;
+}
+
+function deleteHwFromCal(name, hwId, who) {
+  hwAssigned[name] = (hwAssigned[name]||[]).filter(function(h){return h.id!==hwId;});
+  if(window.fbSaveHwAssigned) window.fbSaveHwAssigned(name);
+  renderHwMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function editHwFromCal(name, hwId, who) {
+  var h = (hwAssigned[name]||[]).find(function(h){return h.id===hwId;});
+  if(!h) return;
+  var newName = prompt('과제 이름을 수정해요:', h.name);
+  if(newName===null) return;
+  if(newName.trim()) h.name = newName.trim();
+  if(window.fbSaveHwAssigned) window.fbSaveHwAssigned(name);
+  renderHwMgmt(who, document.getElementById(who+'-main-content'));
 }
 
 function toggleHwCalStu(expKey, who) {
@@ -4381,7 +4523,7 @@ function populateStudentSelect() {
   allStudents.forEach(function(s) {
     var opt = document.createElement('option');
     opt.value = s.name;
-    opt.textContent = s.name + ' (' + s.cls + ' · ' + s.day + ' · ' + s.teacher + ')';
+    opt.textContent = s.name + ' (' + s.cls + ', ' + s.day + ', ' + s.teacher + ')';
     sel.appendChild(opt);
   });
 }
