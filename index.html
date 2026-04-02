@@ -3731,10 +3731,38 @@ function permanentDelete(who, id) {
   // 10. 강의 수강 학생 목록에서 제거
   Object.keys(lectureStudents).forEach(function(lid){
     lectureStudents[lid].delete(name);
+    if(window.fbSaveLecStudents) window.fbSaveLecStudents(parseInt(lid));
   });
   Object.keys(lectureGroupStudents).forEach(function(gid){
     lectureGroupStudents[gid].delete(name);
   });
+
+  // 11. Firebase에서 삭제
+  if(window._fbDel) {
+    // 원생 목록 저장 (삭제 후)
+    window.fbSaveMemberRoster(who);
+    // 과제 삭제
+    window._fbDel('hwAssigned/'+name);
+    // 독서 기록 삭제
+    window._fbDel('bookRecords/'+name);
+    // 상담 기록 삭제
+    window._fbDel('counsel/'+name);
+    // 리포트 삭제 (Firebase에서 해당 학생 리포트 전부)
+    if(window._fbDb) {
+      window._fbDb.collection('reports').where('name','==',name).get().then(function(snap){
+        snap.forEach(function(doc){ doc.ref.delete(); });
+      });
+      // 출결 삭제
+      window._fbDb.collection('attendance').where('name','==',name).get().then(function(snap){
+        snap.forEach(function(doc){ doc.ref.delete(); });
+      });
+      // 결석 사유 삭제
+      window._fbDb.collection('absenceReasons').where('name','==',name).get().then(function(snap){
+        snap.forEach(function(doc){ doc.ref.delete(); });
+      });
+    }
+  }
+  if(window.populateStudentSelect) window.populateStudentSelect();
 
   var el = document.getElementById(who+'-main-content');
   renderStudentMgmt(who, el);
@@ -4374,6 +4402,11 @@ function showFbStatus(msg, autoHide) {
 window.addEventListener('load', function() {
   loadAllData();
 });
+
+// 전역 노출
+window._fbDb = db;
+window._fbSet = fbSet;
+window._fbDel = fbDel;
 }
 initFirebase();
 </script>
