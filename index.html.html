@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>투쌤플레이스 🍪🧈</title>
+<!-- Firebase SDK -->
+
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
 <style>
 :root{--cream:#fffbf0;--warm:#fff4d6;--cookie:#c47a3a;--cookie-lt:#e8a96a;--cookie-bg:#fff0dc;--butter:#f5c842;--butter-lt:#fde882;--butter-bg:#fffce0;--brown:#6b3e1e;--pink:#ff8fab;--mint:#62d2a2;--sky:#7ec8e3;--lavender:#c4b5fd;--text:#4a3000;--text-mid:#8b6914;--text-soft:#b89d6a;}
@@ -4052,12 +4054,15 @@ function deleteNotice(who,id){
   document.getElementById('tmenu-'+who+'-notice').classList.add('active');
 }
 </script>
-
-<!-- Firebase SDK -->
-<!-- Firebase SDK (compat version - works with file://) -->
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
+// Firebase 로드 대기 후 초기화
+function initFirebase() {
+  if(typeof firebase === 'undefined') {
+    setTimeout(initFirebase, 100);
+    return;
+  }
 const firebaseConfig = {
   apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
   authDomain: "twossamplace-lms.firebaseapp.com",
@@ -4369,4 +4374,8 @@ function showFbStatus(msg, autoHide) {
 window.addEventListener('load', function() {
   loadAllData();
 });
+}
+initFirebase();
 </script>
+</body>
+</html>
