@@ -1172,24 +1172,38 @@ function renderStudentDash(name){
 }
 
 function renderStudentSched(name){
-  var d=students[name];
+  var d=students[name]||{cls:'',sched:[]};
   var now=new Date(), y=now.getFullYear(), m=now.getMonth();
   var mPrefix=y+'-'+String(m+1).padStart(2,'0');
   var clsStr=d.cls||'';
-  var isMonWed=clsStr.indexOf('월/수')>-1, isTueThu=clsStr.indexOf('화/목')>-1;
-  var classWD=isMonWed?[1,3]:isTueThu?[2,4]:[];
-  var daysInMonth=new Date(y,m+1,0).getDate();
-  var regularDates=[];
-  for(var day=1;day<=daysInMonth;day++){
-    var dt=new Date(y,m,day);
-    if(classWD.indexOf(dt.getDay())>-1) regularDates.push(fmtDate(y,m,day));
+
+  // 클래스 키 찾기 (예: '픽처북 · 월/수' → '픽처북-월/수')
+  var clsKey = null;
+  Object.keys(classStudents).forEach(function(k){
+    if(classStudents[k].indexOf(name)>-1) clsKey=k;
+  });
+
+  var regularDates = [];
+  if(clsKey) {
+    // 선생님이 설정한 날짜 기반 (삭제/추가 반영)
+    regularDates = getClassDatesForMonth(clsKey, y, m);
+  } else {
+    // fallback: 요일 기반 자동 생성
+    var isMonWed=clsStr.indexOf('월/수')>-1, isTueThu=clsStr.indexOf('화/목')>-1;
+    var classWD=isMonWed?[1,3]:isTueThu?[2,4]:[];
+    var daysInMonth=new Date(y,m+1,0).getDate();
+    for(var day=1;day<=daysInMonth;day++){
+      var dt=new Date(y,m,day);
+      if(classWD.indexOf(dt.getDay())>-1) regularDates.push(fmtDate(y,m,day));
+    }
   }
+
   var makeupDates=(makeupSchedules[name]||[]).filter(function(s){return s.date.startsWith(mPrefix);});
   var tk=todayKey();
   var DOW_KO=['일','월','화','수','목','금','토'];
   var allItems=[];
   regularDates.forEach(function(dk){
-    allItems.push({date:dk,time:d.sched[0]?d.sched[0].t:'',name:d.sched[0]?d.sched[0].n:'수업',room:d.sched[0]?d.sched[0].r:'',type:'regular'});
+    allItems.push({date:dk,time:d.sched&&d.sched[0]?d.sched[0].t:'',name:d.sched&&d.sched[0]?d.sched[0].n:'수업',room:d.sched&&d.sched[0]?d.sched[0].r:'',type:'regular'});
   });
   makeupDates.forEach(function(s){
     allItems.push({date:s.date,time:s.time,name:'보강 수업',room:'',type:'makeup'});
@@ -3109,10 +3123,10 @@ function addSyllabusDate(k, ym, who) {
   if(!syllabusCustomDates[k]) syllabusCustomDates[k] = {};
   if(!syllabusCustomDates[k][ym]) syllabusCustomDates[k][ym] = [];
   if(syllabusCustomDates[k][ym].indexOf(dk) < 0) syllabusCustomDates[k][ym].push(dk);
-  // 혹시 삭제 목록에 있으면 복원
   if(syllabusDeletedDates[k]&&syllabusDeletedDates[k][ym])
     syllabusDeletedDates[k][ym] = syllabusDeletedDates[k][ym].filter(function(d){return d!==dk;});
   inp.value = '';
+  if(window.fbSaveScheduleDates) window.fbSaveScheduleDates(k, ym);
   renderTodayClass(who, document.getElementById(who+'-main-content'));
 }
 
@@ -3120,10 +3134,10 @@ function deleteSyllabusDate(k, dk, ym, who) {
   if(!syllabusDeletedDates[k]) syllabusDeletedDates[k] = {};
   if(!syllabusDeletedDates[k][ym]) syllabusDeletedDates[k][ym] = [];
   if(syllabusDeletedDates[k][ym].indexOf(dk) < 0) syllabusDeletedDates[k][ym].push(dk);
-  // 커스텀 날짜라면 거기서도 제거
   if(syllabusCustomDates[k]&&syllabusCustomDates[k][ym])
     syllabusCustomDates[k][ym] = syllabusCustomDates[k][ym].filter(function(d){return d!==dk;});
   if(syllabusDateSel === dk) syllabusDateSel = null;
+  if(window.fbSaveScheduleDates) window.fbSaveScheduleDates(k, ym);
   renderTodayClass(who, document.getElementById(who+'-main-content'));
 }
 
@@ -4601,6 +4615,13 @@ window.fbSaveCalEvents = async function(dateKey) {
   await fbSet('calEvents/' + dateKey, { events: JSON.stringify(evs) });
 };
 
+window.fbSaveScheduleDates = async function(clsKey, ym) {
+  var safeKey = (clsKey+'_'+ym).replace(/[\/-]/g,'_');
+  var custom = (window.syllabusCustomDates[clsKey]&&window.syllabusCustomDates[clsKey][ym])||[];
+  var deleted = (window.syllabusDeletedDates[clsKey]&&window.syllabusDeletedDates[clsKey][ym])||[];
+  await fbSet('scheduleDates/'+safeKey, { clsKey:clsKey, ym:ym, custom:custom, deleted:deleted });
+};
+
 window.fbSaveQuizResult = async function(name, lecId, vi, qi) {
   var r = quizResults[name]&&quizResults[name][lecId]&&quizResults[name][lecId][vi]&&quizResults[name][lecId][vi][qi];
   if(!r) return;
@@ -4705,6 +4726,17 @@ async function loadAllData() {
   });
 
   // 퀴즈 결과
+  // 수업 날짜 커스텀/삭제 불러오기
+  const schedData = await fbGetCol('scheduleDates');
+  Object.keys(schedData).forEach(function(key) {
+    var d = schedData[key];
+    if(!d.clsKey || !d.ym) return;
+    if(!window.syllabusCustomDates[d.clsKey]) window.syllabusCustomDates[d.clsKey]={};
+    if(!window.syllabusDeletedDates[d.clsKey]) window.syllabusDeletedDates[d.clsKey]={};
+    window.syllabusCustomDates[d.clsKey][d.ym] = d.custom||[];
+    window.syllabusDeletedDates[d.clsKey][d.ym] = d.deleted||[];
+  });
+
   const qrData = await fbGetCol('quizResults');
   Object.keys(qrData).forEach(function(key) {
     var r = qrData[key];
