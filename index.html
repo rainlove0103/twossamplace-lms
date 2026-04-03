@@ -1331,13 +1331,30 @@ function openLecPlayer(lecId, videoIdx) {
     return '<button onclick="setLecSpeed('+s+')" id="speed-btn-'+s.toString().replace('.','_')+'" style="background:'+(s===1?'var(--cookie)':'rgba(255,255,255,.15)')+';border:none;border-radius:6px;color:white;padding:4px 9px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">'+s+'x</button>';
   }).join('');
 
-  // 퀴즈 영역 항상 숨기고 시작 (다시보기도 영상 먼저)
-  document.getElementById('lec-player-right').style.display='none';
+  // 퀴즈 영역 - 다시보기면 처음부터 표시, 처음 보면 숨김
   document.getElementById('lec-player-complete').style.display='none';
-
-  // 이미 완료한 강의여도 영상 먼저 - 끝나면 자동으로 퀴즈 열림
-  // (alreadyDone이면 스크럽바 자유롭게만 허용)
-  lecVideoEndedCalled = false;
+  if(alreadyDone) {
+    // 다시보기: 틀린 문제 초기화 (정답 맞은 건 유지, 틀린 건 재시험)
+    if(v.quizzes && v.quizzes.length > 0) {
+      if(window.quizResults&&window.quizResults[name]&&window.quizResults[name][lecId]&&window.quizResults[name][lecId][videoIdx]) {
+        var vRes = window.quizResults[name][lecId][videoIdx];
+        Object.keys(vRes).forEach(function(qi){
+          if(!vRes[qi].correct) delete vRes[qi]; // 오답만 초기화
+        });
+      }
+      // lecCompleted도 초기화 (틀린 문제가 남아있으면 완료 취소)
+      if(window.lecCompleted&&window.lecCompleted[name]&&window.lecCompleted[name][lecId]) {
+        delete window.lecCompleted[name][lecId][videoIdx];
+      }
+      showQuizPanel(name, lecId, videoIdx, v.quizzes);
+    } else {
+      document.getElementById('lec-player-right').style.display='none';
+    }
+    lecVideoEndedCalled = true;
+  } else {
+    document.getElementById('lec-player-right').style.display='none';
+    lecVideoEndedCalled = false;
+  }
 
   // 모달 열기
   var modal = document.getElementById('modal-lec-player');
@@ -1374,7 +1391,8 @@ function loadYTPlayer(iframe, ytId) {
 
 function createYTPlayer(iframeId, ytId) {
   if(ytPlayer) { try{ytPlayer.destroy();}catch(e){} }
-  ytMaxTime = 0;
+  // alreadyDone이면 ytMaxTime 유지 (openLecPlayer에서 99999로 설정됨)
+  if(ytMaxTime < 99999) ytMaxTime = 0;
   ytSeekGuard = false;
   ytPlayer = new YT.Player(iframeId, {
     events: {
@@ -1383,8 +1401,8 @@ function createYTPlayer(iframeId, ytId) {
           onLecVideoEnded();
         }
         if(e.data === YT.PlayerState.PLAYING) {
-          // 앞으로 감기 감지 루프 시작
-          startSeekGuard();
+          // 다시보기(ytMaxTime===99999)면 seekGuard 불필요
+          if(ytMaxTime < 99999) startSeekGuard();
         }
       }
     }
@@ -2256,6 +2274,10 @@ function renderHwCalendar(name){
 }
 function selHwCalDate(dk,name){ hwCalSelDate=hwCalSelDate===dk?null:dk; renderHwCalendar(name); }
 function changeHwCalMonth(dir,name){ hwCalMonth+=dir; if(hwCalMonth<0){hwCalMonth=11;hwCalYear--;}if(hwCalMonth>11){hwCalMonth=0;hwCalYear++;}hwCalSelDate=null; renderHwCalendar(name); }
+
+// 선생님 이달의 과제 캘린더 전용
+function selTeacherHwCal(dk, who){ hwCalSel=hwCalSel===dk?null:dk; renderHwMgmt(who,document.getElementById(who+'-main-content')); }
+function changeTeacherHwCalMonth(dir, who){ hwCalMonth+=dir; if(hwCalMonth<0){hwCalMonth=11;hwCalYear--;}if(hwCalMonth>11){hwCalMonth=0;hwCalYear++;}hwCalSel=null; renderHwMgmt(who,document.getElementById(who+'-main-content')); }
 
 /* ====== STUDENT NOTICES ====== */
 function getNoticesForStudent(name){
@@ -6178,7 +6200,7 @@ function renderHwMonthlyCal(who) {
     var cls='t-att-cal-cell';
     if(!isM)cls+=' t-cal-other'; else if(isToday2)cls+=' t-cal-today';
     if(isSel)cls+=' t-cal-selected';
-    cells+='<div class="'+cls+'" onclick="selHwCalDate(\''+dk+'\',\''+who+'\')">' +
+    cells+='<div class="'+cls+'" onclick="selTeacherHwCal(\''+dk+'\',\''+who+'\')">' +
       '<div class="t-att-cal-day-num">'+day2+'</div>' +
       (hasDot?'<div style="display:flex;flex-direction:column;align-items:center;gap:1px">' +
         '<div style="width:7px;height:7px;border-radius:50%;background:'+(pct2===100?'#66bb6a':'var(--cookie)')+'"></div>' +
@@ -6189,9 +6211,9 @@ function renderHwMonthlyCal(who) {
 
   var calHtml = '<div class="t-att-cal-wrap" style="margin-bottom:16px">' +
     '<div class="t-att-cal-header">' +
-    '<button class="t-att-cal-nav" onclick="changeHwCalMonth(-1,\''+who+'\')">◀</button>' +
+    '<button class="t-att-cal-nav" onclick="changeTeacherHwCalMonth(-1,\''+who+'\')">◀</button>' +
     '<span class="t-att-cal-label">'+y+'년 '+(m+1)+'월</span>' +
-    '<button class="t-att-cal-nav" onclick="changeHwCalMonth(1,\''+who+'\')">▶</button></div>' +
+    '<button class="t-att-cal-nav" onclick="changeTeacherHwCalMonth(1,\''+who+'\')">▶</button></div>' +
     '<div class="t-att-cal-grid">'+DOW.map(function(d){return '<div class="t-att-cal-dow">'+d+'</div>';}).join('')+cells+'</div>' +
     '<div class="t-att-cal-detail" id="hw-cal-detail">' + renderHwCalDetail(who) + '</div>' +
     '</div>';
@@ -6677,7 +6699,11 @@ function renderMonthlyAtt(who,el){
     else{day2=i-firstDay+1;dk=fmtDate(tAttCalYear,tAttCalMonth,day2);}
     var recs=byDate[dk]||[], statusSet=[];
     recs.forEach(function(r){if(statusSet.indexOf(r.status)<0)statusSet.push(r.status);});
-    var dots=statusSet.map(function(s){return '<div class="t-att-dot t-att-dot-'+s+'"></div>';}).join('');
+    var dots=statusSet.map(function(s){
+      // 등원+하원은 등원 dot + 하원 dot 두 개로 표시
+      if(s==='등원+하원') return '<div class="t-att-dot t-att-dot-등원"></div><div class="t-att-dot t-att-dot-하원"></div>';
+      return '<div class="t-att-dot t-att-dot-'+s+'"></div>';
+    }).join('');
     var cls='t-att-cal-cell';
     if(!isM)cls+=' t-cal-other'; else if(dk===tk)cls+=' t-cal-today';
     if(dk===tAttCalSel)cls+=' t-cal-selected';
