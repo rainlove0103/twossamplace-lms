@@ -7299,7 +7299,19 @@ function initFirebase() {
     }
     db = firebase.firestore();
     storage = firebase.storage ? firebase.storage() : null;
-
+  } catch(initErr) {
+    console.error('Firebase 초기화 오류:', initErr);
+    var ov = document.getElementById('loading-overlay');
+    if(ov) {
+      ov.innerHTML = '<div style="text-align:center;padding:40px;font-family:\'Noto Sans KR\',sans-serif">' +
+        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+        '<div style="font-size:.9rem;font-weight:700;color:#5c3d1e;margin-bottom:8px">연결에 실패했어요</div>' +
+        '<div style="font-size:.78rem;color:#aaa;margin-bottom:20px">페이지를 새로고침 해주세요</div>' +
+        '<button onclick="location.reload()" style="background:#c47a3a;border:none;border-radius:10px;padding:10px 24px;font-size:.85rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">새로고침</button>' +
+      '</div>';
+    }
+    return;
+  }
 
   // 🔴 실시간 출결 동기화
   db.collection('attendance').onSnapshot(function(snapshot) {
@@ -7334,18 +7346,6 @@ function initFirebase() {
     setTimeout(function(){ loadAllData(); }, 0);
   } else {
     window.addEventListener('load', function(){ loadAllData(); });
-  }
-  } catch(initErr) {
-    console.error('Firebase 초기화 오류:', initErr);
-    var ov = document.getElementById('loading-overlay');
-    if(ov) {
-      ov.innerHTML = '<div style="text-align:center;padding:40px;font-family:\'Noto Sans KR\',sans-serif">' +
-        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
-        '<div style="font-size:.9rem;font-weight:700;color:#5c3d1e;margin-bottom:8px">연결에 실패했어요</div>' +
-        '<div style="font-size:.78rem;color:#aaa;margin-bottom:20px">페이지를 새로고침 해주세요</div>' +
-        '<button onclick="location.reload()" style="background:#c47a3a;border:none;border-radius:10px;padding:10px 24px;font-size:.85rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">새로고침</button>' +
-      '</div>';
-    }
   }
 }
 initFirebase();
@@ -7566,6 +7566,17 @@ async function loadAllData() {
   }
   showFbStatus('🔄 데이터 불러오는 중...');
   try {
+  // 필수 window 변수 안전 초기화
+  if(!window.syllabusCustomDates) window.syllabusCustomDates = {};
+  if(!window.syllabusDeletedDates) window.syllabusDeletedDates = {};
+  if(!window.classStudents) window.classStudents = {};
+  if(!window.classAttendance) window.classAttendance = {};
+  if(!window.dailyReports) window.dailyReports = {};
+  if(!window.calEvents) window.calEvents = {};
+  if(!window.syllabusData) window.syllabusData = {};
+  if(!window.memberRoster) window.memberRoster = {cookie:[], butter:[]};
+  if(!window.absenceReasons) window.absenceReasons = {};
+  if(!window.quizResults) window.quizResults = {};
 
   for (var _wi = 0; _wi < ['cookie','butter'].length; _wi++) {
     var who = ['cookie','butter'][_wi];
