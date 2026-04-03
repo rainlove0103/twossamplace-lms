@@ -1165,21 +1165,30 @@ function openLecPlayer(lecId, videoIdx) {
     iframe.id = 'lec-yt-iframe';
     iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
     iframe.allow = 'accelerometer;autoplay;clipboard-write;encrypted-media;gyroscope;picture-in-picture';
-    // fullscreen 제거 - 외부 이동 방지
-    iframe.src = 'https://www.youtube.com/embed/'+ytId+'?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1';
+    iframe.src = 'https://www.youtube.com/embed/'+ytId+'?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&fs=0';
     wrapper.appendChild(iframe);
 
-    // 우측 하단 유튜브 로고/링크 영역 차단 오버레이
+    // 상단 오버레이 — 강의 제목
+    var overlayTop = document.createElement('div');
+    overlayTop.style.cssText = 'position:absolute;top:0;left:0;right:0;height:52px;z-index:10;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.75) 0%,transparent 100%);display:flex;align-items:center;padding:0 14px;gap:10px;';
+    overlayTop.innerHTML =
+      '<div style="font-size:.75rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:\'Noto Sans KR\',sans-serif;">' +
+        lec.emoji + ' ' + lec.title + ' — ' + v.title +
+      '</div>';
+    wrapper.appendChild(overlayTop);
+
+    // 하단 오버레이 — 투쌤플레이스 브랜딩 + 유튜브 UI 가림
+    var overlayBot = document.createElement('div');
+    overlayBot.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:44px;z-index:10;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 100%);display:flex;align-items:center;justify-content:flex-end;padding:0 14px;';
+    overlayBot.innerHTML =
+      '<div style="font-size:.68rem;font-weight:700;color:rgba(255,255,255,.6);font-family:\'Gaegu\',cursive;letter-spacing:.5px;">🍪 투쌤플레이스</div>';
+    wrapper.appendChild(overlayBot);
+
+    // 클릭 차단 (링크 이동 방지)
     var blocker = document.createElement('div');
-    blocker.style.cssText = 'position:absolute;bottom:0;right:0;width:120px;height:42px;z-index:10;cursor:default;';
+    blocker.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:9;cursor:default;';
     blocker.onclick = function(e){ e.stopPropagation(); e.preventDefault(); return false; };
     wrapper.appendChild(blocker);
-
-    // 좌측 상단 유튜브 제목 링크 차단
-    var blockerTop = document.createElement('div');
-    blockerTop.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:40px;z-index:10;cursor:default;';
-    blockerTop.onclick = function(e){ e.stopPropagation(); e.preventDefault(); return false; };
-    wrapper.appendChild(blockerTop);
 
     area.appendChild(wrapper);
 
@@ -3683,6 +3692,7 @@ var dailyReports = {};
 var reportDate = new Date();
 var reportSelClass = null; // 선택된 클래스키
 var reportSelStu = null;   // 선택된 학생 이름
+var reportFromFirst = false; // 첫 화면에서 바로 학생 선택 여부
 
 function getDailyReport(who, dk, name) {
   if(!dailyReports[who]) dailyReports[who]={};
@@ -3736,14 +3746,14 @@ function renderDailyReport(who) {
           return r.lesson||r.review||r.homework||r.leddi||r.feedback;
         }).length;
         html += '<div class="class-mgmt-card" style="cursor:pointer;transition:transform .15s,box-shadow .15s" ' +
-          'onclick="reportSelClass=\''+k+'\';reportSelStu=null;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+          'onclick="reportSelClass=\''+k+'\';reportSelStu=null;reportFromFirst=false;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
           'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 6px 20px rgba(180,120,40,.15)\'" ' +
           'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
           '<div class="class-mgmt-card-header" style="margin-bottom:8px">' +
           '<div class="class-mgmt-card-name">'+cls+'<span class="class-mgmt-badge">'+cls+'</span><span class="class-mgmt-badge day-badge">'+day+'</span></div>' +
           '<span class="class-mgmt-stu-count">'+stuList.length+'명</span></div>' +
           '<div class="class-mgmt-stu-list" style="margin-bottom:8px">'+
-          (stuList.length>0 ? stuList.map(function(name,i){var col=avatarPalette[i%7];return '<div class="class-mgmt-stu-chip" onclick="event.stopPropagation();reportSelClass=\''+k+'\';reportSelStu=\''+name+'\';renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="cursor:pointer" title="'+name+' 리포트 작성"><div class="class-mgmt-stu-avatar" style="background:'+col+'">'+name[0]+'</div><span>'+name+'</span></div>';}).join('') : '<div style="font-size:.75rem;color:#ccc">등록된 학생 없음</div>')+
+          (stuList.length>0 ? stuList.map(function(name,i){var col=avatarPalette[i%7];return '<div class="class-mgmt-stu-chip" onclick="event.stopPropagation();reportSelClass=\''+k+'\';reportSelStu=\''+name+'\';reportFromFirst=true;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="cursor:pointer" title="'+name+' 리포트 작성"><div class="class-mgmt-stu-avatar" style="background:'+col+'">'+name[0]+'</div><span>'+name+'</span></div>';}).join('') : '<div style="font-size:.75rem;color:#ccc">등록된 학생 없음</div>')+
           '</div>'+
           '<div style="font-size:.72rem;color:'+(stuList.length===0?'#ccc':writtenCount>0?'#2e7d32':'var(--text-soft)')+'">'+
           (stuList.length===0?'':writtenCount>0?'✅ '+writtenCount+'/'+stuList.length+'명 작성됨':'리포트 미작성')+'</div>' +
@@ -3805,7 +3815,7 @@ function renderDailyReport(who) {
     var clsName = reportSelClass.split('-')[0], dayName = reportSelClass.split('-').slice(1).join('-');
 
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
-      '<button onclick="reportSelStu=null;renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 학생 목록</button>' +
+      '<button onclick="'+(reportFromFirst ? 'reportSelClass=null;reportSelStu=null;reportFromFirst=false;' : 'reportSelStu=null;')+'renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">'+(reportFromFirst ? '← 첫 화면' : '← 학생 목록')+'</button>' +
       '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+reportSelStu+'</div>' +
       '<span style="font-size:.75rem;color:var(--text-soft)">'+clsName+' · '+dayName+'</span></div>';
 
