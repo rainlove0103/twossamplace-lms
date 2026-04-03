@@ -1243,19 +1243,13 @@ function openLecPlayer(lecId, videoIdx) {
     return '<button onclick="setLecSpeed('+s+')" id="speed-btn-'+s.toString().replace('.','_')+'" style="background:'+(s===1?'var(--cookie)':'rgba(255,255,255,.15)')+';border:none;border-radius:6px;color:white;padding:4px 9px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">'+s+'x</button>';
   }).join('');
 
-  // 퀴즈 영역 숨김
+  // 퀴즈 영역 항상 숨기고 시작 (다시보기도 영상 먼저)
   document.getElementById('lec-player-right').style.display='none';
   document.getElementById('lec-player-complete').style.display='none';
 
-  // 이미 완료한 강의면 바로 퀴즈 패널 오픈
-  if(alreadyDone) {
-    if(v.quizzes && v.quizzes.length > 0) {
-      showQuizPanel(name, lecId, videoIdx, v.quizzes||[]);
-    } else {
-      showCompleteOnly();
-    }
-    lecVideoEndedCalled = true;
-  }
+  // 이미 완료한 강의여도 영상 먼저 - 끝나면 자동으로 퀴즈 열림
+  // (alreadyDone이면 스크럽바 자유롭게만 허용)
+  lecVideoEndedCalled = false;
 
   // 모달 열기
   var modal = document.getElementById('modal-lec-player');
@@ -1322,8 +1316,11 @@ function startSeekGuard() {
         ytMaxTime = cur;
         return;
       }
-      if(cur > ytMaxTime + 2) {
-        // 앞으로 2초 이상 건너뜀 → 되돌리기
+      // 배속에 따라 허용 범위 조정 (1초 체크 * 배속 * 1.5 여유)
+      var rate = (ytPlayer.getPlaybackRate ? ytPlayer.getPlaybackRate() : 1) || 1;
+      var allowance = Math.max(2, rate * 1.5 + 1);
+      if(cur > ytMaxTime + allowance) {
+        // 앞으로 건너뜀 → 되돌리기
         ytPlayer.seekTo(ytMaxTime, true);
       } else {
         ytMaxTime = Math.max(ytMaxTime, cur);
@@ -1444,13 +1441,13 @@ function renderLecPlayerQuiz(name, lecId, vi, qs) {
         html+='<div style="font-size:.75rem;color:var(--text-soft);margin-bottom:6px">단어를 클릭해서 문장을 만들어요</div>';
         html+='<div id="lp-arrange-bank-'+qi+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:36px;padding:6px;background:#f9f9f9;border-radius:8px;border:1px solid #e0e0e0">';
         shuffledWords.forEach(function(w,wi){
-          html+='<span id="lp-word-'+qi+'-'+wi+'" onclick="lpPickWord('+qi+','+wi+',\''+w+'\')" style="background:#f3e5f5;border:1.5px solid #ce93d8;border-radius:8px;padding:4px 12px;font-size:.82rem;color:#6a1b9a;font-weight:600;cursor:pointer">'+w+'</span>';
+          html+='<span id="lp-word-'+qi+'-'+wi+'" data-qi="'+qi+'" data-wi="'+wi+'" data-word="'+encodeURIComponent(w)+'" class="lp-word-chip" style="background:#f3e5f5;border:1.5px solid #ce93d8;border-radius:8px;padding:4px 12px;font-size:.82rem;color:#6a1b9a;font-weight:600;cursor:pointer;display:inline-block">'+w+'</span>';
         });
         html+='</div>';
         html+='<div style="font-size:.75rem;color:var(--text-soft);margin-bottom:4px">내가 만든 문장</div>';
         html+='<div id="lp-arrange-sentence-'+qi+'" style="display:flex;flex-wrap:wrap;gap:5px;min-height:36px;padding:6px;background:#fffbf5;border-radius:8px;border:1.5px solid #f0e8dc"></div>';
         html+='</div>';
-        html+='<button onclick="lpSubmitArrange(\''+name+'\','+lecId+','+vi+','+qi+',\''+q.answer.replace(/'/g,"\\'")+'\')" style="background:var(--cookie);border:none;border-radius:8px;padding:6px 18px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">제출</button>';
+        html+='<button onclick="lpSubmitArrange(\''+name+'\','+lecId+','+vi+','+qi+',\''+q.answer.replace(/\\/g,'\\\\').replace(/'/g,"\\'")+'\')" style="background:var(--cookie);border:none;border-radius:8px;padding:6px 18px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">제출</button>';
         html+='<button onclick="lpClearArrange('+qi+')" style="background:#f5f5f5;border:none;border-radius:8px;padding:6px 12px;font-size:.78rem;font-weight:700;color:#888;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;margin-left:6px">초기화</button>';
       }
     } else {
@@ -1472,6 +1469,16 @@ function renderLecPlayerQuiz(name, lecId, vi, qs) {
     if(name !== '__teacher_preview__') markLecComplete(name, lecId, vi);
     document.getElementById('lec-player-complete').style.display='block';
   }
+
+  // 문장 배열 단어 클릭 - 이벤트 위임 방식 (특수문자 문제 해결)
+  list.onclick = function(e) {
+    var chip = e.target.closest('.lp-word-chip');
+    if(!chip) return;
+    var qi2 = parseInt(chip.getAttribute('data-qi'));
+    var wi2 = parseInt(chip.getAttribute('data-wi'));
+    var w2 = decodeURIComponent(chip.getAttribute('data-word'));
+    lpPickWord(qi2, wi2, w2);
+  };
 }
 
 var lpMcSelected = {}; // lpMcSelected[qi] = Set of selected indices
@@ -1588,19 +1595,29 @@ function markLecComplete(name, lecId, vi) {
 function reqFullscreen() {
   var el = document.getElementById('modal-lec-player');
   var btn = document.querySelector('[onclick="reqFullscreen()"]');
-  if(!document.fullscreenElement) {
-    if(el && el.requestFullscreen) {
-      el.requestFullscreen();
+  var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+
+  if(!isFs) {
+    var req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if(req) {
+      req.call(el).catch(function(){ console.log('전체화면 실패'); });
       if(btn) btn.textContent = '⛶ 전체화면 해제';
     }
   } else {
-    document.exitFullscreen();
+    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if(exit) exit.call(document);
     if(btn) btn.textContent = '⛶ 전체화면';
   }
 }
 document.addEventListener('fullscreenchange', function(){
   var btn = document.querySelector('[onclick="reqFullscreen()"]');
-  if(btn) btn.textContent = document.fullscreenElement ? '⛶ 전체화면 해제' : '⛶ 전체화면';
+  var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if(btn) btn.textContent = isFs ? '⛶ 전체화면 해제' : '⛶ 전체화면';
+});
+document.addEventListener('webkitfullscreenchange', function(){
+  var btn = document.querySelector('[onclick="reqFullscreen()"]');
+  var isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if(btn) btn.textContent = isFs ? '⛶ 전체화면 해제' : '⛶ 전체화면';
 });
 
 function closeLecPlayer() {
