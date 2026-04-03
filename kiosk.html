@@ -56,7 +56,7 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cook
 }
 .key-btn:nth-child(3n) { border-right: none; }
 .key-btn:active { background: var(--soft); }
-.key-btn.del { font-size: 2rem; color: #999; background: #fafafa; }
+.key-btn.del { font-size: 4rem; color: #999; background: #fafafa; }
 .key-btn.empty-cell { background: #fafafa; cursor: default; pointer-events: none; }
 .att-row { display: flex; flex-shrink: 0; }
 .att-main-btn {
@@ -66,11 +66,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cook
 .att-main-btn:active { filter: brightness(.92); }
 .att-main-btn.arrive { background: #ffb347; color: white; }
 .att-main-btn.leave  { background: #ce93d8; color: white; }
-.att-main-btn.cancel {
-  flex: 0 0 86px; background: #f0f0f0; color: #aaa;
-  font-size: 2.2rem; display: flex; align-items: center; justify-content: center;
-  border-left: 1px solid #ddd;
-}
 #popup-overlay {
   display: none; position: fixed; inset: 0; z-index: 1000;
   background: rgba(0,0,0,.45); align-items: center; justify-content: center;
@@ -113,7 +108,6 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cook
   <div class="att-row">
     <button class="att-main-btn arrive" onclick="submitAtt('등원')">등원</button>
     <button class="att-main-btn leave"  onclick="submitAtt('하원')">하원</button>
-    <button class="att-main-btn cancel" onclick="cancelInput()" title="취소">✕</button>
   </div>
 </div>
 <div id="popup-overlay">
