@@ -6265,7 +6265,7 @@ function renderAttSub(who){
   else renderMonthlyAtt(who,el);
 }
 function renderTodayAtt(who,el){
-  var clsKey=currentClass+'-'+currentDay, stuList=classStudents[clsKey]||[];
+  var clsKey=currentClass+'-'+currentDay, stuList=(window.classStudents||{})[clsKey]||[];
   el.innerHTML='<div class="day-tabs-row">'+DAY_GROUPS.map(function(d){return '<div class="day-tab'+(d===currentDay?' active':'')+'" onclick="setAttDay(\''+who+'\',\''+d+'\')">'+d+'</div>';}).join('')+'</div><div class="class-tabs-row">'+CLASSES.map(function(c){return '<div class="class-tab'+(c===currentClass?' active':'')+'" onclick="setAttClass(\''+who+'\',\''+c+'\')">'+c+'</div>';}).join('')+'</div><div id="att-list-'+who+'">'+renderAttList(who,clsKey,stuList)+'</div>';
 }
 function renderAttList(who,clsKey,stuList){
@@ -6389,6 +6389,11 @@ function setTodayAtt(who,clsKey,name,opt){
   if(newVal===null) delete window.classAttendance[clsKey][name][tk];
   else window.classAttendance[clsKey][name][tk] = newVal;
 
+  // 이달의 출결 캘린더를 오늘 날짜 기준으로 동기화
+  var todayNow = new Date();
+  tAttCalYear = todayNow.getFullYear();
+  tAttCalMonth = todayNow.getMonth();
+
   if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, window.classAttendance[clsKey][name][tk]||'');
   renderAttSub(who);
 }
@@ -6402,7 +6407,7 @@ function renderMonthlyAtt(who,el){
     Object.keys(window.classAttendance[clsKey]).forEach(function(name){
       Object.keys(window.classAttendance[clsKey][name]).forEach(function(dk){
         if(!byDate[dk]) byDate[dk]=[];
-        byDate[dk].push({name:name,cls:clsKey,status:attStatus(window.classAttendance[clsKey][name][dk])});
+        byDate[dk].push({name:name, clsKey:clsKey, status:attStatus(window.classAttendance[clsKey][name][dk])});
       });
     });
   });
@@ -6451,7 +6456,7 @@ function renderMonthlyAtt(who,el){
         html+=list.map(function(r,i){
           return '<div class="t-att-detail-row" style="gap:8px">' +
             '<div class="t-att-detail-avatar" style="background:'+avatarPalette[i%7]+'">'+r.name[0]+'</div>' +
-            '<div style="flex:1"><div class="t-att-detail-name">'+r.name+'</div><div class="t-att-detail-cls">'+r.cls+'</div></div>' +
+            '<div style="flex:1"><div class="t-att-detail-name">'+r.name+'</div><div class="t-att-detail-cls">'+r.clsKey+'</div></div>' +
             '<span class="att-summary-chip chip-'+status+'">'+status+'</span>' +
             '<button onclick="openAttEditModal(\''+who+'\',\''+r.clsKey+'\',\''+r.name+'\',\''+tAttCalSel+'\')" style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit;flex-shrink:0">✏️ 수정</button>' +
             '<button onclick="deleteMonthlyAtt(\''+who+'\',\''+r.clsKey+'\',\''+r.name+'\',\''+tAttCalSel+'\')" style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">🗑️</button>' +
