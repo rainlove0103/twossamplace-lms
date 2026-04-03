@@ -267,7 +267,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .att-opt.selected-결석{background:#fce4ec;border-color:#ef5350;color:#b71c1c;}
 .att-opt.selected-보강{background:#f3e5f5;border-color:#ab47bc;color:#6a1b9a;}
 .att-summary-chip{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;}
-.chip-등원{background:#e8f5e9;color:#2e7d32;} .chip-하원{background:#e3f2fd;color:#1565c0;} .chip-지각{background:#fff8e1;color:#e65100;} .chip-결석{background:#fce4ec;color:#b71c1c;} .chip-보강{background:#f3e5f5;color:#6a1b9a;} .chip-미정{background:#f5f5f5;color:#9e9e9e;} .chip-등원\+하원{background:#e8f5e9;color:#2e7d32;}
+.chip-등원{background:#e8f5e9;color:#2e7d32;} .chip-하원{background:#e3f2fd;color:#1565c0;} .chip-지각{background:#fff8e1;color:#e65100;} .chip-결석{background:#fce4ec;color:#b71c1c;} .chip-보강{background:#f3e5f5;color:#6a1b9a;} .chip-미정{background:#f5f5f5;color:#9e9e9e;} .chip-등원\+하원{background:#e3f2fd;color:#1565c0;}
 .t-att-cal-wrap{background:white;border-radius:20px;overflow:hidden;box-shadow:0 3px 16px rgba(0,0,0,.07);border:1.5px solid #f0e8dc;}
 .t-att-cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;background:linear-gradient(135deg,#fff8ee,#fff3e0);border-bottom:1.5px solid #f5e8d5;}
 .t-att-cal-nav{background:white;border:2px solid #f0ddc8;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;color:var(--cookie);transition:all .15s;}
@@ -6529,8 +6529,11 @@ function renderAttPanel(who,el){
 function setAttSub(who,tab){ attSubTab=tab; if(tab==='today') tAttCalSel=null; renderAttPanel(who,document.getElementById(who+'-main-content')); }
 function renderAttSub(who){
   var el=document.getElementById('att-sub-'+who); if(!el) return;
-  if(attSubTab==='today') renderTodayAtt(who,el);
-  else renderMonthlyAtt(who,el);
+  if(attSubTab==='today') {
+    renderTodayAtt(who,el);
+  } else {
+    renderMonthlyAtt(who,el);
+  }
 }
 function renderTodayAtt(who,el){
   var clsKey=currentClass+'-'+currentDay, stuList=(window.classStudents||{})[clsKey]||[];
@@ -6578,7 +6581,7 @@ function renderAttList(who,clsKey,stuList){
       '<div class="att-class">'+clsKey+' · 클릭 → 월별 출결</div>'+
       timeHtml+
       '</div>'+
-      '<span class="att-summary-chip chip-'+(recStatus==='등원+하원'?'하원':recStatus||'미정')+'">'+(recStatus||'미정')+'</span>'+
+      '<span class="att-summary-chip chip-'+(recStatus==='등원+하원'?'등원+하원':recStatus||'미정')+'">'+(recStatus||'미정')+'</span>'+
       '</div>'+
       '<div class="att-options">'+ATT_OPTIONS.map(function(opt){
         var isActive=(recStatus===opt)||(recStatus==='등원+하원'&&(opt==='등원'||opt==='하원'));
@@ -6636,42 +6639,37 @@ function setTodayAtt(who,clsKey,name,opt){
 
   var newVal;
   if(opt==='하원' && curStatus==='등원') {
-    // 등원 → 등원+하원
     newVal = {status:'등원+하원', 등원Time: attTime(cur,'등원Time')||now, 하원Time: now};
   } else if(opt==='등원' && curStatus==='등원+하원') {
-    // 등원+하원에서 등원 해제 → 하원만 남김
     newVal = {status:'하원', 하원Time: attTime(cur,'하원Time')||now};
   } else if(opt==='하원' && curStatus==='등원+하원') {
-    // 등원+하원에서 하원 해제 → 등원만 남김 (하원Time 제거)
     newVal = {status:'등원', 등원Time: attTime(cur,'등원Time')||now};
   } else if(curStatus===opt) {
-    // 같은 버튼 누르면 해제 → 전체 삭제
     newVal = null;
   } else {
-    // 새로 선택
-    var timeKey = opt+'Time';
     newVal = {status:opt};
-    newVal[timeKey] = now;
+    newVal[opt+'Time'] = now;
   }
 
-  if(newVal===null) delete window.classAttendance[clsKey][name][tk];
-  else window.classAttendance[clsKey][name][tk] = newVal;
+  // 메모리 즉시 업데이트
+  if(newVal===null) {
+    delete window.classAttendance[clsKey][name][tk];
+  } else {
+    window.classAttendance[clsKey][name][tk] = newVal;
+  }
+
+  // Firebase 저장 (비동기, 메모리와 무관하게 진행)
+  var safeKey = (clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
+  if(newVal===null) {
+    if(window.fbDel) window.fbDel('attendance/'+safeKey);
+  } else {
+    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, newVal);
+  }
 
   // 이달의 출결 캘린더를 오늘 날짜 기준으로 동기화
-  var todayNow = new Date();
-  tAttCalYear = todayNow.getFullYear();
-  tAttCalMonth = todayNow.getMonth();
+  tAttCalYear = new Date().getFullYear();
+  tAttCalMonth = new Date().getMonth();
 
-  if(window.fbSaveAttendance) {
-    var val = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk];
-    if(!val || (typeof val==='string' && !val)) {
-      // 상태가 없으면 Firebase에서 삭제
-      var delKey = (clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
-      if(window.fbDel) window.fbDel('attendance/'+delKey);
-    } else {
-      window.fbSaveAttendance(clsKey, name, tk, val);
-    }
-  }
   renderAttSub(who);
 }
 
@@ -6700,8 +6698,8 @@ function renderMonthlyAtt(who,el){
     var recs=byDate[dk]||[], statusSet=[];
     recs.forEach(function(r){if(statusSet.indexOf(r.status)<0)statusSet.push(r.status);});
     var dots=statusSet.map(function(s){
-      // 등원+하원은 등원 dot + 하원 dot 두 개로 표시
-      if(s==='등원+하원') return '<div class="t-att-dot t-att-dot-등원"></div><div class="t-att-dot t-att-dot-하원"></div>';
+      // 등원+하원은 블루 dot 하나로 표시
+      if(s==='등원+하원') return '<div class="t-att-dot t-att-dot-하원"></div>';
       return '<div class="t-att-dot t-att-dot-'+s+'"></div>';
     }).join('');
     var cls='t-att-cal-cell';
