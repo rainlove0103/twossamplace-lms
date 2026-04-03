@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>투쌤플레이스 출결</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root {
+  --cookie: #e8a96a;
+  --cookie-lt: #f5d9b0;
+  --cookie-bg: #fff8ee;
+  --brown: #5c3d1e;
+  --soft: #f5ede0;
+  --green: #62d2a2;
+  --blue: #7ec8e3;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cookie-bg); font-family: 'Noto Sans KR', sans-serif; }
+#main-screen { display: flex; flex-direction: column; height: 100vh; }
+.kiosk-header {
+  display: flex; align-items: center; justify-content: center;
+  padding: 18px 20px 14px; background: white;
+  border-bottom: 2px solid var(--cookie-lt); gap: 10px; flex-shrink: 0;
+}
+.kiosk-header-title {
+  font-family: 'Gaegu', cursive;
+  font-size: 2.2rem; font-weight: 700; color: var(--brown);
+}
+.kiosk-datetime {
+  background: #f5ede0; text-align: center;
+  padding: 10px; font-size: 1rem; color: var(--brown);
+  font-weight: 600; letter-spacing: 1px; flex-shrink: 0;
+  border-bottom: 1px solid var(--cookie-lt);
+}.kiosk-display-area {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--soft); min-height: 0;
+}
+.kiosk-display {
+  font-size: 6rem; font-weight: 900; color: var(--brown);
+  letter-spacing: 16px; text-align: center;
+  font-family: 'Noto Sans KR', sans-serif;
+}
+.kiosk-display.empty { color: #ccc; font-size: 1.6rem; letter-spacing: 1px; font-weight: 500; }
+.keypad-wrap { flex-shrink: 0; background: var(--soft); }.keypad-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border-top: 1px solid var(--cookie-lt);
+}
+.key-btn {
+  height: 82px; border: none;
+  border-right: 1px solid var(--cookie-lt); border-bottom: 1px solid var(--cookie-lt);
+  background: white; font-size: 2rem; font-weight: 700; color: var(--brown);
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: background .08s;
+}
+.key-btn:nth-child(3n) { border-right: none; }
+.key-btn:active { background: var(--soft); }
+.key-btn.del { font-size: 1.4rem; color: #aaa; background: #fafafa; }
+.key-btn.empty-cell { background: #fafafa; cursor: default; pointer-events: none; }
+.att-row { display: flex; flex-shrink: 0; }
+.att-main-btn {
+  flex: 1; height: 86px; border: none; font-size: 1.8rem; font-weight: 900;
+  cursor: pointer; font-family: 'Noto Sans KR', sans-serif; transition: filter .1s;
+}
+.att-main-btn:active { filter: brightness(.92); }
+.att-main-btn.arrive { background: #ffb347; color: white; }
+.att-main-btn.leave  { background: #ce93d8; color: white; }
+#popup-overlay {
+  display: none; position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.45); align-items: center; justify-content: center;
+}
+#popup-overlay.show { display: flex; }
+.popup-box {
+  background: white; border-radius: 28px; padding: 40px 44px;
+  text-align: center; min-width: 300px; max-width: 86vw;
+  box-shadow: 0 24px 64px rgba(92,61,30,.18);
+  animation: popIn .3s cubic-bezier(.17,.67,.43,1.4);
+  border: 2px solid var(--cookie-lt);
+}
+@keyframes popIn { 0%{transform:scale(.6);opacity:0} 100%{transform:scale(1);opacity:1} }
+.popup-icon { font-size: 4.5rem; margin-bottom: 14px; }
+.popup-title { font-size: 1.6rem; font-weight: 900; color: var(--brown); margin-bottom: 10px; }
+.popup-msg { font-size: 1.05rem; color: #888; line-height: 1.7; white-space: pre-line; }
+.popup-time { font-size: 1.3rem; font-weight: 700; margin-top: 14px; }
+.popup-time.arrive { color: #2e7d32; }
+.popup-time.leave  { color: var(--cookie); }
+.popup-time.late   { color: #e65100; }
+.popup-box.error .popup-title { color: #b71c1c; }
+</style>
+</head>
+<body>
+<div id="main-screen">
+  <div class="kiosk-header">
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+      <span style="font-size:2.2rem">📋</span>
+      <span class="kiosk-header-title">투쌤플레이스 출결</span>
+    </div>
+  </div>
+  <div class="kiosk-datetime" id="datetime-bar"></div>
+  <div class="kiosk-display-area">
+    <div class="kiosk-display empty" id="kiosk-display">번호를 눌러주세요 😊</div>
+  </div>
+  <div class="keypad-wrap">
+    <div class="keypad-grid" id="keypad-grid"></div>
+  </div>
+  <div class="att-row">
+    <button class="att-main-btn arrive" onclick="submitAtt('등원')">등원</button>
+    <button class="att-main-btn leave"  onclick="submitAtt('하원')">하원</button>
+  </div>
+</div>
+<div id="popup-overlay">
+  <div class="popup-box" id="popup-box">
+    <div class="popup-icon" id="popup-icon"></div>
+    <div class="popup-title" id="popup-title"></div>
+    <div class="popup-msg" id="popup-msg"></div>
+    <div class="popup-time" id="popup-time"></div>
+  </div>
+</div>
+<script>
+var inputCode = '';
+var memberRoster = { cookie: [], butter: [] };
+var classStudents = {};
+
+function updateDatetime() {
+  var now = new Date();
+  var pad = function(n){ return String(n).padStart(2,'0'); };
+  document.getElementById('datetime-bar').textContent =
+    now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+}
+updateDatetime(); setInterval(updateDatetime, 1000);
+
+function updateDisplay() {
+  var el = document.getElementById('kiosk-display');
+  if(!inputCode){ el.className='kiosk-display empty'; el.textContent='번호를 눌러주세요 😊'; }
+  else { el.className='kiosk-display'; el.textContent=inputCode; }
+}
+
+function buildKeypad() {
+  var keys = ['1','2','3','4','5','6','7','8','9','__','0','DEL'];
+  document.getElementById('keypad-grid').innerHTML = keys.map(function(k){
+    if(k==='__') return '<div class="key-btn empty-cell"></div>';
+    if(k==='DEL') return '<button class="key-btn del" onclick="keyDel()">⌫</button>';
+    return '<button class="key-btn" onclick="keyNum(\''+k+'\')">' + k + '</button>';
+  }).join('');
+}
+buildKeypad();
+
+function keyNum(n) { if(inputCode.length>=5) return; inputCode+=n; updateDisplay(); }
+function keyDel() { inputCode=inputCode.slice(0,-1); updateDisplay(); }
+
+var popupTimer = null;
+function showPopup(icon, title, msg, time, timeClass, isError) {
+  document.getElementById('popup-box').className = 'popup-box'+(isError?' error':'');
+  document.getElementById('popup-icon').textContent = icon;
+  document.getElementById('popup-title').textContent = title;
+  document.getElementById('popup-msg').textContent = msg;
+  var tel = document.getElementById('popup-time');
+  tel.textContent = time ? '⏱ '+time : '';
+  tel.className = 'popup-time '+(timeClass||'');
+  document.getElementById('popup-overlay').classList.add('show');
+  if(popupTimer) clearTimeout(popupTimer);
+  popupTimer = setTimeout(function(){ document.getElementById('popup-overlay').classList.remove('show'); inputCode=''; updateDisplay(); }, isError?2200:3200);
+}
+
+function initKiosk() {
+  if(typeof firebase==='undefined'){ setTimeout(initKiosk,100); return; }
+  firebase.initializeApp({
+    apiKey:"AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+    authDomain:"twossamplace-lms.firebaseapp.com",
+    projectId:"twossamplace-lms",
+    storageBucket:"twossamplace-lms.firebasestorage.app",
+    messagingSenderId:"115444457876",
+    appId:"1:115444457876:web:3cc4e437d2aae757edef81"
+  });
+  window._db = firebase.firestore();
+  loadData();
+}
+async function loadData() {
+  try {
+    var s1 = await window._db.collection('memberRoster').get();
+    s1.forEach(function(doc){ try{ memberRoster[doc.id]=JSON.parse(doc.data().roster||'[]'); }catch(e){} });
+    var s2 = await window._db.collection('classStudents').get();
+    s2.forEach(function(doc){ try{ classStudents[doc.id]=JSON.parse(doc.data().students||'[]'); }catch(e){} });
+  } catch(e){ console.error(e); }
+}
+initKiosk();
+
+function findStudent(code) {
+  var found=null;
+  ['cookie','butter'].forEach(function(who){
+    (memberRoster[who]||[]).forEach(function(s){
+      if(s.status==='active' && String(s.attCode||s.attNo||'')===code) found=Object.assign({},s,{who:who});
+    });
+  });
+  return found;
+}
+
+function fmtDate(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function nowTime(){ var n=new Date(); return String(n.getHours()).padStart(2,'0')+':'+String(n.getMinutes()).padStart(2,'0'); }
+
+async function submitAtt(type) {
+  if(!inputCode){ showPopup('⚠️','번호를 입력해주세요','출결번호를 먼저 입력해주세요','','',true); return; }
+  var s = findStudent(inputCode);
+  if(!s){ showPopup('❓','번호를 찾을 수 없어요','"'+inputCode+'" 번호의 학생이 없어요\n번호를 다시 확인해주세요','','',true); return; }
+
+  var now=new Date(), dk=fmtDate(now), ts=nowTime();
+  var clsKey=null;
+  Object.keys(classStudents).forEach(function(k){ if((classStudents[k]||[]).indexOf(s.name)>-1) clsKey=k; });
+  if(!clsKey) clsKey=s.class+'-'+s.day;
+  var safeKey=(clsKey+'_'+s.name+'_'+dk).replace(/[\/-]/g,'_');
+  var data={clsKey:clsKey,name:s.name,dateKey:dk,status:type};
+  data[type+'Time']=ts;
+
+  try {
+    if(window._db){
+      var ex=await window._db.collection('attendance').doc(safeKey).get();
+      if(ex.exists){
+        var prev=ex.data(), ps=prev.status||'';
+        if(type==='하원'&&ps==='등원'){ data.status='등원+하원'; data['등원Time']=prev['등원Time']||''; data['하원Time']=ts; }
+        else if(type==='등원'&&ps==='하원'){ data.status='등원+하원'; data['등원Time']=ts; data['하원Time']=prev['하원Time']||''; }
+      }
+      await window._db.collection('attendance').doc(safeKey).set(data);
+    }
+  } catch(e){ console.error(e); }
+
+  var icons={'등원':'🌅','하원':'🌙','지각':'⏰','등원+하원':'✅'};
+  var msgs={
+    '등원':s.name+' 학생\n등원 완료되었습니다 😊',
+    '하원':s.name+' 학생\n하원 완료되었습니다 👋',
+    '지각':s.name+' 학생\n지각 처리되었습니다',
+    '등원+하원':s.name+' 학생\n등하원 완료되었습니다 ✅'
+  };
+  var ft=data.status;
+  var tc=type==='등원'?'arrive':type==='하원'?'leave':'late';
+  showPopup(icons[ft]||'✅', ft+' 완료', msgs[ft]||s.name+' '+ft, ts, tc, false);
+}
+</script>
+</body>
+</html>

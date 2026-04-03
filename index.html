@@ -16,6 +16,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 @keyframes popIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:none}}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+@keyframes loadingBar{0%{width:20%;margin-left:0}50%{width:40%;margin-left:30%}100%{width:20%;margin-left:70%}}
 @keyframes float{0%{transform:translateY(0) rotate(0deg)}100%{transform:translateY(-110vh) rotate(360deg)}}
 .bg-deco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
 .bg-dot{position:absolute;border-radius:50%;opacity:.18;animation:float linear infinite;}
@@ -481,33 +482,49 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 </div>
 <!-- MODAL: 전체화면 강의 플레이어 -->
 <div id="modal-lec-player" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.96);z-index:9999;flex-direction:column">
-  <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(0,0,0,.8);flex-shrink:0">
+  <!-- 헤더 -->
+  <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:rgba(0,0,0,.85);flex-shrink:0;border-bottom:1px solid rgba(255,255,255,.1)">
     <div>
       <div id="lec-player-title" style="font-size:.95rem;font-weight:700;color:white;font-family:'Noto Sans KR',sans-serif"></div>
       <div id="lec-player-sub" style="font-size:.72rem;color:rgba(255,255,255,.6);margin-top:2px;font-family:'Noto Sans KR',sans-serif"></div>
     </div>
     <button onclick="closeLecPlayer()" style="background:rgba(255,255,255,.15);border:none;border-radius:8px;color:white;padding:6px 14px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">✕ 닫기</button>
   </div>
-  <div id="lec-player-video-area" style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:black">
-    <video id="lec-video-el" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain" playsinline></video>
-    <div id="lec-player-overlay" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,.7);align-items:center;justify-content:center;flex-direction:column;gap:12px">
-      <div style="font-size:1.2rem;font-weight:700;color:white;font-family:'Noto Sans KR',sans-serif">🎉 강의를 완료했어요!</div>
-      <div style="font-size:.85rem;color:rgba(255,255,255,.8);font-family:'Noto Sans KR',sans-serif">아래로 스크롤해서 문제를 풀어보세요</div>
+
+  <!-- 메인 영역: 영상 + 문제 좌우 분할 -->
+  <div id="lec-player-main" style="flex:1;display:flex;overflow:hidden">
+
+    <!-- 좌측: 영상 영역 -->
+    <div id="lec-player-left" style="flex:1;display:flex;flex-direction:column;background:black;min-width:0">
+      <div id="lec-player-video-area" style="flex:1;display:flex;align-items:center;justify-content:center;position:relative;background:black;overflow:hidden">
+        <video id="lec-video-el" style="max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain" playsinline></video>
+      </div>
+      <!-- 컨트롤바 -->
+      <div style="padding:10px 16px;background:rgba(0,0,0,.9);display:flex;align-items:center;gap:10px;flex-shrink:0">
+        <span style="font-size:.7rem;color:rgba(255,255,255,.6);font-family:'Noto Sans KR',sans-serif">배속</span>
+        <div style="display:flex;gap:4px" id="lec-speed-btns"></div>
+        <div style="flex:1"></div>
+        <button onclick="reqFullscreen()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;color:white;padding:4px 10px;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">⛶ 전체화면</button>
+      </div>
     </div>
-  </div>
-  <div style="padding:10px 18px;background:rgba(0,0,0,.8);display:flex;align-items:center;gap:10px;flex-shrink:0">
-    <span style="font-size:.72rem;color:rgba(255,255,255,.6);font-family:'Noto Sans KR',sans-serif">배속</span>
-    <div style="display:flex;gap:4px" id="lec-speed-btns"></div>
-    <div style="flex:1"></div>
-    <button onclick="document.getElementById('lec-video-el').requestFullscreen()" style="background:rgba(255,255,255,.15);border:none;border-radius:6px;color:white;padding:5px 12px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">⛶ 전체화면</button>
-  </div>
-  <div id="lec-player-quiz-area" style="background:white;overflow-y:auto;max-height:50vh;display:none;padding:16px 18px">
-    <div style="font-size:.9rem;font-weight:700;color:var(--brown);margin-bottom:12px;font-family:'Noto Sans KR',sans-serif">📝 퀴즈를 풀어보세요!</div>
-    <div id="lec-player-quiz-list"></div>
-    <div id="lec-player-complete" style="display:none;text-align:center;padding:16px 0">
-      <div style="font-size:1.3rem;margin-bottom:6px">🎉</div>
-      <div style="font-size:.9rem;font-weight:700;color:#2e7d32;font-family:'Noto Sans KR',sans-serif">모든 문제 완료! 강의를 마쳤어요.</div>
+
+    <!-- 우측: 퀴즈 영역 (강의 끝나기 전에는 숨김) -->
+    <div id="lec-player-right" style="display:none;width:50%;min-width:320px;background:white;overflow-y:auto;border-left:2px solid rgba(255,255,255,.1);flex-direction:column">
+      <div style="padding:16px 18px 0;flex-shrink:0">
+        <div style="font-size:.95rem;font-weight:700;color:var(--brown);margin-bottom:4px;font-family:'Noto Sans KR',sans-serif">📝 퀴즈</div>
+        <div style="font-size:.72rem;color:var(--text-soft);margin-bottom:14px;font-family:'Noto Sans KR',sans-serif">영상을 다시 보고 싶으면 왼쪽에서 재생할 수 있어요</div>
+      </div>
+      <div style="padding:0 18px 18px;flex:1">
+        <div id="lec-player-quiz-list"></div>
+        <div id="lec-player-complete" style="display:none;text-align:center;padding:24px 0">
+          <div style="font-size:1.5rem;margin-bottom:8px">🎉</div>
+          <div style="font-size:.95rem;font-weight:700;color:#2e7d32;font-family:'Noto Sans KR',sans-serif">모든 문제 완료!</div>
+          <div style="font-size:.78rem;color:var(--text-soft);margin-top:4px;font-family:'Noto Sans KR',sans-serif">강의를 마쳤어요</div>
+        </div>
+      </div>
     </div>
+    <!-- 퀴즈 없을 때 완료 메시지 (중앙) -->
+    <div id="lec-player-quiz-area" style="display:none"></div>
   </div>
 </div>
 <!-- MODAL: 이번 달 독서 -->
@@ -553,6 +570,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
   <div class="modal-box" style="max-width:520px">
     <div class="modal-header"><div class="modal-title" id="makeup-cal-title">📅 보강 일정 설정</div><button class="modal-close" onclick="closeModal('modal-makeup-cal')">✕</button></div>
     <div class="modal-body" id="makeup-cal-body"></div>
+  </div>
+</div>
+
+<!-- 로딩 오버레이 -->
+<div id="loading-overlay" style="position:fixed;inset:0;background:#fffbf5;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <span style="font-size:2.5rem;animation:bounce 1.2s ease-in-out infinite alternate">🍪🧈</span>
+  <div style="font-size:1rem;font-weight:700;color:var(--brown);font-family:'Noto Sans KR',sans-serif">투쌤플레이스</div>
+  <div style="font-size:.8rem;color:var(--text-soft);font-family:'Noto Sans KR',sans-serif">데이터를 불러오는 중...</div>
+  <div style="width:120px;height:4px;background:#f0e8dc;border-radius:100px;overflow:hidden;margin-top:4px">
+    <div style="height:100%;width:60%;background:var(--cookie);border-radius:100px;animation:loadingBar 1.2s ease-in-out infinite alternate"></div>
   </div>
 </div>
 
@@ -621,7 +648,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
     <div class="s-header-user">
       <button class="btn-back" id="s-back-btn" onclick="backToTeacher()">← 선생님 페이지로</button>
       <div class="s-avatar-chip"><div class="s-avatar-circle" id="s-av-letter">조</div><span class="s-avatar-name" id="s-av-name">조진혁</span></div>
-      <button onclick="openModal('modal-guide')" style="background:#fff3e0;border:2px solid #ffb347;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#e65100;cursor:pointer;flex-shrink:0;white-space:nowrap;font-family:inherit">투쌤 사용설명서</button>
+      <button onclick="openModal('modal-guide')" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;flex-shrink:0;white-space:nowrap;font-family:inherit">투쌤 사용설명서</button>
       <button class="btn-out" onclick="showPage('landing')">로그아웃</button>
     </div>
   </header>
@@ -835,7 +862,7 @@ function showPage(id){
   document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
   document.getElementById(id).classList.add('active');
   window.scrollTo(0,0);
-  if(id==='landing') sessionStorage.clear();
+  if(id==='landing') { sessionStorage.clear(); }
 }
 /* ====== 사용 설명서 ====== */
 var guideItems = [
@@ -943,54 +970,42 @@ function renderStuLectureModal() {
   if(!body) return;
   var name = currentStudent;
 
-  if(stuLecGroup) {
-    var grp = lectureGroups.find(function(g){return g.id===stuLecGroup;});
-    // 배정된 강의만 표시
-    var accessibleLecs = lectures.filter(function(l){return l.group===stuLecGroup && canStudentAccessLec(name,l.id);});
+  // 배정된 모든 강의를 그룹별로 묶어서 바로 표시 (그룹 클릭 단계 제거)
+  var visibleGroups = lectureGroups.filter(function(grp){
+    return lectures.some(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);});
+  });
 
-    body.innerHTML =
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
-      '<button onclick="stuLecGroup=null;renderStuLectureModal()" style="background:#f5ede0;border:none;border-radius:8px;padding:5px 11px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 목록</button>' +
-      '<span style="font-size:.95rem;font-weight:700;color:var(--brown)">'+grp.emoji+' '+grp.title+'</span></div>' +
-      '<div style="display:flex;flex-direction:column;gap:8px">';
-
-    if(accessibleLecs.length === 0) {
-      body.innerHTML += '<div style="text-align:center;padding:30px 20px;font-size:.82rem;color:var(--text-soft)">배정된 강의가 없어요.</div>';
-    } else {
-      accessibleLecs.forEach(function(lec){
-        body.innerHTML += '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fafafa;border-radius:12px;border:1.5px solid '+lec.color+'33;cursor:pointer" onclick="stuOpenLec('+lec.id+')">' +
-          '<div style="width:36px;height:36px;border-radius:10px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">'+lec.emoji+'</div>' +
-          '<div style="flex:1"><div style="font-size:.88rem;font-weight:700;color:var(--brown)">'+lec.title+'</div>' +
-          '<div style="font-size:.7rem;color:var(--text-soft);margin-top:2px">강의 '+lec.videos.length+'개</div></div>' +
-          '<span style="font-size:.72rem;color:'+lec.color+'">▶ 보기</span>' +
-          '</div>';
-      });
-    }
-    body.innerHTML += '</div>';
-
-  } else {
-    // 배정된 강의가 하나라도 있는 그룹만 표시
-    var visibleGroups = lectureGroups.filter(function(grp){
-      return lectures.some(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);});
-    });
-
-    if(visibleGroups.length === 0) {
-      body.innerHTML = '<div class="t-placeholder"><span class="ph-ico">🎬</span><div class="ph-desc">선생님이 아직 강의를 배정하지 않았어요.</div></div>';
-      return;
-    }
-
-    body.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px">' +
-      visibleGroups.map(function(grp){
-        var accessCnt = lectures.filter(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);}).length;
-        return '<div style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fafafa;border-radius:12px;border:1.5px solid '+grp.color+'33;cursor:pointer" onclick="stuLecGroup=\''+grp.id+'\';renderStuLectureModal()">' +
-          '<div style="width:40px;height:40px;border-radius:12px;background:'+grp.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.5rem;flex-shrink:0">'+grp.emoji+'</div>' +
-          '<div style="flex:1"><div style="font-size:.9rem;font-weight:700;color:var(--brown)">'+grp.title+'</div>' +
-          '<div style="font-size:.7rem;color:var(--text-soft);margin-top:2px">수강 가능 '+accessCnt+'강</div></div>' +
-          '<span style="font-size:.72rem;color:'+grp.color+'">▶</span>' +
-          '</div>';
-      }).join('') +
-      '</div>';
+  if(visibleGroups.length === 0) {
+    body.innerHTML = '<div class="t-placeholder"><span class="ph-ico">🎬</span><div class="ph-desc">선생님이 아직 강의를 배정하지 않았어요.</div></div>';
+    return;
   }
+
+  var html = '<div style="display:flex;flex-direction:column;gap:16px">';
+  visibleGroups.forEach(function(grp){
+    var accessibleLecs = lectures.filter(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);});
+    if(accessibleLecs.length===0) return;
+
+    html += '<div>';
+    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0e8dc">';
+    html += '<div style="width:28px;height:28px;border-radius:8px;background:'+grp.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1rem">'+grp.emoji+'</div>';
+    html += '<span style="font-size:.9rem;font-weight:700;color:var(--brown)">'+grp.title+'</span>';
+    html += '<span style="font-size:.68rem;color:var(--text-soft);margin-left:auto">'+accessibleLecs.length+'개</span>';
+    html += '</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    accessibleLecs.forEach(function(lec){
+      var isDone = lecCompleted[name]&&lecCompleted[name][lec.id];
+      var doneCount = isDone ? Object.keys(lecCompleted[name][lec.id]).length : 0;
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fafafa;border-radius:10px;border:1.5px solid '+lec.color+'22;cursor:pointer" onclick="stuOpenLec('+lec.id+')">';
+      html += '<div style="width:32px;height:32px;border-radius:8px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">'+lec.emoji+'</div>';
+      html += '<div style="flex:1"><div style="font-size:.85rem;font-weight:700;color:var(--brown)">'+lec.title+'</div>';
+      html += '<div style="font-size:.68rem;color:var(--text-soft);margin-top:1px">강의 '+lec.videos.length+'개'+(doneCount>0?' · ✅ '+doneCount+'개 완료':'')+'</div></div>';
+      html += '<span style="font-size:.72rem;color:'+lec.color+'">▶</span>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  html += '</div>';
+  body.innerHTML = html;
 }
 
 function stuOpenLec(id) {
@@ -1078,7 +1093,17 @@ function renderStuLecDetail(lec) {
       (isDone?'<div style="font-size:.7rem;color:#2e7d32;margin-top:3px;font-weight:700">✅ 완료</div>':'')+
       '</div>'+
       '<button onclick="openLecPlayer('+lec.id+','+vi+')" style="background:'+lec.colorBg+';border:none;border-radius:8px;padding:6px 14px;font-size:.75rem;font-weight:700;color:'+lec.color+';cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">'+(isDone?'↩ 다시보기':'▶ 재생')+'</button>'+
-      '</div>'+quizHtml+'</div>';
+      '</div>'+
+      (v.pdfs && v.pdfs.length > 0 ?
+        '<div style="margin-top:10px;padding:10px 12px;background:#fffde7;border-radius:10px;border:1px solid #fff176">'+
+        '<div style="font-size:.72rem;font-weight:700;color:#e65100;margin-bottom:6px">📎 강의 자료</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px">'+
+        v.pdfs.map(function(pdf){
+          return '<a href="'+pdf.url+'" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px;background:white;border:1.5px solid #ffcc80;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:700;color:#e65100;text-decoration:none">'+
+            '📄 '+pdf.name+'</a>';
+        }).join('')+
+        '</div></div>' : '')+
+      quizHtml+'</div>';
   }).join('');
 }
 
@@ -1099,6 +1124,12 @@ function openLecPlayer(lecId, videoIdx) {
   var name = currentStudent;
 
   lecPlayerState = {lecId:lecId, videoIdx:videoIdx, quizzes:v.quizzes||[], name:name, lec:lec, v:v};
+  lecVideoEndedCalled = false;
+
+  // 이미 완료한 강의면 스크럽바 자유롭게
+  var alreadyDone = name !== '__teacher_preview__' &&
+    lecCompleted[name] && lecCompleted[name][lecId] && lecCompleted[name][lecId][vi];
+  ytMaxTime = alreadyDone ? 99999 : 0;
 
   // 제목 설정
   document.getElementById('lec-player-title').textContent = lec.emoji+' '+lec.title;
@@ -1144,8 +1175,18 @@ function openLecPlayer(lecId, videoIdx) {
   }).join('');
 
   // 퀴즈 영역 숨김
-  document.getElementById('lec-player-quiz-area').style.display='none';
+  document.getElementById('lec-player-right').style.display='none';
   document.getElementById('lec-player-complete').style.display='none';
+
+  // 이미 완료한 강의면 바로 퀴즈 패널 오픈
+  if(alreadyDone) {
+    if(v.quizzes && v.quizzes.length > 0) {
+      showQuizPanel(name, lecId, videoIdx, v.quizzes||[]);
+    } else {
+      showCompleteOnly();
+    }
+    lecVideoEndedCalled = true;
+  }
 
   // 모달 열기
   var modal = document.getElementById('modal-lec-player');
@@ -1163,6 +1204,9 @@ function extractYtId(url) {
 }
 
 var ytPlayer = null;
+var ytMaxTime = 0; // 최대 재생 시간 추적
+var ytSeekGuard = false; // seek 감지 플래그
+
 function loadYTPlayer(iframe, ytId) {
   if(window.YT && window.YT.Player) {
     createYTPlayer(iframe.id, ytId);
@@ -1179,13 +1223,53 @@ function loadYTPlayer(iframe, ytId) {
 
 function createYTPlayer(iframeId, ytId) {
   if(ytPlayer) { try{ytPlayer.destroy();}catch(e){} }
+  ytMaxTime = 0;
+  ytSeekGuard = false;
   ytPlayer = new YT.Player(iframeId, {
     events: {
       onStateChange: function(e) {
-        if(e.data === YT.PlayerState.ENDED) onLecVideoEnded();
+        if(e.data === YT.PlayerState.ENDED) {
+          onLecVideoEnded();
+        }
+        if(e.data === YT.PlayerState.PLAYING) {
+          // 앞으로 감기 감지 루프 시작
+          startSeekGuard();
+        }
       }
     }
   });
+}
+
+var seekGuardInterval = null;
+function startSeekGuard() {
+  if(seekGuardInterval) clearInterval(seekGuardInterval);
+  seekGuardInterval = setInterval(function(){
+    if(!ytPlayer || !ytPlayer.getCurrentTime) return;
+    try {
+      var cur = ytPlayer.getCurrentTime();
+      var dur = ytPlayer.getDuration();
+      // 선생님 미리보기는 제한 없음
+      if(lecPlayerState.name === '__teacher_preview__') {
+        ytMaxTime = cur;
+        return;
+      }
+      if(cur > ytMaxTime + 2) {
+        // 앞으로 2초 이상 건너뜀 → 되돌리기
+        ytPlayer.seekTo(ytMaxTime, true);
+      } else {
+        ytMaxTime = Math.max(ytMaxTime, cur);
+      }
+      // 영상 끝에 도달 (마지막 3초 이내)
+      if(dur > 0 && ytMaxTime >= dur - 3) {
+        clearInterval(seekGuardInterval);
+        onLecVideoEnded();
+      }
+    } catch(e){}
+  }, 1000);
+}
+
+function stopSeekGuard() {
+  if(seekGuardInterval) { clearInterval(seekGuardInterval); seekGuardInterval=null; }
 }
 
 function setLecSpeed(s) {
@@ -1198,25 +1282,49 @@ function setLecSpeed(s) {
   if(vid) vid.playbackRate = s;
 }
 
+var lecVideoEndedCalled = false;
 function onLecVideoEnded() {
+  if(lecVideoEndedCalled) return;
+  lecVideoEndedCalled = true;
+  stopSeekGuard();
+  // 이제 자유롭게 스크럽 가능하도록 seekGuard 완전 해제
+  ytMaxTime = 99999;
+
   var qs = lecPlayerState.quizzes;
   var name = lecPlayerState.name;
   var lecId = lecPlayerState.lecId;
   var vi = lecPlayerState.videoIdx;
 
-  if(!qs || qs.length===0) {
-    // 문제 없으면 바로 완료
-    markLecComplete(name, lecId, vi);
-    document.getElementById('lec-player-complete').style.display='block';
-    document.getElementById('lec-player-quiz-area').style.display='block';
+  // 선생님 미리보기
+  if(name === '__teacher_preview__') {
+    if(qs && qs.length > 0) showQuizPanel(name, lecId, vi, qs);
+    else showCompleteOnly();
     return;
   }
 
-  // 문제 영역 표시
+  if(!qs || qs.length===0) {
+    markLecComplete(name, lecId, vi);
+    showCompleteOnly();
+    return;
+  }
+
+  showQuizPanel(name, lecId, vi, qs);
+}
+
+function showCompleteOnly() {
+  document.getElementById('lec-player-complete').style.display='block';
+  var right = document.getElementById('lec-player-right');
+  right.style.display='flex';
+  // 영상 영역 50%로 축소
+  document.getElementById('lec-player-left').style.flex='1';
+}
+
+function showQuizPanel(name, lecId, vi, qs) {
   renderLecPlayerQuiz(name, lecId, vi, qs);
-  document.getElementById('lec-player-quiz-area').style.display='block';
-  // 스크롤
-  setTimeout(function(){ document.getElementById('lec-player-quiz-area').scrollIntoView({behavior:'smooth'}); }, 300);
+  var right = document.getElementById('lec-player-right');
+  right.style.display='flex';
+  // 영상 영역 50%로 축소 (flex로 1:1)
+  document.getElementById('lec-player-left').style.flex='1';
 }
 
 function renderLecPlayerQuiz(name, lecId, vi, qs) {
@@ -1292,7 +1400,7 @@ function renderLecPlayerQuiz(name, lecId, vi, qs) {
   }).join('');
 
   if(allDone) {
-    markLecComplete(name, lecId, vi);
+    if(name !== '__teacher_preview__') markLecComplete(name, lecId, vi);
     document.getElementById('lec-player-complete').style.display='block';
   }
 }
@@ -1407,13 +1515,23 @@ function markLecComplete(name, lecId, vi) {
   if(window.fbSaveLecComplete) window.fbSaveLecComplete(name, lecId, vi);
 }
 
+function reqFullscreen() {
+  var el = document.getElementById('lec-player-left');
+  if(el && el.requestFullscreen) el.requestFullscreen();
+}
+
 function closeLecPlayer() {
   var modal = document.getElementById('modal-lec-player');
   modal.style.display='none';
+  stopSeekGuard();
+  ytMaxTime = 0;
+  // 우측 퀴즈 패널 숨기기
+  var right = document.getElementById('lec-player-right');
+  if(right) right.style.display='none';
+  document.getElementById('lec-player-complete').style.display='none';
   if(ytPlayer) { try{ytPlayer.stopVideo();}catch(e){} }
   var vid = document.getElementById('lec-video-el');
   if(vid) { vid.pause(); vid.src=''; }
-  // 강의 목록 새로고침
   var lec = lecPlayerState.lec;
   if(lec) renderStuLecDetail(lec);
 }
@@ -1810,11 +1928,13 @@ function selectMenu(who,key){
     document.querySelectorAll('[id^="tmenu-'+who+'-"]').forEach(function(e){e.classList.remove('active');});
     activeMenu=null;
     el.innerHTML='';
+    sessionStorage.removeItem('activeMenu');
     return;
   }
   document.querySelectorAll('[id^="tmenu-'+who+'-"]').forEach(function(e){e.classList.remove('active');});
   document.getElementById('tmenu-'+who+'-'+key).classList.add('active');
   activeMenu=key;
+  sessionStorage.setItem('activeMenu', key);
   if(key==='today')    renderTodayClass(who,el);
   else if(key==='hw')       renderHwMgmt(who,el);
   else if(key==='lecture')  renderLectureMgmt(who,el);
@@ -2857,6 +2977,7 @@ function renderLectureDetail(lec, who, el) {
       lec.videos.map(function(v, i) {
         var qCount = v.quizzes ? v.quizzes.length : 0;
         var aCount = v.assigned ? v.assigned.length : 0;
+        var pCount = v.pdfs ? v.pdfs.length : 0;
         return '<div class="class-mgmt-card" style="border-color:'+lec.color+'33">' +
           '<div style="display:flex;align-items:center;gap:12px">' +
           '<div style="width:40px;height:40px;border-radius:10px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🎬</div>' +
@@ -2866,6 +2987,7 @@ function renderLectureDetail(lec, who, el) {
           '<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap">' +
           '<span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;background:'+lec.colorBg+';color:'+lec.color+'">문제 '+qCount+'개</span>' +
           '<span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;background:#e8f5e9;color:#2e7d32">부여 '+aCount+'명</span>' +
+          (pCount>0?'<span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;background:#fff8e1;color:#e65100">📎 자료 '+pCount+'개</span>':'')+
           '</div></div>' +
           '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">' +
           '<button onclick="openLecPlayerTeacher('+lec.id+','+i+')" style="background:'+lec.colorBg+';border:none;border-radius:8px;padding:5px 10px;font-size:.72rem;font-weight:700;color:'+lec.color+';cursor:pointer;font-family:inherit;text-align:center">▶ 재생</button>' +
@@ -2874,18 +2996,24 @@ function renderLectureDetail(lec, who, el) {
       }).join('') + '</div>';
   }
 
-  // 강의 추가 폼
+  // ─── 박스 1: 강의 정보 입력 ───
   html += '<div class="register-form-box" style="margin-top:4px">' +
-    '<div class="register-form-title" style="font-size:1rem">+ 강의 추가</div>' +
+    '<div class="register-form-title" style="font-size:1rem">① 강의 정보</div>' +
     '<div class="register-row">' +
     '<div><div class="form-label">강의 제목 *</div><input class="register-input" id="lec-title-'+lec.id+'" placeholder="예: 1강. be동사란?"></div>' +
     '<div><div class="form-label">유튜브 링크 *</div><input class="register-input" id="lec-url-'+lec.id+'" placeholder="https://youtu.be/..."></div>' +
     '</div>' +
     '<div><div class="form-label">설명 (선택)</div><input class="register-input" id="lec-desc-'+lec.id+'" placeholder="강의 간단 설명"></div>' +
+    '<div>' +
+    '<div class="form-label">📎 자료 파일 링크 <span style="font-size:.68rem;color:var(--text-soft)">(선택 · Google Drive 링크, 여러 개 가능)</span></div>' +
+    '<div id="lec-pdf-links-'+lec.id+'" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>' +
+    '<button onclick="addPdfLinkRow('+lec.id+')" style="background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:8px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#666;cursor:pointer;font-family:inherit">+ 링크 추가</button>' +
+    '</div>' +
+    '</div>';
 
-    // 문제 추가 섹션
-    '<div style="margin-top:28px">' +
-    '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:10px">📝 문제 추가 (선택)</div>' +
+  // ─── 박스 2: 문제 추가 ───
+  html += '<div class="register-form-box" style="margin-top:12px">' +
+    '<div class="register-form-title" style="font-size:1rem">② 문제 추가 <span style="font-size:.72rem;color:var(--text-soft);font-weight:400">(선택)</span></div>' +
     '<div style="display:flex;gap:8px;margin-bottom:10px">' +
     '<button id="new-quiz-type-mc-'+lec.id+'" onclick="setNewLecQuizType(\'mc\','+lec.id+')" style="flex:1;padding:7px;border-radius:10px;border:2px solid #42a5f5;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;background:#e3f4fb;color:#1565c0">객관식</button>' +
     '<button id="new-quiz-type-sa-'+lec.id+'" onclick="setNewLecQuizType(\'sa\','+lec.id+')" style="flex:1;padding:7px;border-radius:10px;border:2px solid #e0d0c0;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;background:#fafafa;color:#aaa">주관식</button>' +
@@ -2894,14 +3022,10 @@ function renderLectureDetail(lec, who, el) {
     '<div><div class="form-label">문제</div><input class="register-input" id="new-quiz-q-'+lec.id+'" placeholder="문제를 입력해요" style="margin-bottom:8px"></div>' +
     '<div id="new-quiz-options-area-'+lec.id+'">'+renderNewLecMcOptions(lec.id)+'</div>' +
     '<div id="new-lec-quiz-list-'+lec.id+'" style="margin-top:8px"></div>' +
-    '<button onclick="addNewLecQuiz('+lec.id+')" style="background:var(--cookie-bg);border:1.5px solid var(--cookie-lt);border-radius:8px;padding:5px 14px;font-size:.75rem;font-weight:700;color:var(--cookie);cursor:pointer;font-family:inherit;margin-top:4px">+ 문제 추가</button>' +
-    '</div>' +
+    '<button onclick="addNewLecQuiz('+lec.id+')" style="background:var(--cookie-bg);border:1.5px solid var(--cookie-lt);border-radius:8px;padding:6px 16px;font-size:.75rem;font-weight:700;color:var(--cookie);cursor:pointer;font-family:inherit;margin-top:8px">+ 문제 추가</button>' +
+    '</div>';
 
-    '<div class="register-form-actions" style="margin-top:12px">' +
-    '<button class="btn-reg-submit" style="font-size:.8rem;padding:6px 14px" onclick="addLectureVideo('+lec.id+',\''+who+'\')">+ 강의 추가</button>' +
-    '</div></div>';
-
-  // 수강 학생 지정 섹션
+  // ─── 박스 3: 수강 학생 지정 + 강의 추가 버튼 ───
   html += renderLecStudentAssign(lec, who);
 
   el.innerHTML = html;
@@ -2911,9 +3035,9 @@ function renderLecStudentAssign(lec, who) {
   var grpSel = getGrpStudents(lec.group);
   var lecSel = getLecStudents(lec.id);
 
-  var html = '<div class="register-form-box" style="margin-top:14px">' +
-    '<div class="register-form-title" style="font-size:.95rem;margin-bottom:4px">👤 수강 학생 지정</div>' +
-    '<div style="font-size:.72rem;color:var(--text-soft);margin-bottom:14px">클래스 전체 또는 학생 개별로 지정할 수 있어요.</div>';
+  var html = '<div class="register-form-box" style="margin-top:12px">' +
+    '<div class="register-form-title" style="font-size:.95rem;margin-bottom:4px">③ 수강 학생 지정 + 강의 추가</div>' +
+    '<div style="font-size:.72rem;color:var(--text-soft);margin-bottom:14px">학생을 지정한 후 아래 버튼을 눌러 강의를 추가해요.</div>';
 
   var sel = lecSel;
 
@@ -2949,6 +3073,11 @@ function renderLecStudentAssign(lec, who) {
   });
 
   html += '</div>';
+
+  // 강의 추가 버튼 (박스 3 하단)
+  html += '<div class="register-form-actions" style="margin-top:4px">' +
+    '<button class="btn-reg-submit" style="font-size:.85rem;padding:8px 20px" onclick="addLectureVideo('+lec.id+',\''+who+'\')">✅ 강의 추가 완료</button>' +
+    '</div>';
 
   html += '</div>';
   return html;
@@ -3420,8 +3549,11 @@ function addNewLecQuiz(lecId) {
       '</div>';
     }).join('');
   }
-  // 입력 초기화
+  // 입력 초기화 (문제 + 보기 + 정답 전체 리셋)
   document.getElementById('new-quiz-q-'+lecId).value='';
+  var area = document.getElementById('new-quiz-options-area-'+lecId);
+  var currentType = newLecQuizType[lecId]||'mc';
+  if(area) area.innerHTML = currentType==='mc' ? renderNewLecMcOptions(lecId) : currentType==='arrange' ? renderNewLecArrangeInput(lecId) : '<div class="form-label">정답 (단답형)</div><input class="register-input" id="new-quiz-ans-'+lecId+'" placeholder="정답을 입력해요" style="margin-bottom:0">';
 }
 
 function removeNewLecQuiz(lecId, qi) {
@@ -3438,6 +3570,37 @@ function removeNewLecQuiz(lecId, qi) {
   }
 }
 
+var pdfLinkRowSeq = {};
+function addPdfLinkRow(lecId) {
+  if(!pdfLinkRowSeq[lecId]) pdfLinkRowSeq[lecId] = 0;
+  var rowId = 'pdf-row-'+lecId+'-'+(pdfLinkRowSeq[lecId]++);
+  var container = document.getElementById('lec-pdf-links-'+lecId);
+  if(!container) return;
+  var div = document.createElement('div');
+  div.id = rowId;
+  div.style.cssText = 'display:flex;gap:6px;align-items:center';
+  div.innerHTML =
+    '<input class="register-input" id="pdf-name-'+rowId+'" placeholder="파일명 (예: 1강 워크시트)" style="flex:1;margin-bottom:0">'+
+    '<input class="register-input" id="pdf-url-'+rowId+'" placeholder="Google Drive 공유 링크" style="flex:2;margin-bottom:0">'+
+    '<button onclick="document.getElementById(\''+rowId+'\').remove()" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:1rem;flex-shrink:0">🗑️</button>';
+  container.appendChild(div);
+}
+
+function collectPdfLinks(lecId) {
+  var container = document.getElementById('lec-pdf-links-'+lecId);
+  if(!container) return [];
+  var rows = container.querySelectorAll('[id^="pdf-row-'+lecId+'"]');
+  var links = [];
+  rows.forEach(function(row){
+    var nameEl = row.querySelector('[id^="pdf-name-"]');
+    var urlEl = row.querySelector('[id^="pdf-url-"]');
+    var name = nameEl ? nameEl.value.trim() : '';
+    var url = urlEl ? urlEl.value.trim() : '';
+    if(url) links.push({name: name||'자료', url: url});
+  });
+  return links;
+}
+
 function addLectureVideo(id, who) {
   var lec = lectures.find(function(l){return l.id===id;});
   if(!lec) return;
@@ -3447,9 +3610,11 @@ function addLectureVideo(id, who) {
   if(!title){document.getElementById('lec-title-'+id).focus();return;}
   if(!url){document.getElementById('lec-url-'+id).focus();return;}
   var quizzes = newLecQuizzes[id] || [];
-  lec.videos.push({title:title,url:url,desc:desc,quizzes:quizzes,assigned:[]});
+  var pdfs = collectPdfLinks(id);
+  lec.videos.push({title:title,url:url,desc:desc,quizzes:quizzes,assigned:[],pdfs:pdfs});
   newLecQuizzes[id] = [];
   newLecQuizType[id] = 'mc';
+  pdfLinkRowSeq[id] = 0;
   if(window.fbSaveLectures) window.fbSaveLectures();
   renderLectureDetail(lec, who, document.getElementById(who+'-main-content'));
 }
@@ -5248,6 +5413,34 @@ window.fbSaveLectures = async function() {
   await fbSet('lectureData/main', data);
 };
 
+// 🔴 실시간 출결 동기화
+db.collection('attendance').onSnapshot(function(snapshot) {
+  snapshot.docChanges().forEach(function(change) {
+    if(change.type === 'added' || change.type === 'modified') {
+      var a = change.doc.data();
+      if(!a.clsKey || !a.name || !a.dateKey) return;
+      if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey] = {};
+      if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name] = {};
+      var hasTime = a.등원Time || a.하원Time || a.지각Time || a.보강Time;
+      if(hasTime) {
+        var obj = {status: a.status};
+        if(a.등원Time) obj.등원Time = a.등원Time;
+        if(a.하원Time) obj.하원Time = a.하원Time;
+        if(a.지각Time) obj.지각Time = a.지각Time;
+        if(a.보강Time) obj.보강Time = a.보강Time;
+        window.classAttendance[a.clsKey][a.name][a.dateKey] = obj;
+      } else if(a.status) {
+        window.classAttendance[a.clsKey][a.name][a.dateKey] = a.status;
+      }
+      // 출결 관리 화면이 열려있으면 자동 갱신
+      if(window.currentTeacher && window.activeMenu === 'att') {
+        var el = document.getElementById(window.currentTeacher+'-main-content');
+        if(el) renderAttSub(window.currentTeacher);
+      }
+    }
+  });
+}, function(err) { console.log('출결 실시간 동기화 오류:', err); });
+
 window.fbSaveLecComplete = async function(name, lecId, vi) {
   var key = (name+'_'+lecId+'_'+vi).replace(/\s/g,'_');
   await fbSet('lecComplete/'+key, {name:name, lecId:lecId, vi:vi, completedAt:new Date().toISOString()});
@@ -5499,19 +5692,31 @@ async function loadAllData() {
   // 학생 로그인 목록 자동 채우기
   populateStudentSelect();
 
+  // 로딩 오버레이 숨기기
+  var overlay = document.getElementById('loading-overlay');
+  if(overlay) overlay.style.display='none';
+
   // 세션 자동 로그인
   var loginType = sessionStorage.getItem('loginType');
   var loginName = sessionStorage.getItem('loginName');
+  var savedMenu = sessionStorage.getItem('activeMenu');
+
   if(loginType==='teacher' && loginName) {
     currentTeacher = loginName;
     renderTeacherDash(loginName);
     showPage(loginName+'-dash');
-    // sessionStorage 초기화 방지 (showPage에서 landing일 때만 clear)
+    // 마지막으로 열었던 메뉴 복원
+    if(savedMenu) {
+      setTimeout(function(){ selectMenu(loginName, savedMenu); }, 50);
+    }
   } else if(loginType==='student' && loginName) {
     currentStudent = loginName;
     document.getElementById('s-back-btn').style.display='none';
     renderStudentDash(loginName);
     showPage('student-dashboard');
+  } else {
+    // 로그인 안 된 상태면 landing 표시
+    showPage('landing');
   }
 }
 
