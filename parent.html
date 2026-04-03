@@ -265,9 +265,20 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
         <button class="report-tab active" id="rtab-daily" onclick="setParentReportTab('daily')">📋 데일리</button>
         <button class="report-tab" id="rtab-monthly" onclick="setParentReportTab('monthly')">📅 먼슬리</button>
       </div>
-      <div class="report-month-nav">
+      <!-- 데일리: 날짜 네비 -->
+      <div id="report-date-nav" style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        <button class="report-month-btn" onclick="changeReportDate(-1)">◀</button>
+        <button id="report-date-label" onclick="openReportDatePicker()"
+          style="flex:1;text-align:center;font-size:.92rem;font-weight:700;color:var(--brown);background:none;border:2px solid var(--parent-lt);border-radius:10px;padding:7px 12px;cursor:pointer;font-family:inherit;transition:background .15s"
+          onmouseover="this.style.background='#f3f0ff'" onmouseout="this.style.background='none'">
+          2026년 4월 4일
+        </button>
+        <button class="report-month-btn" onclick="changeReportDate(1)">▶</button>
+      </div>
+      <!-- 먼슬리: 월 네비 -->
+      <div id="report-month-nav" style="display:none;align-items:center;gap:8px;margin-bottom:14px">
         <button class="report-month-btn" onclick="changeReportMonth(-1)">◀</button>
-        <div class="report-month-label" id="report-month-label">2025년 4월</div>
+        <div class="report-month-label" id="report-month-label">2026년 4월</div>
         <button class="report-month-btn" onclick="changeReportMonth(1)">▶</button>
       </div>
       <div id="p-report-list"></div>
@@ -301,6 +312,7 @@ var parentCalMonth = new Date().getMonth();
 var reportTab = 'daily';
 var reportYear = new Date().getFullYear();
 var reportMonth = new Date().getMonth();
+var reportDate = new Date(); // 데일리 탭용 선택 날짜
 
 (function initFirebase(){
   if(typeof firebase === 'undefined'){ setTimeout(initFirebase, 100); return; }
@@ -706,16 +718,21 @@ function renderParentNotices() {
 
 /* ====== 리포트 모달 ====== */
 function openReportModal() {
+  reportDate  = new Date();
   reportYear  = new Date().getFullYear();
   reportMonth = new Date().getMonth();
   reportTab   = 'daily';
   document.getElementById('rtab-daily').classList.add('active');
   document.getElementById('rtab-monthly').classList.remove('active');
+  document.getElementById('report-date-nav').style.display = 'flex';
+  document.getElementById('report-month-nav').style.display = 'none';
   renderParentReports();
   document.getElementById('report-modal').classList.add('open');
 }
 function closeReportModal() {
   document.getElementById('report-modal').classList.remove('open');
+  var picker = document.getElementById('report-cal-picker');
+  if(picker) picker.remove();
 }
 
 /* ====== 리포트 ====== */
@@ -723,9 +740,121 @@ function setParentReportTab(tab) {
   reportTab = tab;
   document.getElementById('rtab-daily').classList.toggle('active', tab==='daily');
   document.getElementById('rtab-monthly').classList.toggle('active', tab==='monthly');
+  document.getElementById('report-date-nav').style.display  = tab==='daily'  ? 'flex' : 'none';
+  document.getElementById('report-month-nav').style.display = tab==='monthly' ? 'flex' : 'none';
+  var picker = document.getElementById('report-cal-picker');
+  if(picker) picker.remove();
   renderParentReports();
 }
 
+/* 데일리: 하루씩 이동 */
+function changeReportDate(dir) {
+  reportDate = new Date(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate() + dir);
+  var picker = document.getElementById('report-cal-picker');
+  if(picker) picker.remove();
+  renderParentReports();
+}
+
+/* 데일리: 날짜 레이블 클릭 → 캘린더 팝업 */
+function openReportDatePicker() {
+  var existing = document.getElementById('report-cal-picker');
+  if(existing) { existing.remove(); return; }
+
+  var picker = document.createElement('div');
+  picker.id = 'report-cal-picker';
+  picker.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);z-index:9999;margin-top:4px;';
+
+  var cy = reportDate.getFullYear(), cm = reportDate.getMonth();
+
+  function buildCal(y, m) {
+    var DOW = ['일','월','화','수','목','금','토'];
+    var daysInMonth = new Date(y,m+1,0).getDate();
+    var firstDow    = new Date(y,m,1).getDay();
+    var today       = new Date();
+    var html = '<div style="background:white;border-radius:16px;padding:14px;width:272px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 8px 32px rgba(0,0,0,.18);border:1.5px solid #ebe7ff">';
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">';
+    html += '<button id="rcp-prev" style="background:#f3f0ff;border:none;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.8rem;color:var(--parent)">◀</button>';
+    html += '<span style="font-size:.88rem;font-weight:700;color:var(--brown)">'+y+'년 '+(m+1)+'월</span>';
+    html += '<button id="rcp-next" style="background:#f3f0ff;border:none;border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:.8rem;color:var(--parent)">▶</button>';
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:4px">';
+    DOW.forEach(function(d){ html += '<div style="font-size:.6rem;color:#bbb;padding:2px">'+d+'</div>'; });
+    html += '</div>';
+    html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center">';
+    for(var i=0;i<firstDow;i++) html += '<div></div>';
+    for(var d=1;d<=daysInMonth;d++){
+      var isSel = d===reportDate.getDate() && m===reportDate.getMonth() && y===reportDate.getFullYear();
+      var isToday2 = d===today.getDate() && m===today.getMonth() && y===today.getFullYear();
+      // 리포트 있는 날짜 표시 (점)
+      var dk2 = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+      var who = currentParent ? currentParent.who : '';
+      var name = currentParent ? currentParent.name : '';
+      var hasReport = !!(dailyReports[who]&&dailyReports[who][dk2]&&dailyReports[who][dk2][name]&&
+        (dailyReports[who][dk2][name].lesson||dailyReports[who][dk2][name].review||
+         dailyReports[who][dk2][name].homework||dailyReports[who][dk2][name].feedback));
+      var hasFile = (parentReports[name]||[]).some(function(p){ return p.type==='daily'&&p.date===dk2; });
+      var hasDot = hasReport || hasFile;
+      html += '<div data-d="'+d+'" style="'+
+        'padding:4px 2px;border-radius:7px;font-size:.75rem;cursor:pointer;position:relative;'+
+        'background:'+(isSel?'var(--parent)':'transparent')+';'+
+        'color:'+(isSel?'white':isToday2?'var(--parent)':'var(--brown)')+';'+
+        'font-weight:'+(isSel||isToday2?'700':'400')+';'+
+        'border:'+(isToday2&&!isSel?'1.5px solid var(--parent-lt)':'1.5px solid transparent')+
+        '" class="rcp-day">'+d+
+        (hasDot&&!isSel?'<div style="width:4px;height:4px;border-radius:50%;background:var(--parent);margin:1px auto 0"></div>':'<div style="height:5px"></div>')+
+        '</div>';
+    }
+    html += '</div>';
+    html += '<button id="rcp-today" style="width:100%;margin-top:10px;background:#f3f0ff;border:none;border-radius:8px;padding:6px;font-size:.75rem;font-weight:700;color:var(--parent);cursor:pointer;font-family:inherit">오늘로 이동</button>';
+    html += '</div>';
+    return html;
+  }
+
+  function rebuildCal() {
+    picker.innerHTML = buildCal(cy, cm);
+    bindEvents();
+  }
+
+  function bindEvents() {
+    picker.querySelector('#rcp-prev').onclick = function(e){ e.stopPropagation(); cm--; if(cm<0){cm=11;cy--;} rebuildCal(); };
+    picker.querySelector('#rcp-next').onclick = function(e){ e.stopPropagation(); cm++; if(cm>11){cm=0;cy++;} rebuildCal(); };
+    picker.querySelector('#rcp-today').onclick = function(e){
+      e.stopPropagation();
+      reportDate = new Date();
+      picker.remove();
+      renderParentReports();
+    };
+    picker.querySelectorAll('.rcp-day').forEach(function(el){
+      el.onmouseover = function(){ if(!this.style.background.includes('parent')) this.style.background='#f3f0ff'; };
+      el.onmouseout  = function(){ if(!this.style.background.includes('parent')) this.style.background='transparent'; };
+      el.onclick = function(e){
+        e.stopPropagation();
+        reportDate = new Date(cy, cm, parseInt(this.getAttribute('data-d')));
+        picker.remove();
+        renderParentReports();
+      };
+    });
+  }
+
+  picker.innerHTML = buildCal(cy, cm);
+  // 날짜 버튼 아래에 붙이기
+  var navEl = document.getElementById('report-date-nav');
+  navEl.style.position = 'relative';
+  navEl.appendChild(picker);
+  bindEvents();
+
+  // 바깥 클릭 시 닫기
+  setTimeout(function(){
+    document.addEventListener('click', function closePicker(e){
+      if(!picker.contains(e.target)){
+        picker.remove();
+        document.removeEventListener('click', closePicker);
+      }
+    });
+  }, 0);
+}
+
+/* 먼슬리: 월 이동 */
 function changeReportMonth(dir) {
   reportMonth += dir;
   if(reportMonth<0){reportMonth=11;reportYear--;}
@@ -735,66 +864,62 @@ function changeReportMonth(dir) {
 }
 
 function renderParentReports() {
-  document.getElementById('report-month-label').textContent = reportYear+'년 '+(reportMonth+1)+'월';
-  if(reportTab==='daily') renderDailyReports();
-  else renderMonthlyReports();
+  if(reportTab==='daily') {
+    // 날짜 레이블 업데이트
+    var DOW_KO = ['일','월','화','수','목','금','토'];
+    var lbl = reportDate.getFullYear()+'년 '+(reportDate.getMonth()+1)+'월 '+reportDate.getDate()+'일 ('+DOW_KO[reportDate.getDay()]+')';
+    document.getElementById('report-date-label').textContent = lbl;
+    renderDailyReports();
+  } else {
+    document.getElementById('report-month-label').textContent = reportYear+'년 '+(reportMonth+1)+'월';
+    renderMonthlyReports();
+  }
 }
 
 function renderDailyReports() {
   var name = currentParent.name;
   var who  = currentParent.who;
-  var y = reportYear, m = reportMonth;
-  var daysInMonth = new Date(y,m+1,0).getDate();
+  var dk   = fmtDate(reportDate.getFullYear(), reportDate.getMonth(), reportDate.getDate());
   var DOW_KO = ['일','월','화','수','목','금','토'];
+  var dt   = reportDate;
+  var lbl  = (dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+DOW_KO[dt.getDay()]+')';
+  var el   = document.getElementById('p-report-list');
 
-  // 텍스트 데일리 리포트 수집
-  var textReports = [];
-  for(var d=daysInMonth;d>=1;d--){
-    var dk = fmtDate(y,m,d);
-    var r  = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-    if(r&&(r.lesson||r.review||r.homework||r.feedback)){
-      textReports.push({dk:dk, day:d, r:r});
-    }
-  }
+  // 텍스트 리포트
+  var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
+  var hasText = r&&(r.lesson||r.review||r.homework||r.feedback);
 
-  // 파일 리포트 (데일리 타입)
-  var mPrefix = y+'-'+String(m+1).padStart(2,'0');
+  // 파일 리포트
   var fileReports = (parentReports[name]||[]).filter(function(p){
-    return p.type==='daily' && (p.date||'').startsWith(mPrefix);
-  }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+    return p.type==='daily' && p.date===dk;
+  });
 
-  var el = document.getElementById('p-report-list');
-  if(textReports.length===0 && fileReports.length===0){
-    el.innerHTML = '<div class="report-empty"><span class="report-empty-ico">📋</span><div class="report-empty-msg">이달 데일리 리포트가 없어요.<br>선생님이 작성하면 여기서 확인할 수 있어요!</div></div>';
+  if(!hasText && fileReports.length===0){
+    el.innerHTML = '<div class="report-empty"><span class="report-empty-ico">📋</span>'+
+      '<div class="report-empty-msg">'+lbl+'에 작성된 리포트가 없어요.</div></div>';
     return;
   }
 
   var html = '';
-
-  // 파일 리포트 먼저
   fileReports.forEach(function(p){
-    var dt = new Date(p.date);
-    var lbl = (dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+DOW_KO[dt.getDay()]+')';
-    html += '<div class="report-card">';
-    html += '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div><div class="report-card-title">'+p.title+'</div></div><span class="report-card-type rtype-daily">데일리</span></div>';
-    html += '<div class="report-card-body">'+renderFilePreview(p)+'</div></div>';
+    html += '<div class="report-card">'+
+      '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div>'+
+      '<div class="report-card-title">'+p.title+'</div></div>'+
+      '<span class="report-card-type rtype-daily">데일리</span></div>'+
+      '<div class="report-card-body">'+renderFilePreview(p)+'</div></div>';
   });
-
-  // 텍스트 리포트
-  textReports.forEach(function(item){
-    var dt = new Date(item.dk);
-    var lbl = (dt.getMonth()+1)+'월 '+item.day+'일 ('+DOW_KO[dt.getDay()]+')';
-    var r = item.r;
-    html += '<div class="report-card">';
-    html += '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div><div class="report-card-title">수업 리포트</div></div><span class="report-card-type rtype-daily">데일리</span></div>';
-    html += '<div class="report-card-body">';
+  if(hasText){
+    html += '<div class="report-card">'+
+      '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div>'+
+      '<div class="report-card-title">수업 리포트</div></div>'+
+      '<span class="report-card-type rtype-daily">데일리</span></div>'+
+      '<div class="report-card-body">';
     if(r.lesson)   html += mkField('📖 수업 내용', r.lesson);
     if(r.review)   html += mkField('📝 복습 포인트', r.review);
     if(r.homework) html += mkField('🏠 숙제', r.homework);
     if(r.feedback) html += mkField('💬 선생님 한마디', r.feedback);
     html += '</div></div>';
-  });
-
+  }
   el.innerHTML = html;
 }
 
