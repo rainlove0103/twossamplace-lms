@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>투쌤플레이스 🍪🧈</title>
+<title>투쌤플레이스 🧈🍪</title>
 <!-- Firebase SDK -->
 
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
@@ -575,7 +575,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 
 <!-- 로딩 오버레이 -->
 <div id="loading-overlay" style="position:fixed;inset:0;background:#fffbf5;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px">
-  <span style="font-size:2.5rem;animation:bounce 1.2s ease-in-out infinite alternate">🍪🧈</span>
+  <span style="font-size:2.5rem;animation:bounce 1.2s ease-in-out infinite alternate">🧈🍪</span>
   <div style="font-size:1rem;font-weight:700;color:var(--brown);font-family:'Noto Sans KR',sans-serif">투쌤플레이스</div>
   <div style="font-size:.8rem;color:var(--text-soft);font-family:'Noto Sans KR',sans-serif">데이터를 불러오는 중...</div>
   <div style="width:120px;height:4px;background:#f0e8dc;border-radius:100px;overflow:hidden;margin-top:4px">
@@ -644,7 +644,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 <!-- STUDENT DASHBOARD -->
 <div id="student-dashboard" class="page">
   <header class="s-header">
-    <div class="s-header-brand">🍪🧈 투쌤플레이스</div>
+    <div class="s-header-brand">🧈🍪 투쌤플레이스</div>
     <div class="s-header-user">
       <button class="btn-back" id="s-back-btn" onclick="backToTeacher()">← 선생님 페이지로</button>
       <div class="s-avatar-chip"><div class="s-avatar-circle" id="s-av-letter">조</div><span class="s-avatar-name" id="s-av-name">조진혁</span></div>
@@ -1168,28 +1168,6 @@ function openLecPlayer(lecId, videoIdx) {
     iframe.src = 'https://www.youtube.com/embed/'+ytId+'?enablejsapi=1&rel=0&modestbranding=1&iv_load_policy=3&playsinline=1&fs=0';
     wrapper.appendChild(iframe);
 
-    // 상단 오버레이 — 강의 제목
-    var overlayTop = document.createElement('div');
-    overlayTop.style.cssText = 'position:absolute;top:0;left:0;right:0;height:52px;z-index:10;pointer-events:none;background:linear-gradient(to bottom,rgba(0,0,0,.75) 0%,transparent 100%);display:flex;align-items:center;padding:0 14px;gap:10px;';
-    overlayTop.innerHTML =
-      '<div style="font-size:.75rem;font-weight:700;color:white;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:\'Noto Sans KR\',sans-serif;">' +
-        lec.emoji + ' ' + lec.title + ' — ' + v.title +
-      '</div>';
-    wrapper.appendChild(overlayTop);
-
-    // 하단 오버레이 — 투쌤플레이스 브랜딩 + 유튜브 UI 가림
-    var overlayBot = document.createElement('div');
-    overlayBot.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:44px;z-index:10;pointer-events:none;background:linear-gradient(to top,rgba(0,0,0,.8) 0%,transparent 100%);display:flex;align-items:center;justify-content:flex-end;padding:0 14px;';
-    overlayBot.innerHTML =
-      '<div style="font-size:.68rem;font-weight:700;color:rgba(255,255,255,.6);font-family:\'Gaegu\',cursive;letter-spacing:.5px;">🍪 투쌤플레이스</div>';
-    wrapper.appendChild(overlayBot);
-
-    // 클릭 차단 (링크 이동 방지)
-    var blocker = document.createElement('div');
-    blocker.style.cssText = 'position:absolute;top:0;left:0;right:0;bottom:0;z-index:9;cursor:default;';
-    blocker.onclick = function(e){ e.stopPropagation(); e.preventDefault(); return false; };
-    wrapper.appendChild(blocker);
-
     area.appendChild(wrapper);
 
     // YouTube IFrame API로 종료 감지
@@ -1553,9 +1531,22 @@ function markLecComplete(name, lecId, vi) {
 }
 
 function reqFullscreen() {
-  var el = document.getElementById('lec-player-left');
-  if(el && el.requestFullscreen) el.requestFullscreen();
+  var el = document.getElementById('modal-lec-player');
+  var btn = document.querySelector('[onclick="reqFullscreen()"]');
+  if(!document.fullscreenElement) {
+    if(el && el.requestFullscreen) {
+      el.requestFullscreen();
+      if(btn) btn.textContent = '⛶ 전체화면 해제';
+    }
+  } else {
+    document.exitFullscreen();
+    if(btn) btn.textContent = '⛶ 전체화면';
+  }
 }
+document.addEventListener('fullscreenchange', function(){
+  var btn = document.querySelector('[onclick="reqFullscreen()"]');
+  if(btn) btn.textContent = document.fullscreenElement ? '⛶ 전체화면 해제' : '⛶ 전체화면';
+});
 
 function closeLecPlayer() {
   var modal = document.getElementById('modal-lec-player');
