@@ -49,6 +49,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .login-back-btn{position:fixed;top:20px;left:20px;background:white;border:2px solid #ffe0c8;color:var(--cookie);border-radius:50%;width:42px;height:42px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:1.1rem;transition:all .2s;z-index:100;box-shadow:0 2px 10px rgba(0,0,0,.08);}
 .login-back-btn:hover{transform:scale(1.1);background:var(--cookie);color:white;}
 .login-box{background:white;border-radius:32px;padding:44px 40px;width:100%;max-width:400px;box-shadow:0 8px 48px rgba(180,120,40,.12);}
+@media(max-width:480px){.login-box{padding:32px 24px;border-radius:24px;}.landing-inner{padding:0 16px;}}
 .login-face{font-size:3rem;text-align:center;display:block;margin-bottom:12px;}
 .login-title{font-family:'Noto Sans KR',sans-serif;font-size:1.9rem;text-align:center;color:var(--brown);margin-bottom:4px;}
 .login-sub{text-align:center;font-size:.8rem;color:var(--text-soft);margin-bottom:30px;}
@@ -137,6 +138,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(100,60,10,.35);backdrop-filter:blur(4px);z-index:500;align-items:center;justify-content:center;padding:20px;animation:fadeIn .2s ease;}
 .modal-overlay.open{display:flex;}
 .modal-box{background:white;border-radius:28px;width:100%;max-width:480px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(100,60,10,.25);animation:popIn .3s cubic-bezier(.34,1.56,.64,1);overflow:hidden;}
+@media(max-width:480px){.modal-box{border-radius:20px;max-height:90vh;}.modal-body{padding:16px;}}
 .modal-header{padding:22px 24px 16px;border-bottom:2px solid #f5ede0;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
 .modal-title{font-family:'Noto Sans KR',sans-serif;font-size:1.4rem;color:var(--brown);}
 .modal-close{width:32px;height:32px;border-radius:50%;border:none;background:#f5ede0;color:var(--text-soft);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:background .15s;}
@@ -184,7 +186,45 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .chip-cookie{background:var(--cookie-bg);border-color:var(--cookie-lt);} .chip-butter{background:var(--butter-bg);border-color:var(--butter);}
 .t-chip-face{font-size:1.4rem;} .t-chip-name{font-size:.85rem;font-weight:700;color:var(--brown);}
 .t-body{padding:28px 28px 48px;max-width:1060px;margin:0 auto;width:100%;}
-@media(max-width:700px){.t-body{padding:16px;}.t-header{padding:0 16px;}}
+@media(max-width:700px){.t-body{padding:12px;}.t-header{padding:0 12px;height:56px;}}
+@media(max-width:480px){
+  /* 헤더 */
+  .t-header-brand{font-size:1.1rem;}
+  .t-header-user{gap:6px;}
+  .btn-out{padding:5px 10px;font-size:.72rem;}
+  /* 배너 */
+  .t-banner{padding:16px 18px;margin-bottom:16px;border-radius:16px;}
+  .t-banner-text h2{font-size:1.5rem;}
+  .t-banner-face{font-size:2.4rem;}
+  /* 메뉴 그리드 - 모바일에서 3열 */
+  .t-stats-5{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+  .t-menu-btn{padding:12px 6px;border-radius:12px;}
+  .t-menu-ico{font-size:1.2rem;margin-bottom:3px;}
+  .t-menu-lbl{font-size:.62rem;}
+  /* 섹션 제목 */
+  .t-section-title{font-size:1rem;}
+  /* 클래스 카드 */
+  .class-mgmt-card{padding:12px;}
+  /* 폼 */
+  .register-form-box{padding:14px;}
+  .register-input{font-size:.85rem;padding:8px 10px;}
+  /* 출결 */
+  .att-opt{font-size:.65rem;padding:6px 2px;}
+  /* 학생 헤더 */
+  .s-header{padding:0 12px;height:54px;}
+  .s-body{padding:12px;}
+  .s-header-brand{font-size:1.1rem;}
+  /* 강의 플레이어 - 모바일에서 세로 분할 */
+  #lec-player-main{flex-direction:column !important;}
+  #lec-player-left{width:100% !important;height:45vw;min-height:200px;flex:none !important;}
+  #lec-player-right{width:100% !important;flex:1 !important;border-left:none !important;border-top:2px solid rgba(255,255,255,.1) !important;}
+  /* 원비/회계 요약 카드 폰트 */
+  .t-section-title{font-size:.95rem;}
+  /* 탭 버튼 */
+  .att-sub-tab{font-size:.72rem;padding:6px 10px;}
+  /* 캘린더 날짜 */
+  .t-att-cal-day-num{font-size:.7rem;}
+}
 .t-banner{border-radius:24px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 24px rgba(0,0,0,.1);position:relative;overflow:hidden;}
 .t-banner-text h2{font-family:'Gaegu',cursive;font-size:2.1rem;color:white;margin-bottom:4px;}
 .t-banner-text p{font-size:.84rem;color:rgba(255,255,255,.85);}
@@ -509,7 +549,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
     </div>
 
     <!-- 우측: 퀴즈 영역 (강의 끝나기 전에는 숨김) -->
-    <div id="lec-player-right" style="display:none;width:50%;min-width:320px;background:white;overflow-y:auto;border-left:2px solid rgba(255,255,255,.1);flex-direction:column">
+    <div id="lec-player-right" style="display:none;width:50%;min-width:0;background:white;overflow-y:auto;border-left:2px solid rgba(255,255,255,.1);flex-direction:column">
       <div style="padding:16px 18px 0;flex-shrink:0">
         <div style="font-size:.95rem;font-weight:700;color:var(--brown);margin-bottom:4px;font-family:'Noto Sans KR',sans-serif">📝 퀴즈</div>
         <div style="font-size:.72rem;color:var(--text-soft);margin-bottom:14px;font-family:'Noto Sans KR',sans-serif">영상을 다시 보고 싶으면 왼쪽에서 재생할 수 있어요</div>
@@ -817,6 +857,7 @@ var memberRoster = {
   cookie:[],
   butter:[]
 };
+window.memberRoster = memberRoster;
 var memberIdSeq = 1;
 
 var notices = [];
@@ -3753,6 +3794,15 @@ function renderDailyReport(who) {
     });
     html += '</div>';
 
+    // 카카오 알림톡 배너
+    html += '<div style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:12px;padding:12px 16px;margin-top:16px;display:flex;align-items:center;gap:10px">' +
+      '<div style="flex:1">' +
+        '<div style="font-size:.82rem;font-weight:700;color:#a07040;margin-bottom:2px;">📨 카카오 알림톡 일괄 발송</div>' +
+        '<div style="font-size:.72rem;color:var(--text-soft)">카카오 알림톡 연동 후 데일리 리포트를 학부모에게 일괄 발송할 수 있어요.</div>' +
+      '</div>' +
+      '<button style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:6px 12px;font-size:.72rem;font-weight:700;color:#bbb;cursor:default;font-family:inherit;flex-shrink:0">준비 중</button>' +
+    '</div>';
+
   } else if(!reportSelStu) {
     // 학생 목록
     var stuList = classStudents[reportSelClass]||[];
@@ -3820,6 +3870,12 @@ function renderDailyReport(who) {
 
     html += '<div class="register-form-box">';
     if(r.savedAt) html += '<div style="font-size:.72rem;color:#2e7d32;margin-bottom:12px">✅ 마지막 저장: '+r.savedAt+'</div>';
+
+    // 수업 일자
+    html += '<div style="margin-bottom:16px">' +
+      '<div class="form-label" style="margin-bottom:6px">📅 수업 일자</div>' +
+      '<input type="date" id="rpt-lessonDate" class="register-input" value="'+(r.lessonDate||dk)+'" style="margin-bottom:0">' +
+    '</div>';
 
     // 리뷰 테스트 점수 + 레디영어 완료 (상단 인라인)
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">' +
@@ -3904,6 +3960,8 @@ function toggleLeddiDone(who, dk, name) {
 
 function saveDailyReport(who, dk, name) {
   var r = getDailyReport(who, dk, name);
+  var dateEl = document.getElementById('rpt-lessonDate');
+  if(dateEl) r.lessonDate = dateEl.value;
   ['lesson','review','homework','leddi','feedback'].forEach(function(key){
     var el2 = document.getElementById('rpt-'+key);
     if(el2) r[key] = el2.value.trim();
@@ -4078,10 +4136,18 @@ function renderMonthlyReport(who) {
   });
 
   html += '</div>';
+
+  // 카카오 알림톡 배너
+  html += '<div style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:12px;padding:12px 16px;margin-top:4px;display:flex;align-items:center;gap:10px">' +
+    '<div style="flex:1">' +
+      '<div style="font-size:.82rem;font-weight:700;color:#a07040;margin-bottom:2px;">📨 카카오 알림톡 일괄 발송</div>' +
+      '<div style="font-size:.72rem;color:var(--text-soft)">카카오 알림톡 연동 후 먼슬리 리포트 PDF 다운로드 링크를 학부모에게 일괄 발송할 수 있어요.</div>' +
+    '</div>' +
+    '<button style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:6px 12px;font-size:.72rem;font-weight:700;color:#bbb;cursor:default;font-family:inherit;flex-shrink:0">준비 중</button>' +
+  '</div>';
+
   return html;
 }
-
-function openMonthlyDetail(who, name, y, m) {
   var el = document.getElementById(who+'-main-content');
   var daysInMonth = new Date(y,m+1,0).getDate();
   var monthLabel = y+'년 '+(m+1)+'월';
@@ -7196,24 +7262,28 @@ function deleteNotice(who,id){
 var db = null;
 var storage = null;
 
-function _doInitFirebase() {
+function initFirebase() {
   if(typeof firebase === 'undefined') {
-    setTimeout(_doInitFirebase, 100);
+    setTimeout(initFirebase, 100);
     return;
   }
-  var firebaseConfig = {
-    apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
-    authDomain: "twossamplace-lms.firebaseapp.com",
-    projectId: "twossamplace-lms",
-    storageBucket: "twossamplace-lms.firebasestorage.app",
-    messagingSenderId: "115444457876",
-    appId: "1:115444457876:web:3cc4e437d2aae757edef81"
-  };
-  firebase.initializeApp(firebaseConfig);
-  db = firebase.firestore();
-  storage = firebase.storage();
+  try {
+    var firebaseConfig = {
+      apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+      authDomain: "twossamplace-lms.firebaseapp.com",
+      projectId: "twossamplace-lms",
+      storageBucket: "twossamplace-lms.firebasestorage.app",
+      messagingSenderId: "115444457876",
+      appId: "1:115444457876:web:3cc4e437d2aae757edef81"
+    };
+    if(!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    db = firebase.firestore();
+    storage = firebase.storage ? firebase.storage() : null;
 
-  // 🔴 실시간 출결 동기화 (db 초기화 후 시작)
+
+  // 🔴 실시간 출결 동기화
   db.collection('attendance').onSnapshot(function(snapshot) {
     snapshot.docChanges().forEach(function(change) {
       if(change.type === 'added' || change.type === 'modified') {
@@ -7239,7 +7309,7 @@ function _doInitFirebase() {
         }
       }
     });
-  }, function(err) { console.log('출결 실시간 동기화 오류:', err); });
+  }, function(err) { console.log('출결 동기화 오류:', err); });
 
   // db/storage 준비 완료 후 데이터 로드
   if(document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -7247,42 +7317,48 @@ function _doInitFirebase() {
   } else {
     window.addEventListener('load', function(){ loadAllData(); });
   }
+  } catch(initErr) {
+    console.error('Firebase 초기화 오류:', initErr);
+    var ov = document.getElementById('loading-overlay');
+    if(ov) {
+      ov.innerHTML = '<div style="text-align:center;padding:40px;font-family:\'Noto Sans KR\',sans-serif">' +
+        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+        '<div style="font-size:.9rem;font-weight:700;color:#5c3d1e;margin-bottom:8px">연결에 실패했어요</div>' +
+        '<div style="font-size:.78rem;color:#aaa;margin-bottom:20px">페이지를 새로고침 해주세요</div>' +
+        '<button onclick="location.reload()" style="background:#c47a3a;border:none;border-radius:10px;padding:10px 24px;font-size:.85rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">새로고침</button>' +
+      '</div>';
+    }
+  }
 }
-_doInitFirebase();
+initFirebase();
 
-/* ── 저장 헬퍼 (전역 노출) ── */
-window.fbSet = async function fbSet(path, data) {
+/* ── 저장 헬퍼 ── */
+window.fbSet = async function(path, data) {
   if(!db) return;
   try {
     var parts = path.split('/');
-    var ref;
-    if (parts.length === 2) {
-      ref = db.collection(parts[0]).doc(parts[1]);
-    } else {
-      ref = db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
-    }
-    await ref.set(data, { merge: true });
+    var ref = parts.length === 2
+      ? db.collection(parts[0]).doc(parts[1])
+      : db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
+    await ref.set(data, {merge:true});
   } catch(e) { console.error('fbSet error', path, e); }
 };
 var fbSet = window.fbSet;
 
-window.fbGet = async function fbGet(path) {
+window.fbGet = async function(path) {
   if(!db) return null;
   try {
     var parts = path.split('/');
-    var ref;
-    if (parts.length === 2) {
-      ref = db.collection(parts[0]).doc(parts[1]);
-    } else {
-      ref = db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
-    }
+    var ref = parts.length === 2
+      ? db.collection(parts[0]).doc(parts[1])
+      : db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
     var snap = await ref.get();
     return snap.exists ? snap.data() : null;
   } catch(e) { console.error('fbGet error', path, e); return null; }
 };
 var fbGet = window.fbGet;
 
-window.fbGetCol = async function fbGetCol(colPath) {
+window.fbGetCol = async function(colPath) {
   if(!db) return {};
   try {
     var snap = await db.collection(colPath).get();
@@ -7293,7 +7369,7 @@ window.fbGetCol = async function fbGetCol(colPath) {
 };
 var fbGetCol = window.fbGetCol;
 
-window.fbDel = async function fbDel(path) {
+window.fbDel = async function(path) {
   if(!db) return;
   try {
     var parts = path.split('/');
@@ -7379,7 +7455,7 @@ window.fbSaveLectures = async function() {
   await fbSet('lectureData/main', data);
 };
 
-// 🔴 실시간 출결 동기화는 _doInitFirebase() 안으로 이동됨
+// 🔴 실시간 출결 동기화는 initFirebase() 안으로 이동됨
 
 window.fbSaveLecComplete = async function(name, lecId, vi) {
   var key = (name+'_'+lecId+'_'+vi).replace(/\s/g,'_');
@@ -7389,7 +7465,7 @@ window.fbSaveLecComplete = async function(name, lecId, vi) {
 window.fbSaveTuition = async function(ym, name, data) {
   var key = ym+'_'+(name||'').replace(/\s/g,'_');
   if(data===null) {
-    await db.collection('tuition').doc(key).delete().catch(function(){});
+    await window.fbDel('tuition/'+key);
   } else {
     await fbSet('tuition/'+key, Object.assign({ym:ym, name:name}, data));
   }
@@ -7402,7 +7478,7 @@ window.fbSaveExpense = async function(who, ym, id, data) {
 
 window.fbDeleteExpense = async function(who, ym, id) {
   var key = who+'_'+ym+'_'+id;
-  await db.collection('expenses').doc(key).delete().catch(function(){});
+  await window.fbDel('expenses/'+key);
 };
 
 window.fbSaveExpenseCategories = async function() {
@@ -7413,13 +7489,13 @@ window.fbSaveTextbook = async function(tb) {
   await fbSet('textbooks/'+tb.id, tb);
 };
 window.fbDeleteTextbook = async function(tbId) {
-  await db.collection('textbooks').doc(String(tbId)).delete().catch(function(){});
+  await window.fbDel('textbooks/'+String(tbId));
 };
 window.fbSaveTbLog = async function(log) {
   await fbSet('tbLogs/'+log.id, log);
 };
 window.fbDeleteTbLog = async function(logId) {
-  await db.collection('tbLogs').doc(logId).delete().catch(function(){});
+  await window.fbDel('tbLogs/'+logId);
 };
 
 window.fbSaveQuizResult = async function(name, lecId, vi, qi) {
@@ -7465,6 +7541,11 @@ window.fbSaveClassReport = async function(who, dk, clsKey) {
 
 /* ── 초기 데이터 불러오기 ── */
 async function loadAllData() {
+  // db가 아직 준비 안 됐으면 재시도
+  if(!db) {
+    setTimeout(loadAllData, 200);
+    return;
+  }
   showFbStatus('🔄 데이터 불러오는 중...');
   try {
 
@@ -7690,8 +7771,8 @@ async function loadAllData() {
   });
   // 지출 카테고리 불러오기
   try {
-    var catDoc = await db.collection('settings').doc('expenseCategories').get();
-    if(catDoc.exists && catDoc.data().categories) expenseCategories = catDoc.data().categories;
+    var catDoc = await window.fbGet('settings/expenseCategories');
+    if(catDoc && catDoc.categories) expenseCategories = catDoc.categories;
   } catch(e) {}
 
   // 교재 데이터 불러오기
