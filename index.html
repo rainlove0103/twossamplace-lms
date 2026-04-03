@@ -847,11 +847,14 @@ var classStudents = {
   '비욘드A-월/수':[],'비욘드A-화/목':[],
   '비욘드B-월/수':[],'비욘드B-화/목':[]
 };
+window.classStudents = classStudents;
 currentClass = CLASSES[0];
 currentDay = DAY_GROUPS[0];
 
 var classAttendance = {};
+window.classAttendance = classAttendance;
 var absenceReasons = {}; // absenceReasons[clsKey][name][dateKey] = '사유'
+window.absenceReasons = absenceReasons;
 
 var memberRoster = {
   cookie:[],
@@ -3290,6 +3293,7 @@ var calCatIdSeq = 100;
 
 // 일정 데이터: calEvents[dateKey] = [{id, title, catId, time, done, note}]
 var calEvents = {};
+window.calEvents = calEvents;
 var calEventIdSeq = 1;
 
 // 할 일: calTodos[weekKey] = [{id, title, done}] (주간)
@@ -3720,6 +3724,7 @@ var reportTab = 'daily';
 
 // dailyReports[who][dateKey][studentName] = {lesson, review, homework, feedback, leddi, reviewScore, leddiDone, savedAt}
 var dailyReports = {};
+window.dailyReports = dailyReports;
 // 현재 선택 상태
 var reportDate = new Date();
 var reportSelClass = null; // 선택된 클래스키
@@ -4591,6 +4596,7 @@ var lectureStudents = {};
 var lectureGroupStudents = {};
 // quizResults[studentName][lecId][videoIdx][quizIdx] = {answer, correct, submittedAt}
 var quizResults = {};
+window.quizResults = quizResults;
 
 function getLecStudents(lecId) {
   if(!lectureStudents[lecId]) lectureStudents[lecId] = new Set();
@@ -5454,6 +5460,7 @@ function removeLectureVideo(id, idx, who) {
 /* 이달의 수업 */
 /* ====== TODAY CLASS + SYLLABUS ====== */
 var syllabusData = {}; // syllabusData[clsKey][dateKey] = {plan, execute, feedback}
+window.syllabusData = syllabusData;
 var syllabusDetailKey = null; // 열린 클래스 키
 var syllabusDateSel = null;   // 선택된 날짜
 
@@ -5528,6 +5535,8 @@ var syllabusYear = new Date().getFullYear();
 var syllabusMonth = new Date().getMonth();
 var syllabusCustomDates = {};
 var syllabusDeletedDates = {};
+window.syllabusCustomDates = syllabusCustomDates;
+window.syllabusDeletedDates = syllabusDeletedDates;
 var syllabusEditMode = false; // 편집 모드 (날짜 추가/삭제 표시)
 
 function getSyllabusDateKey(k) {
@@ -7253,6 +7262,15 @@ function deleteNotice(who,id){
   renderNoticePanel(who,document.getElementById(who+'-main-content'));
   document.getElementById('tmenu-'+who+'-notice').classList.add('active');
 }
+
+// 핵심 함수 window 노출 (Firebase init 스크립트에서 접근 가능하도록)
+window.showPage = showPage;
+window.renderTeacherDash = renderTeacherDash;
+window.renderStudentDash = renderStudentDash;
+window.selectMenu = selectMenu;
+window.renderAttSub = renderAttSub;
+window.renderReportPanel = renderReportPanel;
+window.populateStudentSelect = function(){};  // placeholder, 실제 함수는 아래 스크립트에서 정의
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
@@ -7794,7 +7812,8 @@ async function loadAllData() {
   console.log('✅ Firebase 데이터 로드 완료');
 
   // 학생 로그인 목록 자동 채우기
-  populateStudentSelect();
+  if(typeof populateStudentSelect === 'function') populateStudentSelect();
+  else if(window.populateStudentSelect) window.populateStudentSelect();
 
   // 로딩 오버레이 숨기기
   var overlay = document.getElementById('loading-overlay');
@@ -7807,26 +7826,24 @@ async function loadAllData() {
 
   if(loginType==='teacher' && loginName) {
     currentTeacher = loginName;
-    renderTeacherDash(loginName);
-    showPage(loginName+'-dash');
-    // 마지막으로 열었던 메뉴 복원
+    window.renderTeacherDash(loginName);
+    window.showPage(loginName+'-dash');
     if(savedMenu) {
-      setTimeout(function(){ selectMenu(loginName, savedMenu); }, 50);
+      setTimeout(function(){ window.selectMenu(loginName, savedMenu); }, 50);
     }
   } else if(loginType==='student' && loginName) {
     currentStudent = loginName;
     document.getElementById('s-back-btn').style.display='none';
-    renderStudentDash(loginName);
-    showPage('student-dashboard');
+    window.renderStudentDash(loginName);
+    window.showPage('student-dashboard');
   } else {
-    // 로그인 안 된 상태면 landing 표시
-    showPage('landing');
+    window.showPage('landing');
   }
   } catch(err) {
     console.error('데이터 로드 오류:', err);
     var overlay2 = document.getElementById('loading-overlay');
     if(overlay2) overlay2.style.display='none';
-    if(typeof showPage === 'function') showPage('landing');
+    if(window.showPage) window.showPage('landing');
   }
 }
 
@@ -7854,6 +7871,7 @@ function populateStudentSelect() {
     sel.appendChild(opt);
   });
 }
+window.populateStudentSelect = populateStudentSelect;
 
 function showFbStatus(msg, autoHide) {
   var el = document.getElementById('fb-status');
