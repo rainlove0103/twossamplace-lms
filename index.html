@@ -2769,6 +2769,8 @@ function getImgAsBase64(url) {
     img.src = url;
   });
 }
+
+function openEditExpense(who, ym, id) {
   var list = expenseData[who][ym]||[];
   var e = list.find(function(x){return x.id===id;});
   if(!e) return;
@@ -7060,8 +7062,10 @@ window.fbSaveClassReport = async function(who, dk, clsKey) {
 /* ── 초기 데이터 불러오기 ── */
 async function loadAllData() {
   showFbStatus('🔄 데이터 불러오는 중...');
+  try {
 
-  for (var who of ['cookie', 'butter']) {
+  for (var _wi = 0; _wi < ['cookie','butter'].length; _wi++) {
+    var who = ['cookie','butter'][_wi];
     var d = await fbGet('memberRoster/' + who);
     if (d && d.roster) {
       try { window.memberRoster[who] = JSON.parse(d.roster); } catch(e) {}
@@ -7086,7 +7090,8 @@ async function loadAllData() {
     window.dailyReports[r.who][r.dateKey][r.name] = r;
   });
 
-  for (var who of ['cookie', 'butter']) {
+  for (var _wi2 = 0; _wi2 < ['cookie','butter'].length; _wi2++) {
+    var who = ['cookie','butter'][_wi2];
     var d = await fbGet('notices/' + who);
     if (d && d.notices) {
       try {
@@ -7116,7 +7121,10 @@ async function loadAllData() {
 
   var lecData = await fbGetCol('lecStudents');
   Object.keys(lecData).forEach(function(lecId) {
-    window.lectureStudents[parseInt(lecId)] = new Set(lecData[lecId].students || []);
+    var id = parseInt(lecId);
+    if(isNaN(id)) return;
+    if(!window.lectureStudents) window.lectureStudents = {};
+    window.lectureStudents[id] = new Set(lecData[lecId].students || []);
   });
 
   // 퀴즈 결과
@@ -7163,11 +7171,13 @@ async function loadAllData() {
   // 강의 완료 기록
   var lcData = await fbGetCol('lecComplete');
   Object.keys(lcData).forEach(function(key){
-    var d=lcData[key];
-    if(!d.name||d.lecId===undefined||d.vi===undefined) return;
-    if(!window.lecCompleted[d.name]) window.lecCompleted[d.name]={};
-    if(!window.lecCompleted[d.name][d.lecId]) window.lecCompleted[d.name][d.lecId]={};
-    window.lecCompleted[d.name][d.lecId][d.vi]=true;
+    try {
+      var d=lcData[key];
+      if(!d.name||d.lecId===undefined||d.vi===undefined) return;
+      if(!window.lecCompleted[d.name]) window.lecCompleted[d.name]={};
+      if(!window.lecCompleted[d.name][d.lecId]) window.lecCompleted[d.name][d.lecId]={};
+      window.lecCompleted[d.name][d.lecId][d.vi]=true;
+    } catch(e) { console.warn('lecComplete load error:', e); }
   });
 
   var qrData = await fbGetCol('quizResults');
@@ -7325,6 +7335,12 @@ async function loadAllData() {
     showPage('student-dashboard');
   } else {
     // 로그인 안 된 상태면 landing 표시
+    showPage('landing');
+  }
+  } catch(err) {
+    console.error('데이터 로드 오류:', err);
+    var overlay2 = document.getElementById('loading-overlay');
+    if(overlay2) overlay2.style.display='none';
     showPage('landing');
   }
 }
