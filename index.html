@@ -3300,7 +3300,7 @@ function renderCalendar(who, el) {
 
   var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">' +
     '<div class="t-section-title" style="margin-bottom:0">📅 캘린더</div>' +
-    '<button onclick="openCalCatMgr(\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 편집</button>' +
+    '<button onclick="openCalCatMgr(\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">🏷️ 카테고리 편집</button>' +
     '</div>' + tabs;
 
   if(calendarView==='daily')   html += renderCalDaily(who);
@@ -3312,7 +3312,7 @@ function renderCalendar(who, el) {
 
 function setCalView(v, who) {
   calendarView = v;
-  renderCalendar(who,getCalEl(who));
+  renderCalendar(who, getCalEl(who));
 }
 
 /* 카테고리 도트 목록 */
@@ -3790,15 +3790,12 @@ function renderDailyReport(who) {
       var r = getDailyReport(who, dk, name);
       var written = r.lesson||r.review||r.homework||r.leddi||r.feedback;
       var col = avatarPalette[i%7];
-      html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:white;border-radius:14px;border:1.5px solid '+(written?'#66bb6a33':'#f0e8dc')+'">' +
+      html += '<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:white;border-radius:14px;border:1.5px solid '+(written?'#66bb6a33':'#f0e8dc')+';cursor:pointer" ' +
+        'onclick="reportSelStu=\''+name+'\';renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">' +
         '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:.85rem;font-weight:900;color:white;flex-shrink:0">'+name[0]+'</div>' +
-        '<div style="flex:1;cursor:pointer" onclick="reportSelStu=\''+name+'\';renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">' +
-          '<div style="font-size:.9rem;font-weight:700;color:var(--brown)">'+name+'</div>' +
-          '<div style="font-size:.72rem;color:'+(written?'#2e7d32':'var(--text-soft)')+';margin-top:2px">'+(written?'✅ 작성됨':'미작성')+'</div>' +
-        '</div>' +
-        '<button onclick="goToStudentEdit(\''+who+'\',\''+name+'\')" title="원생 정보 편집" style="background:#f3e5f5;border:none;border-radius:8px;padding:5px 10px;font-size:.72rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;flex-shrink:0">⚙️</button>' +
-        '<span style="font-size:.75rem;color:var(--cookie);cursor:pointer" onclick="reportSelStu=\''+name+'\';renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">편집 →</span>' +
-      '</div>';
+        '<div style="flex:1"><div style="font-size:.9rem;font-weight:700;color:var(--brown)">'+name+'</div>' +
+        '<div style="font-size:.72rem;color:'+(written?'#2e7d32':'var(--text-soft)')+';margin-top:2px">'+(written?'✅ 작성됨':'미작성')+'</div></div>' +
+        '<span style="font-size:.75rem;color:var(--cookie)">편집 →</span></div>';
     });
     html += '</div>';
 
@@ -6916,19 +6913,6 @@ function openEditForm(who,id){
   var s=(memberRoster[who]||[]).find(function(m){return m.id===id;}); if(!s) return;
   document.getElementById('edit-form-'+id).innerHTML=buildRegForm(who,s);
 }
-
-function goToStudentEdit(who, name) {
-  // 원생 관리 탭으로 이동 후 해당 학생 편집 폼 열기
-  var s = (memberRoster[who]||[]).find(function(m){return m.name===name;});
-  if(!s) return;
-  selectMenu(who, 'student');
-  setTimeout(function(){
-    openEditForm(who, s.id);
-    // 해당 학생 위치로 스크롤
-    var editEl = document.getElementById('edit-form-'+s.id);
-    if(editEl) editEl.scrollIntoView({behavior:'smooth', block:'center'});
-  }, 150);
-}
 function closeEditForm(id){ var el=document.getElementById('edit-form-'+id); if(el) el.innerHTML=''; }
 function saveEdit(who,id){
   var v=getRegVals(who);
@@ -7111,9 +7095,9 @@ function renderClassBlocks(who){
       // 클래스-요일 칩: 둥근 직사각형
       html += '<div style="'+
         'display:flex;flex-direction:column;align-items:center;justify-content:center;'+
-        'padding:6px 8px;border-radius:10px;border:1.5px solid '+(isActive?'var(--cookie)':'#e8ddd0')+';'+
-        'background:'+(isActive?'var(--cookie)':'white')+';'+
-        'color:'+(isActive?'white':'var(--text-soft)')+';'+
+        'padding:6px 8px;border-radius:10px;border:1.5px solid '+(isActive?'var(--cookie)':'#f5c99a')+';'+
+        'background:'+(isActive?'var(--cookie)':'#fff3e8')+';'+
+        'color:'+(isActive?'white':'#c87820')+';'+
         'cursor:'+(isEmpty?'default':'pointer')+';opacity:'+(isEmpty?'.35':'1')+';'+
         'flex:1;min-width:0;transition:all .15s;'+
         '"'+(isEmpty?'':' onclick="toggleRecip(\''+k+'\',\''+who+'\')"')+'>'
