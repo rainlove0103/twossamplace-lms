@@ -3444,26 +3444,95 @@ function renderCalAddForm(dk, who) {
   return '<div class="register-form-box" style="margin-top:4px">' +
     '<div class="register-form-title" style="font-size:.92rem;margin-bottom:10px">+ 일정 추가</div>' +
     '<div class="register-row">' +
-    '<div><div class="form-label">제목 *</div><input class="register-input" id="cal-add-title" placeholder="일정 제목을 입력해요"></div>' +
-    '<div><div class="form-label">카테고리</div><select class="register-select" id="cal-add-cat">'+catOpts+'</select></div>' +
+      '<div><div class="form-label">제목 *</div><input class="register-input" id="cal-add-title" placeholder="일정 제목을 입력해요"></div>' +
+      '<div><div class="form-label">카테고리</div><select class="register-select" id="cal-add-cat">'+catOpts+'</select></div>' +
     '</div>' +
     '<div class="register-row">' +
-    '<div><div class="form-label">시간</div><input class="register-input" type="time" id="cal-add-time"></div>' +
-    '<div><div class="form-label">메모</div><input class="register-input" id="cal-add-note" placeholder="간단한 메모"></div>' +
+      '<div><div class="form-label">시작 날짜</div><input class="register-input" type="date" id="cal-add-start" value="'+dk+'"></div>' +
+      '<div><div class="form-label">종료 날짜 <span style="font-size:.68rem;color:var(--text-soft)">(기간)</span></div><input class="register-input" type="date" id="cal-add-end" value="'+dk+'"></div>' +
+    '</div>' +
+    '<div class="register-row">' +
+      '<div><div class="form-label">시간</div><input class="register-input" type="time" id="cal-add-time"></div>' +
+      '<div><div class="form-label">메모</div><input class="register-input" id="cal-add-note" placeholder="간단한 메모"></div>' +
+    '</div>' +
+    '<div style="margin-bottom:12px">' +
+      '<div class="form-label">반복</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+        ['없음','매주','매달','매년'].map(function(r){
+          return '<label style="display:flex;align-items:center;gap:4px;font-size:.8rem;font-weight:600;color:var(--text-mid);cursor:pointer">' +
+            '<input type="radio" name="cal-repeat" value="'+r+'" '+(r==='없음'?'checked':'')+' onchange="calRepeatChange()" style="accent-color:var(--cookie)"> '+r+'</label>';
+        }).join('') +
+      '</div>' +
+      '<div style="display:none;align-items:center;gap:8px" id="cal-repeat-end-wrap">' +
+        '<span style="font-size:.78rem;color:var(--text-soft);white-space:nowrap">반복 종료일</span>' +
+        '<input class="register-input" type="date" id="cal-add-repeat-end" style="margin-bottom:0;font-size:.8rem">' +
+      '</div>' +
     '</div>' +
     '<div class="register-form-actions">' +
-    '<button class="btn-reg-submit" style="font-size:.8rem;padding:6px 14px" onclick="calSubmitAdd(\''+dk+'\',\''+who+'\')">+ 추가</button>' +
+      '<button class="btn-reg-submit" style="font-size:.8rem;padding:6px 14px" onclick="calSubmitAdd(\''+dk+'\',\''+who+'\')">+ 추가</button>' +
     '</div></div>';
 }
 
+function calRepeatChange() {
+  var sel = document.querySelector('input[name="cal-repeat"]:checked');
+  var wrap = document.getElementById('cal-repeat-end-wrap');
+  if(wrap) wrap.style.display = (sel && sel.value !== '없음') ? 'flex' : 'none';
+}
+
 function calSubmitAdd(dk, who) {
-  var title=(document.getElementById('cal-add-title')||{value:''}).value.trim();
-  var catId=(document.getElementById('cal-add-cat')||{value:'todo'}).value;
-  var time=(document.getElementById('cal-add-time')||{value:''}).value;
-  var note=(document.getElementById('cal-add-note')||{value:''}).value.trim();
-  if(!title) {document.getElementById('cal-add-title').focus();return;}
-  calAddEvent(dk,title,catId,time,note);
-  renderCalendar(who,getCalEl(who));
+  var title = (document.getElementById('cal-add-title')||{value:''}).value.trim();
+  var catId  = (document.getElementById('cal-add-cat')||{value:'todo'}).value;
+  var time   = (document.getElementById('cal-add-time')||{value:''}).value;
+  var note   = (document.getElementById('cal-add-note')||{value:''}).value.trim();
+  var start  = (document.getElementById('cal-add-start')||{value:dk}).value || dk;
+  var end    = (document.getElementById('cal-add-end')||{value:dk}).value || start;
+  var repeatEl = document.querySelector('input[name="cal-repeat"]:checked');
+  var repeat = repeatEl ? repeatEl.value : '없음';
+  var repeatEnd = (document.getElementById('cal-add-repeat-end')||{value:''}).value;
+
+  if(!title) { var t=document.getElementById('cal-add-title'); if(t) t.focus(); return; }
+  if(end < start) end = start;
+
+  // 기간 내 모든 날짜에 일정 추가
+  var dates = [];
+  var cur = new Date(start+'T00:00:00');
+  var endDt = new Date(end+'T00:00:00');
+  while(cur <= endDt) {
+    dates.push(calDateKey(cur));
+    cur.setDate(cur.getDate() + 1);
+  }
+
+  // 반복 일정 추가
+  if(repeat !== '없음' && repeatEnd) {
+    var repEndDt = new Date(repeatEnd+'T00:00:00');
+    var baseDates = dates.slice(); // 원래 기간 복사
+    var spanDays = dates.length;  // 기간 길이(일)
+
+    var nextStart = new Date(start+'T00:00:00');
+    var safety = 0;
+    while(safety++ < 500) {
+      // 다음 반복 시작일 계산
+      if(repeat === '매주')       nextStart.setDate(nextStart.getDate() + 7);
+      else if(repeat === '매달')  nextStart.setMonth(nextStart.getMonth() + 1);
+      else if(repeat === '매년')  nextStart.setFullYear(nextStart.getFullYear() + 1);
+
+      if(nextStart > repEndDt) break;
+
+      for(var i=0; i<spanDays; i++) {
+        var d = new Date(nextStart.getFullYear(), nextStart.getMonth(), nextStart.getDate()+i);
+        if(d > repEndDt) break;
+        dates.push(calDateKey(d));
+      }
+    }
+  }
+
+  // 중복 제거 후 저장
+  var uniqueDates = dates.filter(function(v,i,a){return a.indexOf(v)===i;});
+  uniqueDates.forEach(function(d) {
+    calAddEvent(d, title, catId, time, note);
+  });
+
+  renderCalendar(who, getCalEl(who));
 }
 
 function moveCalDay(dir, who) {
@@ -4209,7 +4278,7 @@ function openMonthlyDetail(who, name, y, m) {
       if((classStudents[k]||[]).indexOf(name)>-1) clsKey=k;
     });
     if(clsKey){
-      var att = classAttendance[clsKey]&&classAttendance[clsKey][name]&&classAttendance[clsKey][name][dk];
+      var att = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][dk];
       if(att){
         var st = typeof att==='string'?att:(att.status||'');
         if(st.indexOf('등원')>-1||st==='출석') attData['출석']++;
@@ -4453,7 +4522,7 @@ function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
     var dk2 = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
     var clsKey2 = null;
     Object.keys(classStudents).forEach(function(k){ if((classStudents[k]||[]).indexOf(name)>-1) clsKey2=k; });
-    var att2 = clsKey2 && classAttendance[clsKey2]&&classAttendance[clsKey2][name]&&classAttendance[clsKey2][name][dk2];
+    var att2 = clsKey2 && window.classAttendance[clsKey2]&&window.classAttendance[clsKey2][name]&&window.classAttendance[clsKey2][name][dk2];
     var st2 = att2 ? (typeof att2==='string'?att2:(att2.status||'')) : '';
     var bg2='transparent', color2='#ccc';
     if(st2.indexOf('등원')>-1||st2==='출석'){bg2='#e8f5e9';color2='#2e7d32';}
@@ -6203,7 +6272,7 @@ function renderAttList(who,clsKey,stuList){
   if(stuList.length===0) return '<div class="t-placeholder"><span class="ph-ico">🤷</span><div class="ph-desc">이 클래스엔 등록된 학생이 없어요.</div></div>';
   var tk=todayKey();
   return stuList.map(function(name,i){
-    var col=avatarPalette[i%7], rec=classAttendance[clsKey]&&classAttendance[clsKey][name]&&classAttendance[clsKey][name][tk];
+    var col=avatarPalette[i%7], rec=window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk];
     var recStatus = attStatus(rec);
     var reason = absenceReasons[clsKey]&&absenceReasons[clsKey][name]&&absenceReasons[clsKey][name][tk]||'';
     var safeId = clsKey.replace(/[\/-]/g,'_');
@@ -6273,7 +6342,7 @@ function saveAbsenceReason(who, clsKey, name) {
   if(!absenceReasons[clsKey][name]) absenceReasons[clsKey][name]={};
   absenceReasons[clsKey][name][tk] = reason;
   // Firebase 저장
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, classAttendance[clsKey]&&classAttendance[clsKey][name]&&classAttendance[clsKey][name][tk]||'');
+  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk]||'');
   if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+tk, {clsKey:clsKey,name:name,dateKey:tk,reason:reason});
   renderAttSub(who);
 }
@@ -6291,9 +6360,9 @@ function attTime(val, key) {
 
 function setTodayAtt(who,clsKey,name,opt){
   var tk=todayKey();
-  if(!classAttendance[clsKey]) classAttendance[clsKey]={};
-  if(!classAttendance[clsKey][name]) classAttendance[clsKey][name]={};
-  var cur = classAttendance[clsKey][name][tk];
+  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
+  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
+  var cur = window.classAttendance[clsKey][name][tk];
   var curStatus = attStatus(cur);
   var now = nowTimeStr();
 
@@ -6317,10 +6386,10 @@ function setTodayAtt(who,clsKey,name,opt){
     newVal[timeKey] = now;
   }
 
-  if(newVal===null) delete classAttendance[clsKey][name][tk];
-  else classAttendance[clsKey][name][tk] = newVal;
+  if(newVal===null) delete window.classAttendance[clsKey][name][tk];
+  else window.classAttendance[clsKey][name][tk] = newVal;
 
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, classAttendance[clsKey][name][tk]||'');
+  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, window.classAttendance[clsKey][name][tk]||'');
   renderAttSub(who);
 }
 
@@ -6329,11 +6398,11 @@ function renderMonthlyAtt(who,el){
   var DOW=['일','월','화','수','목','금','토'];
   var firstDay=new Date(tAttCalYear,tAttCalMonth,1).getDay(), days=new Date(tAttCalYear,tAttCalMonth+1,0).getDate(), prevDays=new Date(tAttCalYear,tAttCalMonth,0).getDate(), tk=todayKey();
   var byDate={};
-  Object.keys(classAttendance).forEach(function(clsKey){
-    Object.keys(classAttendance[clsKey]).forEach(function(name){
-      Object.keys(classAttendance[clsKey][name]).forEach(function(dk){
+  Object.keys(window.classAttendance).forEach(function(clsKey){
+    Object.keys(window.classAttendance[clsKey]).forEach(function(name){
+      Object.keys(window.classAttendance[clsKey][name]).forEach(function(dk){
         if(!byDate[dk]) byDate[dk]=[];
-        byDate[dk].push({name:name,cls:clsKey,status:attStatus(classAttendance[clsKey][name][dk])});
+        byDate[dk].push({name:name,cls:clsKey,status:attStatus(window.classAttendance[clsKey][name][dk])});
       });
     });
   });
@@ -6432,12 +6501,12 @@ function addNewAtt(who, clsKey, name, dk, status) {
     });});
   }
   if(!clsKey) { alert('클래스 정보를 찾을 수 없어요.'); return; }
-  if(!classAttendance[clsKey]) classAttendance[clsKey]={};
-  if(!classAttendance[clsKey][name]) classAttendance[clsKey][name]={};
+  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
+  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
   var now = nowTimeStr();
   var newVal = {status:status};
   newVal[status+'Time'] = now;
-  classAttendance[clsKey][name][dk] = newVal;
+  window.classAttendance[clsKey][name][dk] = newVal;
   if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
   renderAttSub(who);
 }
@@ -6447,15 +6516,17 @@ function changeTAttMonth(who,dir){ tAttCalMonth+=dir; if(tAttCalMonth<0){tAttCal
 
 function deleteMonthlyAtt(who, clsKey, name, dk) {
   if(!confirm(name+'님의 '+dk+' 출결 기록을 삭제할까요?')) return;
-  if(classAttendance[clsKey]&&classAttendance[clsKey][name]) {
-    delete classAttendance[clsKey][name][dk];
+  if(window.classAttendance[clsKey] && window.classAttendance[clsKey][name]) {
+    delete window.classAttendance[clsKey][name][dk];
   }
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, '');
+  // Firebase에서 실제 삭제
+  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
+  if(window.fbDel) window.fbDel('attendance/'+safeKey);
   renderAttSub(who);
 }
 
 function openAttEditModal(who, clsKey, name, dk) {
-  var cur = classAttendance[clsKey]&&classAttendance[clsKey][name]&&classAttendance[clsKey][name][dk];
+  var cur = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][dk];
   var curStatus = attStatus(cur)||'등원';
 
   var existing = document.getElementById('att-edit-overlay');
@@ -6495,12 +6566,12 @@ function openAttEditModal(who, clsKey, name, dk) {
 }
 
 function applyAttEdit(who, clsKey, name, dk, newStatus) {
-  if(!classAttendance[clsKey]) classAttendance[clsKey]={};
-  if(!classAttendance[clsKey][name]) classAttendance[clsKey][name]={};
+  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
+  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
   var now = nowTimeStr();
   var newVal = {status:newStatus};
   newVal[newStatus+'Time'] = now;
-  classAttendance[clsKey][name][dk] = newVal;
+  window.classAttendance[clsKey][name][dk] = newVal;
   if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
   document.getElementById('att-edit-overlay').remove();
   renderAttSub(who);
@@ -6514,7 +6585,7 @@ function openMonthlyAtt(name,clsKey){
 }
 function renderMonthlyAttModal(name,clsKey,year,month){
   var DOW=['일','월','화','수','목','금','토'];
-  var rec=(classAttendance[clsKey]&&classAttendance[clsKey][name])||{};
+  var rec=(window.classAttendance[clsKey]&&window.classAttendance[clsKey][name])||{};
   var firstDay=new Date(year,month,1).getDay(), days=new Date(year,month+1,0).getDate(), prevDays=new Date(year,month,0).getDate();
   var isMonWed=clsKey.indexOf('월/수')>-1, classDays=isMonWed?[1,3]:[2,4], tk=todayKey();
   var total=Math.ceil((firstDay+days)/7)*7, cells='';
@@ -6547,7 +6618,7 @@ function renderMonthlyAttModal(name,clsKey,year,month){
 function editMonthlyAtt(name, clsKey, dk, year, month) {
   var panel = document.getElementById('monthly-att-edit-panel');
   if(!panel) return;
-  var rec = (classAttendance[clsKey]&&classAttendance[clsKey][name])||{};
+  var rec = (window.classAttendance[clsKey]&&window.classAttendance[clsKey][name])||{};
   var cur = rec[dk]||'';
   var dt = new Date(dk);
   var DOW2=['일','월','화','수','목','금','토'];
@@ -6568,23 +6639,26 @@ function editMonthlyAtt(name, clsKey, dk, year, month) {
 }
 
 function setMonthlyAtt(name, clsKey, dk, opt, year, month) {
-  if(!classAttendance[clsKey]) classAttendance[clsKey]={};
-  if(!classAttendance[clsKey][name]) classAttendance[clsKey][name]={};
-  var cur = classAttendance[clsKey][name][dk]||'';
-  if(opt==='하원'&&cur==='등원') classAttendance[clsKey][name][dk]='등원+하원';
-  else if(opt==='등원'&&cur==='등원+하원') classAttendance[clsKey][name][dk]='하원';
-  else if(opt==='하원'&&cur==='등원+하원') classAttendance[clsKey][name][dk]='등원';
-  else if(cur===opt) classAttendance[clsKey][name][dk]='';
-  else classAttendance[clsKey][name][dk]=opt;
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey,name,dk,classAttendance[clsKey][name][dk]||'');
+  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
+  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
+  var cur = window.classAttendance[clsKey][name][dk]||'';
+  if(opt==='하원'&&cur==='등원') window.classAttendance[clsKey][name][dk]='등원+하원';
+  else if(opt==='등원'&&cur==='등원+하원') window.classAttendance[clsKey][name][dk]='하원';
+  else if(opt==='하원'&&cur==='등원+하원') window.classAttendance[clsKey][name][dk]='등원';
+  else if(cur===opt) window.classAttendance[clsKey][name][dk]='';
+  else window.classAttendance[clsKey][name][dk]=opt;
+  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey,name,dk,window.classAttendance[clsKey][name][dk]||'');
   renderMonthlyAttModal(name,clsKey,year,month);
   editMonthlyAtt(name,clsKey,dk,year,month);
 }
 
 function deleteMonthlyAtt(name, clsKey, dk, year, month) {
   if(!confirm('이 날 출결 기록을 삭제할까요?')) return;
-  if(classAttendance[clsKey]&&classAttendance[clsKey][name]) delete classAttendance[clsKey][name][dk];
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey,name,dk,'');
+  if(window.classAttendance[clsKey] && window.classAttendance[clsKey][name]) {
+    delete window.classAttendance[clsKey][name][dk];
+  }
+  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
+  if(window.fbDel) window.fbDel('attendance/'+safeKey);
   renderMonthlyAttModal(name,clsKey,year,month);
 }
 
@@ -6592,9 +6666,9 @@ function deleteMonthlyAtt(name, clsKey, dk, year, month) {
 function renderMakeupNeeded(who){
   var monthPrefix=tAttCalYear+'-'+String(tAttCalMonth+1).padStart(2,'0');
   var ATTENDED=['등원','하원','지각','보강'], results=[];
-  Object.keys(classAttendance).forEach(function(clsKey){
-    Object.keys(classAttendance[clsKey]).forEach(function(name){
-      var dateMap=classAttendance[clsKey][name];
+  Object.keys(window.classAttendance).forEach(function(clsKey){
+    Object.keys(window.classAttendance[clsKey]).forEach(function(name){
+      var dateMap=window.classAttendance[clsKey][name];
       var monthEntries=Object.keys(dateMap).filter(function(dk){return dk.startsWith(monthPrefix);}).map(function(dk){return {dk:dk,s:dateMap[dk]};});
       var count=monthEntries.filter(function(e){return ATTENDED.indexOf(e.s)>-1;}).length;
       var late=monthEntries.filter(function(e){return e.s==='지각';}).length;
@@ -6870,8 +6944,8 @@ function permanentDelete(who, id) {
   });
 
   // 3. 출결 기록 삭제
-  Object.keys(classAttendance).forEach(function(k){
-    if(classAttendance[k][name]) delete classAttendance[k][name];
+  Object.keys(window.classAttendance).forEach(function(k){
+    if(window.classAttendance[k][name]) delete window.classAttendance[k][name];
   });
 
   // 4. 과제 기록 삭제
