@@ -267,7 +267,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .att-opt.selected-결석{background:#fce4ec;border-color:#ef5350;color:#b71c1c;}
 .att-opt.selected-보강{background:#f3e5f5;border-color:#ab47bc;color:#6a1b9a;}
 .att-summary-chip{font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;}
-.chip-등원{background:#e8f5e9;color:#2e7d32;} .chip-하원{background:#e3f2fd;color:#1565c0;} .chip-지각{background:#fff8e1;color:#e65100;} .chip-결석{background:#fce4ec;color:#b71c1c;} .chip-보강{background:#f3e5f5;color:#6a1b9a;} .chip-미정{background:#f5f5f5;color:#9e9e9e;} .chip-등원\+하원{background:#e3f2fd;color:#1565c0;} .chip-지각\+하원{background:#fff8e1;color:#e65100;}
+.chip-등원{background:#e8f5e9;color:#2e7d32;} .chip-하원{background:#e3f2fd;color:#1565c0;} .chip-지각{background:#fff8e1;color:#e65100;} .chip-결석{background:#fce4ec;color:#b71c1c;} .chip-보강{background:#f3e5f5;color:#6a1b9a;} .chip-미정{background:#f5f5f5;color:#9e9e9e;} .chip-등원\+하원{background:#e3f2fd;color:#1565c0;} .chip-지각\+하원{background:#fff8e1;color:#e65100;} .chip-보강\+하원{background:#f3e5f5;color:#6a1b9a;}
 .t-att-cal-wrap{background:white;border-radius:20px;overflow:hidden;box-shadow:0 3px 16px rgba(0,0,0,.07);border:1.5px solid #f0e8dc;}
 .t-att-cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;background:linear-gradient(135deg,#fff8ee,#fff3e0);border-bottom:1.5px solid #f5e8d5;}
 .t-att-cal-nav{background:white;border:2px solid #f0ddc8;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;color:var(--cookie);transition:all .15s;}
@@ -284,7 +284,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .t-att-cal-day-num{font-size:.75rem;font-weight:700;color:var(--brown);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin-bottom:3px;}
 .t-att-cal-dots{display:flex;flex-wrap:wrap;gap:2px;}
 .t-att-dot{width:7px;height:7px;border-radius:50%;}
-.t-att-dot-등원{background:#66bb6a;} .t-att-dot-하원{background:#42a5f5;} .t-att-dot-지각{background:#ffca28;} .t-att-dot-결석{background:#ef5350;} .t-att-dot-보강{background:#ab47bc;} .t-att-dot-지각\+하원{background:#ffca28;}
+.t-att-dot-등원{background:#66bb6a;} .t-att-dot-하원{background:#42a5f5;} .t-att-dot-지각{background:#ffca28;} .t-att-dot-결석{background:#ef5350;} .t-att-dot-보강{background:#ab47bc;} .t-att-dot-지각\+하원{background:#ffca28;} .t-att-dot-보강\+하원{background:#ab47bc;}
 .t-att-cal-detail{padding:14px 18px 16px;border-top:1.5px solid #f5ede0;background:#fffbf5;min-height:56px;}
 .t-att-cal-detail-title{font-family:'Noto Sans KR',sans-serif;font-size:1rem;color:var(--brown);margin-bottom:10px;}
 .t-att-detail-empty{font-size:.82rem;color:var(--text-soft);text-align:center;padding:6px 0;}
@@ -5251,7 +5251,9 @@ function openLecture(id, who) {
 function renderLectureDetail(lec, who, el) {
   var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">' +
     '<button onclick="closeLectureDetail(\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 목록</button>' +
-    '<div style="font-family:\'Noto Sans KR\',sans-serif;font-size:1.15rem;color:var(--brown)">'+lec.emoji+' '+lec.title+'</div></div>';
+    '<div style="font-family:\'Noto Sans KR\',sans-serif;font-size:1.15rem;color:var(--brown);flex:1">'+lec.emoji+' '+lec.title+'</div>' +
+    '<button onclick="toggleLecEditMode(\''+who+'\')" style="background:'+(lecEditMode?'var(--cookie)':'#f5ede0')+';border:none;border-radius:8px;padding:6px 14px;font-size:.78rem;font-weight:700;color:'+(lecEditMode?'white':'var(--text-mid)')+';cursor:pointer;font-family:inherit;flex-shrink:0">'+(lecEditMode?'✅ 편집 완료':'✏️ 편집')+'</button>' +
+    '</div>';
 
   if(lec.videos.length === 0) {
     html += '<div class="t-placeholder"><span class="ph-ico">🎬</span><div class="ph-desc">등록된 강의가 없어요.<br>아래에서 강의를 추가해보세요!</div></div>';
@@ -6668,12 +6670,13 @@ function renderAttList(who,clsKey,stuList){
       '<div class="att-class">'+clsKey+' · 클릭 → 월별 출결</div>'+
       timeHtml+
       '</div>'+
-      '<span class="att-summary-chip chip-'+(recStatus==='등원+하원'?'등원+하원':recStatus==='지각+하원'?'지각+하원':recStatus||'미정')+'">'+(recStatus||'미정')+'</span>'+
+      '<span class="att-summary-chip chip-'+(recStatus==='등원+하원'?'등원+하원':recStatus==='지각+하원'?'지각+하원':recStatus==='보강+하원'?'보강+하원':recStatus||'미정')+'">'+(recStatus||'미정')+'</span>'+
       '</div>'+
       '<div class="att-options">'+ATT_OPTIONS.map(function(opt){
         var isActive=(recStatus===opt)
           ||(recStatus==='등원+하원'&&(opt==='등원'||opt==='하원'))
-          ||(recStatus==='지각+하원'&&(opt==='지각'||opt==='하원'));
+          ||(recStatus==='지각+하원'&&(opt==='지각'||opt==='하원'))
+          ||(recStatus==='보강+하원'&&(opt==='보강'||opt==='하원'));
         return '<div class="att-opt'+(isActive?' selected-'+opt:'')+'" onclick="setTodayAtt(\''+who+'\',\''+clsKey+'\',\''+name+'\',\''+opt+'\')">'+opt+'</div>';
       }).join('')+'</div>'+
       reasonBox+'</div>';
@@ -6730,17 +6733,20 @@ function setTodayAtt(who,clsKey,name,opt){
   if(opt==='하원' && curStatus==='등원') {
     newVal = {status:'등원+하원', 등원Time: attTime(cur,'등원Time')||now, 하원Time: now};
   } else if(opt==='하원' && curStatus==='지각') {
-    // 지각 → 지각+하원
     newVal = {status:'지각+하원', 지각Time: attTime(cur,'지각Time')||now, 하원Time: now};
+  } else if(opt==='하원' && curStatus==='보강') {
+    newVal = {status:'보강+하원', 보강Time: attTime(cur,'보강Time')||now, 하원Time: now};
   } else if(opt==='하원' && curStatus==='등원+하원') {
     newVal = {status:'등원', 등원Time: attTime(cur,'등원Time')||now};
   } else if(opt==='하원' && curStatus==='지각+하원') {
-    // 지각+하원에서 하원 해제 → 지각만
     newVal = {status:'지각', 지각Time: attTime(cur,'지각Time')||now};
+  } else if(opt==='하원' && curStatus==='보강+하원') {
+    newVal = {status:'보강', 보강Time: attTime(cur,'보강Time')||now};
   } else if(opt==='등원' && curStatus==='등원+하원') {
     newVal = {status:'하원', 하원Time: attTime(cur,'하원Time')||now};
   } else if(opt==='지각' && curStatus==='지각+하원') {
-    // 지각+하원에서 지각 해제 → 하원만
+    newVal = {status:'하원', 하원Time: attTime(cur,'하원Time')||now};
+  } else if(opt==='보강' && curStatus==='보강+하원') {
     newVal = {status:'하원', 하원Time: attTime(cur,'하원Time')||now};
   } else if(curStatus===opt) {
     newVal = null;
@@ -6798,6 +6804,7 @@ function renderMonthlyAtt(who,el){
     var dots=statusSet.map(function(s){
       if(s==='등원+하원') return '<div class="t-att-dot t-att-dot-하원"></div>';
       if(s==='지각+하원') return '<div class="t-att-dot t-att-dot-지각"></div>';
+      if(s==='보강+하원') return '<div class="t-att-dot t-att-dot-보강"></div>';
       return '<div class="t-att-dot t-att-dot-'+s+'"></div>';
     }).join('');
     var cls='t-att-cal-cell';
@@ -6827,8 +6834,8 @@ function renderMonthlyAtt(who,el){
     if(recs2.length===0){
       detail='<div class="t-att-cal-detail-title">'+lbl2+'</div><div class="t-att-detail-empty">이 날 기록된 출결이 없어요.</div>';
     } else {
-      // '등원+하원', '지각+하원'도 포함한 그룹 목록
-      var allStatuses = ATT_OPTIONS.concat(['등원+하원','지각+하원']);
+      // '등원+하원', '지각+하원', '보강+하원'도 포함한 그룹 목록
+      var allStatuses = ATT_OPTIONS.concat(['등원+하원','지각+하원','보강+하원']);
       var groups={};allStatuses.forEach(function(o){groups[o]=[];});
       recs2.forEach(function(r){
         var s = r.status;
@@ -6863,12 +6870,20 @@ function renderMonthlyAtt(who,el){
       unrecorded.forEach(function(name){
         var clsKey=null;
         CLASSES.forEach(function(cls){DAY_GROUPS.forEach(function(day){var k=cls+'-'+day;if((classStudents[k]||[]).indexOf(name)>-1)clsKey=k;});});
-        detail += '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #f5ede0">';
-        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);flex:1">'+name+'</div>';
-        detail += ATT_OPTIONS.map(function(opt){
-          var chipColors={'등원':'#e8f5e9:#2e7d32','하원':'#e3f2fd:#1565c0','지각':'#fff8e1:#e65100','결석':'#fce4ec:#c2185b','보강':'#f3e5f5:#6a1b9a'};
-          var cc=(chipColors[opt]||'#f5ede0:#888').split(':');
-          return '<button onclick="addNewAtt(\''+who+'\',\''+(clsKey||'')+'\',\''+name+'\',\''+tAttCalSel+'\',\''+opt+'\')" style="background:'+cc[0]+';border:none;border-radius:6px;padding:3px 7px;font-size:.65rem;font-weight:700;color:'+cc[1]+';cursor:pointer;font-family:inherit">'+opt+'</button>';
+        detail += '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #f5ede0;flex-wrap:wrap">';
+        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);min-width:60px">'+name+'</div>';
+        var allOpts = [
+          {label:'등원', bg:'#e8f5e9', color:'#2e7d32'},
+          {label:'하원', bg:'#e3f2fd', color:'#1565c0'},
+          {label:'지각', bg:'#fff8e1', color:'#e65100'},
+          {label:'결석', bg:'#fce4ec', color:'#c2185b'},
+          {label:'보강', bg:'#f3e5f5', color:'#6a1b9a'},
+          {label:'등원+하원', bg:'#e3f2fd', color:'#1565c0'},
+          {label:'지각+하원', bg:'#fff8e1', color:'#e65100'},
+          {label:'보강+하원', bg:'#f3e5f5', color:'#6a1b9a'}
+        ];
+        detail += allOpts.map(function(o){
+          return '<button onclick="addNewAtt(\''+who+'\',\''+(clsKey||'')+'\',\''+name+'\',\''+tAttCalSel+'\',\''+o.label+'\')" style="background:'+o.bg+';border:none;border-radius:6px;padding:3px 7px;font-size:.65rem;font-weight:700;color:'+o.color+';cursor:pointer;font-family:inherit;white-space:nowrap">'+o.label+'</button>';
         }).join('');
         detail += '</div>';
       });
@@ -6888,7 +6903,6 @@ function toggleAttAddPanel(who, dk) {
 
 function addNewAtt(who, clsKey, name, dk, status) {
   if(!clsKey) {
-    // clsKey 못 찾으면 첫 번째 클래스로
     CLASSES.forEach(function(cls){DAY_GROUPS.forEach(function(day){
       var k=cls+'-'+day;
       if((classStudents[k]||[]).indexOf(name)>-1&&!clsKey) clsKey=k;
@@ -6899,7 +6913,11 @@ function addNewAtt(who, clsKey, name, dk, status) {
   if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
   var now = nowTimeStr();
   var newVal = {status:status};
-  newVal[status+'Time'] = now;
+  // 복합 status 시간 처리
+  if(status==='등원+하원')      { newVal.등원Time=now; newVal.하원Time=now; }
+  else if(status==='지각+하원') { newVal.지각Time=now; newVal.하원Time=now; }
+  else if(status==='보강+하원') { newVal.보강Time=now; newVal.하원Time=now; }
+  else                          { newVal[status+'Time']=now; }
   window.classAttendance[clsKey][name][dk] = newVal;
   if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
   renderAttSub(who);
@@ -6949,7 +6967,8 @@ function openAttEditModal(who, clsKey, name, dk) {
   function getBtnStyle(opt) {
     var sel = tempStatus===opt
       || (tempStatus==='등원+하원'&&(opt==='등원'||opt==='하원'))
-      || (tempStatus==='지각+하원'&&(opt==='지각'||opt==='하원'));
+      || (tempStatus==='지각+하원'&&(opt==='지각'||opt==='하원'))
+      || (tempStatus==='보강+하원'&&(opt==='보강'||opt==='하원'));
     return sel ? 'background:'+chipColors[opt]+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%;border:none'
                : inactiveStyle+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%;border:none';
   }
@@ -6966,12 +6985,19 @@ function openAttEditModal(who, clsKey, name, dk) {
       else if(tempStatus==='등원') tempStatus='등원+하원';
       else if(tempStatus==='지각+하원') tempStatus='지각';
       else if(tempStatus==='지각') tempStatus='지각+하원';
+      else if(tempStatus==='보강+하원') tempStatus='보강';
+      else if(tempStatus==='보강') tempStatus='보강+하원';
       else tempStatus='하원';
     } else if(opt==='지각') {
       if(tempStatus==='지각') tempStatus='';
       else if(tempStatus==='지각+하원') tempStatus='하원';
       else if(tempStatus==='하원') tempStatus='지각+하원';
       else tempStatus='지각';
+    } else if(opt==='보강') {
+      if(tempStatus==='보강') tempStatus='';
+      else if(tempStatus==='보강+하원') tempStatus='하원';
+      else if(tempStatus==='하원') tempStatus='보강+하원';
+      else tempStatus='보강';
     } else {
       tempStatus = tempStatus===opt ? '' : opt;
     }
@@ -6981,7 +7007,8 @@ function openAttEditModal(who, clsKey, name, dk) {
       if(!btn) return;
       var sel = tempStatus===o
         || (tempStatus==='등원+하원'&&(o==='등원'||o==='하원'))
-        || (tempStatus==='지각+하원'&&(o==='지각'||o==='하원'));
+        || (tempStatus==='지각+하원'&&(o==='지각'||o==='하원'))
+        || (tempStatus==='보강+하원'&&(o==='보강'||o==='하원'));
       if(sel) {
         btn.style.cssText = 'background:'+chipColors[o]+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%';
       } else {
@@ -7000,7 +7027,8 @@ function openAttEditModal(who, clsKey, name, dk) {
       ATT_OPTIONS.map(function(opt){
         var sel = curStatus===opt
           || (curStatus==='등원+하원'&&(opt==='등원'||opt==='하원'))
-          || (curStatus==='지각+하원'&&(opt==='지각'||opt==='하원'));
+          || (curStatus==='지각+하원'&&(opt==='지각'||opt==='하원'))
+          || (curStatus==='보강+하원'&&(opt==='보강'||opt==='하원'));
         return '<button id="att-ed-'+opt+'" style="'+(sel?'background:'+chipColors[opt]:inactiveStyle)+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%">'+opt+'</button>';
       }).join('') +
     '</div>' +
@@ -7025,6 +7053,7 @@ function openAttEditModal(who, clsKey, name, dk) {
     else if(tempStatus==='하원') newVal={status:'하원', 하원Time:attTime(cur,'하원Time')||now};
     else if(tempStatus==='등원+하원') newVal={status:'등원+하원', 등원Time:attTime(cur,'등원Time')||now, 하원Time:attTime(cur,'하원Time')||now};
     else if(tempStatus==='지각+하원') newVal={status:'지각+하원', 지각Time:attTime(cur,'지각Time')||now, 하원Time:attTime(cur,'하원Time')||now};
+    else if(tempStatus==='보강+하원') newVal={status:'보강+하원', 보강Time:attTime(cur,'보강Time')||now, 하원Time:attTime(cur,'하원Time')||now};
     else if(tempStatus) { newVal={status:tempStatus}; newVal[tempStatus+'Time']=now; }
 
     if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
