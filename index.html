@@ -3743,7 +3743,7 @@ function renderDailyReport(who) {
           '<div class="class-mgmt-card-name">'+cls+'<span class="class-mgmt-badge">'+cls+'</span><span class="class-mgmt-badge day-badge">'+day+'</span></div>' +
           '<span class="class-mgmt-stu-count">'+stuList.length+'명</span></div>' +
           '<div class="class-mgmt-stu-list" style="margin-bottom:8px">'+
-          (stuList.length>0 ? stuList.map(function(name,i){var col=avatarPalette[i%7];return '<div class="class-mgmt-stu-chip"><div class="class-mgmt-stu-avatar" style="background:'+col+'">'+name[0]+'</div><span>'+name+'</span></div>';}).join('') : '<div style="font-size:.75rem;color:#ccc">등록된 학생 없음</div>')+
+          (stuList.length>0 ? stuList.map(function(name,i){var col=avatarPalette[i%7];return '<div class="class-mgmt-stu-chip" onclick="event.stopPropagation();reportSelClass=\''+k+'\';reportSelStu=\''+name+'\';renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="cursor:pointer" title="'+name+' 리포트 작성"><div class="class-mgmt-stu-avatar" style="background:'+col+'">'+name[0]+'</div><span>'+name+'</span></div>';}).join('') : '<div style="font-size:.75rem;color:#ccc">등록된 학생 없음</div>')+
           '</div>'+
           '<div style="font-size:.72rem;color:'+(stuList.length===0?'#ccc':writtenCount>0?'#2e7d32':'var(--text-soft)')+'">'+
           (stuList.length===0?'':writtenCount>0?'✅ '+writtenCount+'/'+stuList.length+'명 작성됨':'리포트 미작성')+'</div>' +
