@@ -6829,7 +6829,7 @@ function renderMonthlyAtt(who,el){
         });
       });
     });
-    var unrecorded = allActiveStudents.filter(function(n){return recordedNames.indexOf(n)<0;});
+    var unrecorded = allActiveStudents.filter(function(n){return recordedNames.indexOf(n)<0;}).sort(function(a,b){return a.localeCompare(b,'ko');});
 
     if(recs2.length===0){
       detail='<div class="t-att-cal-detail-title">'+lbl2+'</div><div class="t-att-detail-empty">이 날 기록된 출결이 없어요.</div>';
