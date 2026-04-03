@@ -618,7 +618,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
       <div class="form-group"><label class="form-label-sm">아이디</label><input type="text" id="t-id" placeholder="아이디 입력" class="form-input form-input-cookie"></div>
       <div class="form-group"><label class="form-label-sm">비밀번호</label><input type="password" id="t-pw" placeholder="비밀번호 입력" class="form-input form-input-cookie"></div>
       <button class="btn-submit btn-cookie-submit" onclick="teacherLogin()">로그인</button>
-      <div class="login-hint">쿠키쌤 ID <b>cookie</b> / PW <b>1234</b><br>버터쌤 ID <b>butter</b> / PW <b>1234</b></div>
+      
     </div>
   </div>
 </div>
@@ -779,6 +779,7 @@ var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
+var CLASS_FEE = {'픽처북':400000,'리더스북':430000,'챕터북':480000,'노블':550000,'비욘드A':650000,'비욘드B':650000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -787,6 +788,16 @@ function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
 var students = {};
 
 var bookRecords = {};
+// tuitionData[ym][name] = {paid:true/false, paidAt:'', method:'', amount:0}
+var tuitionData = {};
+// expenseData[who][ym] = [{id, date, category, title, amount, memo}]
+var expenseData = {cookie:{}, butter:{}};
+var expenseCategories = ['교재비','소모품비','간식비','임대료','광고비','비품비','구독료','기타'];
+// textbooks = [{id, title, type:'시중'|'자체제작', publisher, classes:[], unitPrice, stock, createdAt}]
+// textbookLogs = [{id, tbId, logType:'입고'|'출고', qty, date, note, studentName, who}]
+var textbooks = [];
+var textbookLogs = [];
+var tbIdSeq = 1;
 
 var classStudents = {
   '픽처북-월/수':[],'픽처북-화/목':[],
@@ -1128,7 +1139,7 @@ function openLecPlayer(lecId, videoIdx) {
 
   // 이미 완료한 강의면 스크럽바 자유롭게
   var alreadyDone = name !== '__teacher_preview__' &&
-    lecCompleted[name] && lecCompleted[name][lecId] && lecCompleted[name][lecId][vi];
+    lecCompleted[name] && lecCompleted[name][lecId] && lecCompleted[name][lecId][videoIdx];
   ytMaxTime = alreadyDone ? 99999 : 0;
 
   // 제목 설정
@@ -1944,12 +1955,844 @@ function selectMenu(who,key){
   else if(key==='class')    renderClassMgmt(who,el);
   else if(key==='point')    renderPlaceholder(el,'⭐','포인트 관리','학생 포인트 관리 기능이 곧 추가될 예정이에요!');
   else if(key==='student')  renderStudentMgmt(who,el);
-  else if(key==='tuition')  renderPlaceholder(el,'💰','원비 관리','원비 관리 기능이 곧 추가될 예정이에요!');
-  else if(key==='textbook') renderPlaceholder(el,'📖','교재 관리','교재 관리 기능이 곧 추가될 예정이에요!');
-  else if(key==='account')  renderPlaceholder(el,'🧾','회계 관리','회계 관리 기능이 곧 추가될 예정이에요!');
+  else if(key==='tuition')  renderTuitionMgmt(who,el);
+  else if(key==='textbook') renderTextbookMgmt(who,el);
+  else if(key==='account')  renderAccountMgmt(who,el);
   else if(key==='notice')   renderNoticePanel(who,el);
   // 메뉴 콘텐츠 열리면 상단으로 부드럽게 스크롤
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+/* ====== 원비 관리 ====== */
+var tuitionYm = (function(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');})();
+
+function renderTuitionMgmt(who, el) {
+  var now = new Date();
+  var ym = tuitionYm;
+  var ymLabel = ym.replace('-','년 ')+'월';
+
+  // 해당 월 재원생 목록 수집
+  var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  if(!tuitionData[ym]) tuitionData[ym]={};
+
+  // 집계
+  var totalRevenue=0, paidCount=0, unpaidCount=0;
+  roster.forEach(function(s){
+    var fee = CLASS_FEE[s.class]||0;
+    var t = tuitionData[ym][s.name]||{};
+    if(t.paid){totalRevenue+=fee;paidCount++;}
+    else unpaidCount++;
+  });
+
+  var html = '<div class="t-section-title">💰 원비 관리</div>';
+
+  // 월 이동 + 제목
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
+    '<button onclick="moveTuitionMonth(-1,\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">◀</button>' +
+    '<div style="font-size:1rem;font-weight:700;color:var(--brown);flex:1;text-align:center">'+ymLabel+'</div>' +
+    '<button onclick="moveTuitionMonth(1,\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">▶</button>' +
+    '</div>';
+
+  // 요약 카드 3개
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.75rem;color:#4caf50;font-weight:700;margin-bottom:4px;">💰 이달의 매출</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:#2e7d32;">'+totalRevenue.toLocaleString()+'<span style="font-size:.75rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+    '<div style="background:#e3f2fd;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.75rem;color:#2196f3;font-weight:700;margin-bottom:4px;">✅ 납부 완료</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:#1565c0;">'+paidCount+'<span style="font-size:.75rem;font-weight:400;">명</span></div>' +
+    '</div>' +
+    '<div style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.75rem;color:#e91e63;font-weight:700;margin-bottom:4px;">⏳ 미납</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:#c2185b;">'+unpaidCount+'<span style="font-size:.75rem;font-weight:400;">명</span></div>' +
+    '</div>' +
+  '</div>';
+
+  // 알림톡 발송 예고 배너 + 영수증 PDF 버튼
+  html += '<div style="display:flex;gap:10px;margin-bottom:16px">';
+  html += '<div style="flex:1;background:#fff8ee;border:1px solid #f5d9b0;border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:10px">' +
+    '<div style="flex:1"><div style="font-size:.82rem;font-weight:700;color:#a07040;margin-bottom:2px;">📨 카카오 알림톡 일괄 발송</div>' +
+    '<div style="font-size:.72rem;color:var(--text-soft)">카카오 알림톡 연동 후 미납 학생에게 결제 안내 메시지를 일괄 발송할 수 있어요.</div></div>' +
+    '<button style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:6px 12px;font-size:.72rem;font-weight:700;color:#bbb;cursor:default;font-family:inherit">준비 중</button>' +
+  '</div>';
+  html += '<button onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')" style="background:#5c3d1e;border:none;border-radius:12px;padding:12px 18px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0">📄 영수증<br>PDF 저장</button>';
+  html += '</div>';
+
+  // 학생 목록 테이블
+  if(roster.length === 0) {
+    html += '<div class="t-placeholder"><span class="ph-ico">👩‍🎓</span><div class="ph-desc">등록된 재원생이 없어요.</div></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    roster.forEach(function(s, i){
+      var fee = CLASS_FEE[s.class]||0;
+      var t = tuitionData[ym][s.name]||{};
+      var isPaid = t.paid||false;
+      var col = avatarPalette[i%7];
+
+      html += '<div style="background:white;border-radius:12px;border:1.5px solid '+(isPaid?'#a5d6a7':'#ffcdd2')+';padding:12px 14px;display:flex;align-items:center;gap:12px">' +
+        '<div style="width:34px;height:34px;border-radius:50%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;color:white;flex-shrink:0">'+s.name[0]+'</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:.88rem;font-weight:700;color:var(--brown)">'+s.name+'</div>' +
+          '<div style="font-size:.72rem;color:var(--text-soft);margin-top:2px">'+s.class+' · '+s.day+' · '+fee.toLocaleString()+'원</div>' +
+          (isPaid?'<div style="font-size:.68rem;color:#2e7d32;margin-top:2px">✅ '+t.paidAt+' · '+(t.method||'')+' 납부</div>':'<div style="font-size:.68rem;color:#e53935;margin-top:2px">⏳ 미납</div>') +
+        '</div>';
+
+      if(!isPaid) {
+        html += '<button onclick="openTuitionModal(\''+who+'\',\''+s.name+'\',\''+ym+'\','+fee+')" ' +
+          'style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#2e7d32;cursor:pointer;font-family:inherit;flex-shrink:0">납부 처리</button>';
+      } else {
+        html += '<button onclick="cancelTuition(\''+who+'\',\''+s.name+'\',\''+ym+'\')" ' +
+          'style="background:#fce4ec;border:1.5px solid #f48fb1;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">취소</button>';
+      }
+      html += '</div>';
+    });
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function moveTuitionMonth(dir, who, el) {
+  var parts = tuitionYm.split('-');
+  var y=parseInt(parts[0]), m=parseInt(parts[1])-1;
+  m+=dir; if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+  tuitionYm = y+'-'+String(m+1).padStart(2,'0');
+  renderTuitionMgmt(who, el);
+}
+
+function openTuitionModal(who, name, ym, fee) {
+  var overlay = document.createElement('div');
+  overlay.id = 'tuition-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:20px;padding:28px 28px 24px;width:320px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2)">' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:4px;">납부 처리</div>' +
+      '<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:16px">'+name+' · '+fee.toLocaleString()+'원</div>' +
+      '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:8px">결제 수단</div>' +
+      '<div style="display:flex;gap:8px;margin-bottom:16px">' +
+        ['계좌이체','카드결제','제로페이'].map(function(m2){
+          return '<button onclick="selectPayMethod(this,\''+m2+'\')" class="pay-method-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.72rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">'+m2+'</button>';
+        }).join('') +
+      '</div>' +
+      '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:8px">납부일</div>' +
+      '<input type="date" id="tuition-paid-date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid #e0d0c0;font-size:.82rem;font-family:inherit;margin-bottom:20px;box-sizing:border-box">' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="closeTuitionModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.8rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">취소</button>' +
+        '<button onclick="confirmTuition(\''+who+'\',\''+name+'\',\''+ym+'\','+fee+')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--cookie);font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">납부 완료</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+var selectedPayMethod = '';
+function selectPayMethod(btn, method) {
+  selectedPayMethod = method;
+  document.querySelectorAll('.pay-method-btn').forEach(function(b){
+    b.style.border='1.5px solid #e0d0c0'; b.style.background='#fafafa'; b.style.color='#aaa';
+  });
+  btn.style.border='1.5px solid var(--cookie)'; btn.style.background='var(--cookie-bg)'; btn.style.color='var(--brown)';
+}
+
+function closeTuitionModal() {
+  var o=document.getElementById('tuition-modal-overlay'); if(o) o.remove();
+  selectedPayMethod='';
+}
+
+function confirmTuition(who, name, ym, fee) {
+  if(!selectedPayMethod){alert('결제 수단을 선택해주세요.');return;}
+  var dateEl=document.getElementById('tuition-paid-date');
+  var paidAt=dateEl?dateEl.value:'';
+  if(!tuitionData[ym]) tuitionData[ym]={};
+  tuitionData[ym][name]={paid:true, paidAt:paidAt, method:selectedPayMethod, amount:fee};
+  if(window.fbSaveTuition) window.fbSaveTuition(ym, name, tuitionData[ym][name]);
+  closeTuitionModal();
+  renderTuitionMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function cancelTuition(who, name, ym) {
+  if(!confirm(name+'님의 납부 기록을 취소할까요?')) return;
+  if(tuitionData[ym]) delete tuitionData[ym][name];
+  if(window.fbSaveTuition) window.fbSaveTuition(ym, name, null);
+  renderTuitionMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function downloadReceiptsPDF(who, ym) {
+  var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  var paidList = roster.filter(function(s){
+    return tuitionData[ym] && tuitionData[ym][s.name] && tuitionData[ym][s.name].paid;
+  });
+  if(paidList.length===0){alert('납부 완료된 학생이 없어요.');return;}
+
+  var btn = document.querySelector('[onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')"]');
+  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
+
+  var ymLabel = ym.replace('-','년 ')+'월';
+  var whoLabel = who==='cookie'?'쿠키쌤':'버터쌤';
+  var issueDate = new Date().toLocaleDateString('ko-KR');
+
+  // 영수증 HTML 빌드 (한 장에 2명씩)
+  var receiptsHtml = '';
+  paidList.forEach(function(s, idx){
+    var t = tuitionData[ym][s.name];
+    var fee = CLASS_FEE[s.class]||t.amount||0;
+    var receiptNo = ym.replace('-','')+'-'+String(idx+1).padStart(3,'0');
+
+    receiptsHtml +=
+      '<div style="width:370px;border:1.5px solid #f0d8b0;border-radius:12px;padding:24px 26px;background:white;box-sizing:border-box;font-family:\'Noto Sans KR\',sans-serif;page-break-inside:avoid;">' +
+        // 헤더
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #e8a96a;padding-bottom:12px;margin-bottom:14px;">' +
+          '<div>' +
+            '<div style="font-size:9px;color:#b08040;letter-spacing:2px;font-weight:600;margin-bottom:4px;">RECEIPT</div>' +
+            '<div style="font-size:18px;font-weight:900;color:#5c3d1e;">원비 영수증</div>' +
+          '</div>' +
+          '<div style="text-align:right;">' +
+            '<div style="font-size:9px;color:#aaa;">No. '+receiptNo+'</div>' +
+            '<div style="font-size:9px;color:#aaa;margin-top:2px;">발행일 '+issueDate+'</div>' +
+          '</div>' +
+        '</div>' +
+        // 수강생 정보
+        '<div style="margin-bottom:14px;">' +
+          '<div style="font-size:9px;color:#a07040;font-weight:700;margin-bottom:6px;letter-spacing:.5px;">수강생 정보</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+            '<tr><td style="color:#888;padding:3px 0;width:60px;">성명</td><td style="color:#333;font-weight:700;">'+s.name+'</td></tr>' +
+            '<tr><td style="color:#888;padding:3px 0;">클래스</td><td style="color:#333;">'+s.class+' · '+s.day+'</td></tr>' +
+            '<tr><td style="color:#888;padding:3px 0;">수강 기간</td><td style="color:#333;">'+ymLabel+'</td></tr>' +
+          '</table>' +
+        '</div>' +
+        // 납부 내역
+        '<div style="background:#fffbf5;border-radius:8px;padding:12px 14px;margin-bottom:14px;">' +
+          '<div style="font-size:9px;color:#a07040;font-weight:700;margin-bottom:8px;letter-spacing:.5px;">납부 내역</div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:6px;">' +
+            '<span style="color:#888;">수강료 ('+ymLabel+')</span>' +
+            '<span style="color:#333;font-weight:700;">'+fee.toLocaleString()+' 원</span>' +
+          '</div>' +
+          '<div style="border-top:1px dashed #f0d8b0;margin:8px 0;"></div>' +
+          '<div style="display:flex;justify-content:space-between;font-size:13px;">' +
+            '<span style="color:#5c3d1e;font-weight:700;">합계</span>' +
+            '<span style="color:#e8a96a;font-weight:900;">'+fee.toLocaleString()+' 원</span>' +
+          '</div>' +
+        '</div>' +
+        // 납부 정보
+        '<div style="margin-bottom:16px;">' +
+          '<div style="font-size:9px;color:#a07040;font-weight:700;margin-bottom:6px;letter-spacing:.5px;">납부 정보</div>' +
+          '<table style="width:100%;border-collapse:collapse;font-size:11px;">' +
+            '<tr><td style="color:#888;padding:3px 0;width:60px;">납부일</td><td style="color:#333;">'+t.paidAt+'</td></tr>' +
+            '<tr><td style="color:#888;padding:3px 0;">결제 수단</td><td style="color:#333;">'+t.method+'</td></tr>' +
+            '<tr><td style="color:#888;padding:3px 0;">납부 금액</td><td style="color:#2e7d32;font-weight:700;">'+fee.toLocaleString()+' 원</td></tr>' +
+          '</table>' +
+        '</div>' +
+        // 푸터
+        '<div style="border-top:1px solid #f5ede0;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">' +
+          '<div>' +
+            '<div style="font-size:10px;font-weight:700;color:#5c3d1e;">투쌤플레이스 영어 공부방</div>' +
+            '<div style="font-size:9px;color:#aaa;margin-top:1px;">'+whoLabel+'</div>' +
+          '</div>' +
+          '<div style="width:48px;height:48px;border-radius:50%;background:#fff8ee;border:1.5px solid #f5d9b0;display:flex;align-items:center;justify-content:center;font-size:18px;">🍪</div>' +
+        '</div>' +
+      '</div>';
+  });
+
+  // 2열 그리드로 배치
+  var gridHtml =
+    '<div style="background:white;padding:20px;font-family:\'Noto Sans KR\',sans-serif;">' +
+      '<div style="text-align:center;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid #f5ede0;">' +
+        '<div style="font-size:11px;color:#b08040;letter-spacing:2px;margin-bottom:4px;">MONTHLY RECEIPTS</div>' +
+        '<div style="font-size:20px;font-weight:900;color:#5c3d1e;">'+ymLabel+' 원비 영수증 모음</div>' +
+        '<div style="font-size:11px;color:#aaa;margin-top:4px;">'+whoLabel+' · 총 '+paidList.length+'명 · 발행일 '+issueDate+'</div>' +
+      '</div>' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">'+receiptsHtml+'</div>' +
+    '</div>';
+
+  // 임시 컨테이너
+  var container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:800px;background:white;';
+  container.innerHTML = gridHtml;
+  document.body.appendChild(container);
+
+  function loadScript(src, cb) {
+    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
+    var s=document.createElement('script'); s.src=src; s.onload=cb; document.head.appendChild(s);
+  }
+
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', function(){
+      html2canvas(container, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
+        var pdf = new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+        var pdfW = pdf.internal.pageSize.getWidth();
+        var pdfH = pdf.internal.pageSize.getHeight();
+        var imgData = canvas.toDataURL('image/jpeg',0.95);
+        var imgH = canvas.height * pdfW / canvas.width;
+
+        if(imgH <= pdfH) {
+          pdf.addImage(imgData,'JPEG',0,0,pdfW,imgH);
+        } else {
+          var heightLeft = imgH, pos = 0;
+          pdf.addImage(imgData,'JPEG',0,pos,pdfW,imgH);
+          heightLeft -= pdfH;
+          while(heightLeft > 0) {
+            pos = heightLeft - imgH;
+            pdf.addPage();
+            pdf.addImage(imgData,'JPEG',0,pos,pdfW,imgH);
+            heightLeft -= pdfH;
+          }
+        }
+
+        pdf.save(ym+'_'+whoLabel+'_원비영수증.pdf');
+        document.body.removeChild(container);
+        if(btn){btn.innerHTML='📄 영수증<br>PDF 저장';btn.disabled=false;}
+      }).catch(function(){
+        document.body.removeChild(container);
+        if(btn){btn.innerHTML='📄 영수증<br>PDF 저장';btn.disabled=false;}
+        alert('PDF 생성 중 오류가 발생했어요.');
+      });
+    });
+  });
+}
+
+/* ====== 회계 관리 ====== */
+var accountYm = (function(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');})();
+var accountTab = 'mine'; // 'mine' | 'all'
+
+function getRevenue(who, ym) {
+  var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  var total = 0;
+  roster.forEach(function(s){
+    if(tuitionData[ym]&&tuitionData[ym][s.name]&&tuitionData[ym][s.name].paid)
+      total += CLASS_FEE[s.class]||0;
+  });
+  return total;
+}
+
+function getExpenseTotal(who, ym) {
+  return ((expenseData[who]||{})[ym]||[]).reduce(function(a,e){return a+(e.amount||0);},0);
+}
+
+function renderAccountMgmt(who, el) {
+  var ym = accountYm;
+  var ymLabel = ym.replace('-','년 ')+'월';
+  var isAll = accountTab==='all';
+
+  var html = '<div class="t-section-title">🧾 회계 관리</div>';
+
+  // 탭
+  html += '<div style="display:flex;gap:6px;margin-bottom:16px">' +
+    '<button onclick="accountTab=\'mine\';renderAccountMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    'style="padding:6px 16px;border-radius:100px;border:none;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:'+(isAll?'#f5ede0':'var(--cookie)')+';color:'+(isAll?'var(--text-mid)':'white')+'">'+(who==='cookie'?'🍪 쿠키쌤':'🧈 버터쌤')+'</button>' +
+    '<button onclick="accountTab=\'all\';renderAccountMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    'style="padding:6px 16px;border-radius:100px;border:none;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;background:'+(isAll?'var(--cookie)':'#f5ede0')+';color:'+(isAll?'white':'var(--text-mid)')+'">📊 전체 통합</button>' +
+  '</div>';
+
+  if(isAll) {
+    html += renderAccountAll(who, el);
+    el.innerHTML = html;
+    return;
+  }
+
+  // 월 이동
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
+    '<button onclick="moveAccountMonth(-1,\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">◀</button>' +
+    '<div style="font-size:1rem;font-weight:700;color:var(--brown);flex:1;text-align:center">'+ymLabel+'</div>' +
+    '<button onclick="moveAccountMonth(1,\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">▶</button>' +
+  '</div>';
+
+  var revenue = getRevenue(who, ym);
+  var expense = getExpenseTotal(who, ym);
+  var profit = revenue - expense;
+
+  // 요약 카드
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#4caf50;font-weight:700;margin-bottom:4px;">💰 매출</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:#2e7d32;">'+revenue.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+      '<div style="font-size:.65rem;color:#aaa;margin-top:2px;">원비 자동 동기화</div>' +
+    '</div>' +
+    '<div style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#e91e63;font-weight:700;margin-bottom:4px;">📤 지출</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:#c2185b;">'+expense.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+    '<div style="background:'+(profit>=0?'#e3f2fd':'#fff8e1')+';border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:'+(profit>=0?'#2196f3':'#ff9800')+';font-weight:700;margin-bottom:4px;">📊 순이익</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:'+(profit>=0?'#1565c0':'#e65100')+';">'+(profit>=0?'':'-')+Math.abs(profit).toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+  '</div>';
+
+  // 최근 6개월 그래프
+  html += renderAccountChart(who);
+
+  // 카테고리 관리
+  html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:12px 16px;margin-bottom:16px">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
+      '<div style="font-size:.85rem;font-weight:700;color:var(--brown)">📂 지출 카테고리</div>' +
+      '<button onclick="addExpenseCategory(\''+who+'\')" style="margin-left:auto;background:var(--cookie-bg);border:1.5px solid var(--cookie-lt);border-radius:7px;padding:3px 10px;font-size:.7rem;font-weight:700;color:var(--cookie);cursor:pointer;font-family:inherit">+ 추가</button>' +
+    '</div>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:6px">' +
+    expenseCategories.map(function(cat, idx){
+      return '<div style="display:flex;align-items:center;gap:4px;background:white;border:1px solid #f0e8dc;border-radius:100px;padding:3px 8px 3px 10px;font-size:.72rem;color:var(--brown)">' +
+        cat +
+        '<button onclick="removeExpenseCategory('+idx+',\''+who+'\')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:.75rem;padding:0 2px;line-height:1">✕</button>' +
+      '</div>';
+    }).join('') +
+    '</div></div>';
+
+  // 지출 입력 폼
+  html += '<div class="register-form-box" style="margin-bottom:16px">' +
+    '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:12px">+ 지출 내역 추가</div>' +
+    '<div class="register-row">' +
+      '<div><div class="form-label">날짜</div><input type="date" class="register-input" id="exp-date-'+who+'" value="'+new Date().toISOString().slice(0,10)+'" style="margin-bottom:0"></div>' +
+      '<div><div class="form-label">카테고리</div>' +
+        '<select class="register-input" id="exp-cat-'+who+'" style="margin-bottom:0">' +
+        expenseCategories.map(function(c){return '<option>'+c+'</option>';}).join('') +
+        '</select>' +
+      '</div>' +
+    '</div>' +
+    '<div class="register-row">' +
+      '<div><div class="form-label">항목명</div><input class="register-input" id="exp-title-'+who+'" placeholder="예: 8월 교재 구입" style="margin-bottom:0"></div>' +
+      '<div><div class="form-label">금액 (원)</div><input type="number" class="register-input" id="exp-amount-'+who+'" placeholder="0" style="margin-bottom:0"></div>' +
+    '</div>' +
+    '<div><div class="form-label">메모 (선택)</div><input class="register-input" id="exp-memo-'+who+'" placeholder="추가 메모" style="margin-bottom:0"></div>' +
+    '<div class="register-form-actions"><button class="btn-reg-submit" onclick="addExpense(\''+who+'\',\''+ym+'\')">+ 지출 추가</button></div>' +
+  '</div>';
+
+  // 지출 목록
+  var expenses = (expenseData[who][ym]||[]).slice().reverse();
+  if(expenses.length===0){
+    html += '<div class="t-placeholder" style="padding:20px 0"><span class="ph-ico">📭</span><div class="ph-desc">이달의 지출 내역이 없어요.</div></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    expenses.forEach(function(e){
+      var catColors = {'교재비':'#e3f2fd:#1565c0','소모품비':'#f3e5f5:#6a1b9a','간식비':'#fff8e1:#e65100','임대료':'#fce4ec:#c2185b','광고비':'#e8f5e9:#2e7d32','비품비':'#fff3e0:#e65100','구독료':'#e8f4fd:#0277bd','기타':'#f5f5f5:#666'};
+      var cc = (catColors[e.category]||'#f5f5f5:#666').split(':');
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:10px;border:1px solid #f0e8dc">' +
+        '<div style="flex:1">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">' +
+            '<span style="font-size:.68rem;font-weight:700;padding:2px 8px;border-radius:100px;background:'+cc[0]+';color:'+cc[1]+'">'+e.category+'</span>' +
+            '<span style="font-size:.85rem;font-weight:700;color:var(--brown)">'+e.title+'</span>' +
+          '</div>' +
+          '<div style="font-size:.7rem;color:var(--text-soft)">'+e.date+(e.memo?' · '+e.memo:'')+'</div>' +
+        '</div>' +
+        '<div style="font-size:.9rem;font-weight:700;color:#c2185b;flex-shrink:0">-'+e.amount.toLocaleString()+'원</div>' +
+        '<button onclick="deleteExpense(\''+who+'\',\''+ym+'\',\''+e.id+'\')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;flex-shrink:0">🗑️</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function renderAccountAll(who) {
+  var now = new Date();
+  var y = now.getFullYear();
+  var html = '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:16px">'+y+'년 전체 현황</div>';
+
+  // 연간 합계
+  var totals = {cookie:{rev:0,exp:0}, butter:{rev:0,exp:0}};
+  for(var mo=0;mo<12;mo++){
+    var mym = y+'-'+String(mo+1).padStart(2,'0');
+    ['cookie','butter'].forEach(function(w){
+      totals[w].rev += getRevenue(w, mym);
+      totals[w].exp += getExpenseTotal(w, mym);
+    });
+  }
+  var allRev = totals.cookie.rev + totals.butter.rev;
+  var allExp = totals.cookie.exp + totals.butter.exp;
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#4caf50;font-weight:700;margin-bottom:4px;">💰 연간 매출</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:#2e7d32;">'+allRev.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+    '<div style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#e91e63;font-weight:700;margin-bottom:4px;">📤 연간 지출</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:#c2185b;">'+allExp.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+    '<div style="background:#e3f2fd;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#2196f3;font-weight:700;margin-bottom:4px;">📊 연간 순이익</div>' +
+      '<div style="font-size:1.2rem;font-weight:900;color:#1565c0;">'+(allRev-allExp).toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
+    '</div>' +
+  '</div>';
+
+  // 선생님별 비교
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">';
+  [{w:'cookie',label:'🍪 쿠키쌤'},{w:'butter',label:'🧈 버터쌤'}].forEach(function(t){
+    var r=totals[t.w].rev, e=totals[t.w].exp, p=r-e;
+    html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px">' +
+      '<div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:10px">'+t.label+'</div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:6px"><span style="color:#888">매출</span><span style="color:#2e7d32;font-weight:700">'+r.toLocaleString()+'원</span></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:.78rem;margin-bottom:6px"><span style="color:#888">지출</span><span style="color:#c2185b;font-weight:700">'+e.toLocaleString()+'원</span></div>' +
+      '<div style="border-top:1px solid #f0e8dc;padding-top:8px;display:flex;justify-content:space-between;font-size:.82rem"><span style="color:#888">순이익</span><span style="color:#1565c0;font-weight:900">'+p.toLocaleString()+'원</span></div>' +
+    '</div>';
+  });
+  html += '</div>';
+
+  // 월별 테이블
+  html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;overflow:hidden">' +
+    '<div style="padding:12px 16px;border-bottom:1px solid #f0e8dc;font-size:.85rem;font-weight:700;color:var(--brown)">월별 현황</div>' +
+    '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.78rem">' +
+    '<tr style="background:#fff8ee">' +
+      '<th style="padding:8px 12px;text-align:left;color:#a07040;font-weight:700">월</th>' +
+      '<th style="padding:8px 12px;text-align:right;color:#2e7d32;font-weight:700">매출</th>' +
+      '<th style="padding:8px 12px;text-align:right;color:#c2185b;font-weight:700">지출</th>' +
+      '<th style="padding:8px 12px;text-align:right;color:#1565c0;font-weight:700">순이익</th>' +
+    '</tr>';
+  for(var mo2=0;mo2<12;mo2++){
+    var mym2 = y+'-'+String(mo2+1).padStart(2,'0');
+    var rev2 = getRevenue('cookie',mym2)+getRevenue('butter',mym2);
+    var exp2 = getExpenseTotal('cookie',mym2)+getExpenseTotal('butter',mym2);
+    var pro2 = rev2-exp2;
+    var isThis = mym2===accountYm;
+    html += '<tr style="border-top:1px solid #f5ede0;background:'+(isThis?'#fffbf5':'white')+'">' +
+      '<td style="padding:8px 12px;font-weight:'+(isThis?'700':'400')+';color:var(--brown)">'+(mo2+1)+'월'+(isThis?' ●':'')+'</td>' +
+      '<td style="padding:8px 12px;text-align:right;color:#2e7d32">'+( rev2?rev2.toLocaleString()+' 원':'-')+'</td>' +
+      '<td style="padding:8px 12px;text-align:right;color:#c2185b">'+( exp2?exp2.toLocaleString()+' 원':'-')+'</td>' +
+      '<td style="padding:8px 12px;text-align:right;color:'+(pro2>=0?'#1565c0':'#e65100')+';font-weight:700">'+( rev2||exp2?(pro2>=0?'':'-')+Math.abs(pro2).toLocaleString()+' 원':'-')+'</td>' +
+    '</tr>';
+  }
+  html += '</table></div></div>';
+  return html;
+}
+
+function renderAccountChart(who) {
+  var now = new Date();
+  var months = [];
+  for(var i=5;i>=0;i--){
+    var d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    months.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'월'});
+  }
+  var maxVal = 0;
+  var data = months.map(function(m){
+    var r=getRevenue(who,m.ym), e=getExpenseTotal(who,m.ym);
+    maxVal=Math.max(maxVal,r,e);
+    return {label:m.label, rev:r, exp:e};
+  });
+  if(maxVal===0) return '';
+  var html = '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px 16px;margin-bottom:16px">' +
+    '<div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:12px">📈 최근 6개월</div>' +
+    '<div style="display:flex;align-items:flex-end;gap:8px;height:80px">';
+  data.forEach(function(d){
+    var rH=maxVal?Math.round(d.rev/maxVal*70):0;
+    var eH=maxVal?Math.round(d.exp/maxVal*70):0;
+    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
+      '<div style="display:flex;align-items:flex-end;gap:2px;height:70px">' +
+        '<div style="width:10px;background:#a5d6a7;border-radius:3px 3px 0 0;height:'+rH+'px;"></div>' +
+        '<div style="width:10px;background:#f48fb1;border-radius:3px 3px 0 0;height:'+eH+'px;"></div>' +
+      '</div>' +
+      '<div style="font-size:.62rem;color:var(--text-soft)">'+d.label+'</div>' +
+    '</div>';
+  });
+  html += '</div>' +
+    '<div style="display:flex;gap:12px;margin-top:8px">' +
+      '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#2e7d32"><div style="width:10px;height:10px;border-radius:2px;background:#a5d6a7"></div>매출</div>' +
+      '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#c2185b"><div style="width:10px;height:10px;border-radius:2px;background:#f48fb1"></div>지출</div>' +
+    '</div>' +
+  '</div>';
+  return html;
+}
+
+function moveAccountMonth(dir, who, el) {
+  var parts=accountYm.split('-'), y=parseInt(parts[0]), m=parseInt(parts[1])-1;
+  m+=dir; if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+  accountYm=y+'-'+String(m+1).padStart(2,'0');
+  renderAccountMgmt(who, el);
+}
+
+function addExpense(who, ym) {
+  var date  = (document.getElementById('exp-date-'+who)||{value:''}).value;
+  var cat   = (document.getElementById('exp-cat-'+who)||{value:''}).value;
+  var title = (document.getElementById('exp-title-'+who)||{value:''}).value.trim();
+  var amt   = parseInt((document.getElementById('exp-amount-'+who)||{value:'0'}).value)||0;
+  var memo  = (document.getElementById('exp-memo-'+who)||{value:''}).value.trim();
+  if(!title){document.getElementById('exp-title-'+who).focus();return;}
+  if(!amt){document.getElementById('exp-amount-'+who).focus();return;}
+  if(!expenseData[who][ym]) expenseData[who][ym]=[];
+  var id = Date.now()+'';
+  expenseData[who][ym].push({id:id, date:date, category:cat, title:title, amount:amt, memo:memo});
+  if(window.fbSaveExpense) window.fbSaveExpense(who, ym, id, {date:date, category:cat, title:title, amount:amt, memo:memo});
+  renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function deleteExpense(who, ym, id) {
+  if(!confirm('지출 내역을 삭제할까요?')) return;
+  expenseData[who][ym] = (expenseData[who][ym]||[]).filter(function(e){return e.id!==id;});
+  if(window.fbDeleteExpense) window.fbDeleteExpense(who, ym, id);
+  renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function addExpenseCategory(who) {
+  var name = prompt('추가할 카테고리 이름을 입력해요:');
+  if(!name||!name.trim()) return;
+  if(expenseCategories.indexOf(name.trim())>-1){alert('이미 있는 카테고리예요.');return;}
+  expenseCategories.push(name.trim());
+  if(window.fbSaveExpenseCategories) window.fbSaveExpenseCategories();
+  renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function removeExpenseCategory(idx, who) {
+  var cat = expenseCategories[idx];
+  if(!confirm('"'+cat+'" 카테고리를 삭제할까요?\n해당 카테고리의 기존 지출 내역은 유지돼요.')) return;
+  expenseCategories.splice(idx,1);
+  if(window.fbSaveExpenseCategories) window.fbSaveExpenseCategories();
+  renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+/* ====== 교재 관리 ====== */
+var tbView = 'list'; // 'list' | 'add' | 'detail'
+var tbSelectedId = null;
+
+function renderTextbookMgmt(who, el) {
+  if(tbView==='add') { el.innerHTML = renderTbAddForm(who); return; }
+  if(tbView==='detail' && tbSelectedId) { el.innerHTML = renderTbDetail(who, tbSelectedId); return; }
+
+  var html = '<div class="t-section-title">📖 교재 관리</div>';
+
+  // 요약 카드
+  var totalStock = textbooks.reduce(function(a,b){return a+b.stock;},0);
+  var lowStock = textbooks.filter(function(b){return b.stock<=2;}).length;
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
+    '<div style="background:#e3f2fd;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#2196f3;font-weight:700;margin-bottom:4px;">📚 등록 교재</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:#1565c0;">'+textbooks.length+'<span style="font-size:.75rem;font-weight:400;">종</span></div>' +
+    '</div>' +
+    '<div style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:#4caf50;font-weight:700;margin-bottom:4px;">📦 총 재고</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:#2e7d32;">'+totalStock+'<span style="font-size:.75rem;font-weight:400;">권</span></div>' +
+    '</div>' +
+    '<div style="background:'+(lowStock>0?'#fff3e0':'#f5f5f5')+';border-radius:12px;padding:14px;text-align:center">' +
+      '<div style="font-size:.72rem;color:'+(lowStock>0?'#e65100':'#aaa')+';font-weight:700;margin-bottom:4px;">⚠️ 재고 부족</div>' +
+      '<div style="font-size:1.4rem;font-weight:900;color:'+(lowStock>0?'#e65100':'#ccc')+';">'+lowStock+'<span style="font-size:.75rem;font-weight:400;">종</span></div>' +
+    '</div>' +
+  '</div>';
+
+  // 교재 추가 버튼
+  html += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">' +
+    '<button onclick="tbView=\'add\';renderTextbookMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    'style="background:var(--cookie);border:none;border-radius:10px;padding:8px 18px;font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">+ 교재 추가</button>' +
+  '</div>';
+
+  if(textbooks.length===0) {
+    html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">등록된 교재가 없어요.<br>교재 추가 버튼을 눌러 등록해보세요!</div></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:8px">';
+    textbooks.forEach(function(tb){
+      var isLow = tb.stock<=2;
+      var typeBg = tb.type==='자체제작'?'#f3e5f5':'#e3f2fd';
+      var typeColor = tb.type==='자체제작'?'#6a1b9a':'#1565c0';
+      var clsLabel = (tb.classes||[]).join(' · ')||'미지정';
+      var outQty = textbookLogs.filter(function(l){return l.tbId===tb.id&&l.logType==='출고';}).reduce(function(a,l){return a+l.qty;},0);
+
+      html += '<div style="background:white;border-radius:12px;border:1.5px solid '+(isLow?'#ffcc80':'#f0e8dc')+';padding:13px 16px;display:flex;align-items:center;gap:12px;cursor:pointer" onclick="tbView=\'detail\';tbSelectedId='+tb.id+';renderTextbookMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">' +
+        '<div style="width:42px;height:42px;border-radius:10px;background:#fff8ee;display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">📗</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">' +
+            '<span style="font-size:.88rem;font-weight:700;color:var(--brown)">'+tb.title+'</span>' +
+            '<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:100px;background:'+typeBg+';color:'+typeColor+'">'+tb.type+'</span>' +
+          '</div>' +
+          '<div style="font-size:.72rem;color:var(--text-soft)">'+clsLabel+(tb.publisher?' · '+tb.publisher:'')+(tb.unitPrice?' · '+tb.unitPrice.toLocaleString()+'원':'')+'</div>' +
+          '<div style="font-size:.72rem;margin-top:3px">' +
+            '<span style="color:'+(isLow?'#e65100':'#2e7d32')+';font-weight:700">재고 '+tb.stock+'권</span>' +
+            '<span style="color:var(--text-soft);margin-left:8px">총 배부 '+outQty+'권</span>' +
+          '</div>' +
+        '</div>' +
+        '<span style="font-size:.72rem;color:var(--cookie)">→</span>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  el.innerHTML = html;
+}
+
+function renderTbAddForm(who) {
+  var html = '<div class="t-section-title">📖 교재 관리</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">' +
+      '<button onclick="tbView=\'list\';renderTextbookMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 목록</button>' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown)">새 교재 추가</div>' +
+    '</div>' +
+    '<div class="register-form-box">' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">교재명 *</div><input class="register-input" id="tb-title" placeholder="예: 챕터북 리더스 1단계" style="margin-bottom:0"></div>' +
+        '<div><div class="form-label">종류</div>' +
+          '<select class="register-input" id="tb-type" style="margin-bottom:0">' +
+            '<option value="시중">시중 교재</option>' +
+            '<option value="자체제작">자체 제작</option>' +
+          '</select>' +
+        '</div>' +
+      '</div>' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">출판사 / 제작자</div><input class="register-input" id="tb-publisher" placeholder="예: 넥서스" style="margin-bottom:0"></div>' +
+        '<div><div class="form-label">단가 (원)</div><input type="number" class="register-input" id="tb-price" placeholder="0" style="margin-bottom:0"></div>' +
+      '</div>' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">초기 재고 (권)</div><input type="number" class="register-input" id="tb-stock" placeholder="0" style="margin-bottom:0"></div>' +
+        '<div><div class="form-label">입고일</div><input type="date" class="register-input" id="tb-date" value="'+new Date().toISOString().slice(0,10)+'" style="margin-bottom:0"></div>' +
+      '</div>' +
+      '<div><div class="form-label">사용 클래스 (복수 선택)</div>' +
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:0">' +
+        CLASSES.map(function(c){
+          return '<label style="display:flex;align-items:center;gap:4px;font-size:.78rem;cursor:pointer">' +
+            '<input type="checkbox" name="tb-class" value="'+c+'"> '+c+'</label>';
+        }).join('') +
+        '</div>' +
+      '</div>' +
+      '<div><div class="form-label">메모</div><input class="register-input" id="tb-memo" placeholder="추가 메모" style="margin-bottom:0"></div>' +
+      '<div class="register-form-actions">' +
+        '<button class="btn-reg-submit" onclick="saveNewTextbook(\''+who+'\')">📗 교재 등록</button>' +
+      '</div>' +
+    '</div>';
+  return html;
+}
+
+function saveNewTextbook(who) {
+  var title = (document.getElementById('tb-title')||{value:''}).value.trim();
+  if(!title){document.getElementById('tb-title').focus();return;}
+  var type = (document.getElementById('tb-type')||{value:'시중'}).value;
+  var publisher = (document.getElementById('tb-publisher')||{value:''}).value.trim();
+  var price = parseInt((document.getElementById('tb-price')||{value:'0'}).value)||0;
+  var stock = parseInt((document.getElementById('tb-stock')||{value:'0'}).value)||0;
+  var date = (document.getElementById('tb-date')||{value:''}).value;
+  var memo = (document.getElementById('tb-memo')||{value:''}).value.trim();
+  var classes = [];
+  document.querySelectorAll('input[name="tb-class"]:checked').forEach(function(cb){classes.push(cb.value);});
+
+  var id = tbIdSeq++;
+  var tb = {id:id, title:title, type:type, publisher:publisher, unitPrice:price, stock:stock, classes:classes, memo:memo, createdAt:date};
+  textbooks.push(tb);
+
+  // 입고 로그
+  if(stock>0) {
+    textbookLogs.push({id:Date.now()+'', tbId:id, logType:'입고', qty:stock, date:date, note:'최초 입고'});
+  }
+
+  if(window.fbSaveTextbook) window.fbSaveTextbook(tb);
+  tbView='detail'; tbSelectedId=id;
+  renderTextbookMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function renderTbDetail(who, tbId) {
+  var tb = textbooks.find(function(t){return t.id===tbId;});
+  if(!tb) return '';
+  var logs = textbookLogs.filter(function(l){return l.tbId===tbId;}).slice().reverse();
+  var outQty = textbookLogs.filter(function(l){return l.tbId===tbId&&l.logType==='출고';}).reduce(function(a,l){return a+l.qty;},0);
+  var inQty  = textbookLogs.filter(function(l){return l.tbId===tbId&&l.logType==='입고';}).reduce(function(a,l){return a+l.qty;},0);
+
+  var html = '<div class="t-section-title">📖 교재 관리</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">' +
+      '<button onclick="tbView=\'list\';renderTextbookMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 목록</button>' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown);flex:1">'+tb.title+'</div>' +
+      '<button onclick="deleteTextbook(\''+who+'\','+tbId+')" style="background:#fce4ec;border:none;border-radius:8px;padding:6px 12px;font-size:.75rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit">🗑️ 삭제</button>' +
+    '</div>';
+
+  // 교재 정보 카드
+  html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px 16px;margin-bottom:16px">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.82rem">' +
+      '<div><span style="color:#a07040;font-weight:700">종류</span> <span style="color:#333">'+tb.type+'</span></div>' +
+      '<div><span style="color:#a07040;font-weight:700">출판사</span> <span style="color:#333">'+(tb.publisher||'-')+'</span></div>' +
+      '<div><span style="color:#a07040;font-weight:700">단가</span> <span style="color:#333">'+(tb.unitPrice?tb.unitPrice.toLocaleString()+'원':'-')+'</span></div>' +
+      '<div><span style="color:#a07040;font-weight:700">사용 클래스</span> <span style="color:#333">'+((tb.classes||[]).join(', ')||'-')+'</span></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:12px;text-align:center">' +
+      '<div style="background:#e8f5e9;border-radius:8px;padding:10px"><div style="font-size:.68rem;color:#4caf50;margin-bottom:2px">총 입고</div><div style="font-size:1.2rem;font-weight:900;color:#2e7d32">'+inQty+'<span style="font-size:.7rem;font-weight:400;">권</span></div></div>' +
+      '<div style="background:#fce4ec;border-radius:8px;padding:10px"><div style="font-size:.68rem;color:#e91e63;margin-bottom:2px">총 배부</div><div style="font-size:1.2rem;font-weight:900;color:#c2185b">'+outQty+'<span style="font-size:.7rem;font-weight:400;">권</span></div></div>' +
+      '<div style="background:'+(tb.stock<=2?'#fff3e0':'#e3f2fd')+';border-radius:8px;padding:10px"><div style="font-size:.68rem;color:'+(tb.stock<=2?'#e65100':'#2196f3')+';margin-bottom:2px">현재 재고</div><div style="font-size:1.2rem;font-weight:900;color:'+(tb.stock<=2?'#e65100':'#1565c0')+'">'+tb.stock+'<span style="font-size:.7rem;font-weight:400;">권</span></div></div>' +
+    '</div>' +
+  '</div>';
+
+  // 입출고 폼
+  html += '<div class="register-form-box" style="margin-bottom:16px">' +
+    '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:12px">입고 / 출고 처리</div>' +
+    '<div class="register-row">' +
+      '<div><div class="form-label">구분</div>' +
+        '<div style="display:flex;gap:8px">' +
+          '<button id="tb-log-in-btn" onclick="setTbLogType(\'입고\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #a5d6a7;background:#e8f5e9;font-size:.78rem;font-weight:700;color:#2e7d32;cursor:pointer;font-family:inherit">📦 입고</button>' +
+          '<button id="tb-log-out-btn" onclick="setTbLogType(\'출고\')" style="flex:1;padding:8px;border-radius:8px;border:2px solid #e0d0c0;background:#fafafa;font-size:.78rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">📤 출고</button>' +
+        '</div>' +
+      '</div>' +
+      '<div><div class="form-label">수량 (권)</div><input type="number" class="register-input" id="tb-log-qty" placeholder="1" min="1" style="margin-bottom:0"></div>' +
+    '</div>' +
+    '<div class="register-row">' +
+      '<div><div class="form-label">날짜</div><input type="date" class="register-input" id="tb-log-date" value="'+new Date().toISOString().slice(0,10)+'" style="margin-bottom:0"></div>' +
+      '<div id="tb-log-stu-wrap"><div class="form-label">학생명 (출고 시)</div><input class="register-input" id="tb-log-stu" placeholder="학생 이름" style="margin-bottom:0"></div>' +
+    '</div>' +
+    '<div><div class="form-label">메모</div><input class="register-input" id="tb-log-note" placeholder="추가 메모" style="margin-bottom:0"></div>' +
+    '<div class="register-form-actions"><button class="btn-reg-submit" onclick="addTbLog(\''+who+'\','+tbId+')">처리</button></div>' +
+  '</div>';
+
+  // 입출고 이력
+  html += '<div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:10px">📋 입출고 이력</div>';
+  if(logs.length===0){
+    html += '<div style="text-align:center;padding:20px;font-size:.8rem;color:var(--text-soft)">이력이 없어요.</div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    logs.forEach(function(l){
+      var isIn = l.logType==='입고';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:10px;border:1px solid '+(isIn?'#a5d6a7':'#f0e8dc')+'">' +
+        '<span style="font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:100px;background:'+(isIn?'#e8f5e9':'#fff3e0')+';color:'+(isIn?'#2e7d32':'#e65100')+'">'+l.logType+'</span>' +
+        '<div style="flex:1">' +
+          '<span style="font-size:.82rem;font-weight:700;color:var(--brown)">'+(isIn?'+':'-')+l.qty+'권</span>' +
+          (l.studentName?'<span style="font-size:.72rem;color:var(--text-soft);margin-left:6px">→ '+l.studentName+'</span>':'') +
+          (l.note?'<span style="font-size:.72rem;color:var(--text-soft);margin-left:6px">'+l.note+'</span>':'') +
+        '</div>' +
+        '<span style="font-size:.7rem;color:var(--text-soft)">'+l.date+'</span>' +
+        '<button onclick="deleteTbLog(\''+who+'\','+tbId+',\''+l.id+'\')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:.8rem">🗑️</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+  return html;
+}
+
+var tbLogType = '입고';
+function setTbLogType(type) {
+  tbLogType = type;
+  var inBtn  = document.getElementById('tb-log-in-btn');
+  var outBtn = document.getElementById('tb-log-out-btn');
+  if(type==='입고'){
+    if(inBtn){inBtn.style.border='2px solid #a5d6a7';inBtn.style.background='#e8f5e9';inBtn.style.color='#2e7d32';}
+    if(outBtn){outBtn.style.border='2px solid #e0d0c0';outBtn.style.background='#fafafa';outBtn.style.color='#aaa';}
+  } else {
+    if(outBtn){outBtn.style.border='2px solid #ffcc80';outBtn.style.background='#fff8e1';outBtn.style.color='#e65100';}
+    if(inBtn){inBtn.style.border='2px solid #e0d0c0';inBtn.style.background='#fafafa';inBtn.style.color='#aaa';}
+  }
+}
+
+function addTbLog(who, tbId) {
+  var qty  = parseInt((document.getElementById('tb-log-qty')||{value:'1'}).value)||1;
+  var date = (document.getElementById('tb-log-date')||{value:''}).value;
+  var stu  = (document.getElementById('tb-log-stu')||{value:''}).value.trim();
+  var note = (document.getElementById('tb-log-note')||{value:''}).value.trim();
+  var tb   = textbooks.find(function(t){return t.id===tbId;});
+  if(!tb) return;
+
+  if(tbLogType==='출고' && tb.stock < qty) { alert('재고가 부족해요. 현재 재고: '+tb.stock+'권'); return; }
+
+  tb.stock += (tbLogType==='입고' ? qty : -qty);
+  var logId = Date.now()+'';
+  var log = {id:logId, tbId:tbId, logType:tbLogType, qty:qty, date:date, note:note, studentName:stu};
+  textbookLogs.push(log);
+
+  if(window.fbSaveTextbook) window.fbSaveTextbook(tb);
+  if(window.fbSaveTbLog) window.fbSaveTbLog(log);
+  renderTextbookMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function deleteTbLog(who, tbId, logId) {
+  if(!confirm('이력을 삭제할까요? 재고도 복원돼요.')) return;
+  var log = textbookLogs.find(function(l){return l.id===logId;});
+  var tb  = textbooks.find(function(t){return t.id===tbId;});
+  if(log && tb) tb.stock += (log.logType==='입고' ? -log.qty : log.qty);
+  textbookLogs = textbookLogs.filter(function(l){return l.id!==logId;});
+  if(window.fbSaveTextbook) window.fbSaveTextbook(tb);
+  if(window.fbDeleteTbLog) window.fbDeleteTbLog(logId);
+  renderTextbookMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function deleteTextbook(who, tbId) {
+  if(!confirm('교재를 삭제할까요? 입출고 이력도 모두 삭제돼요.')) return;
+  textbooks = textbooks.filter(function(t){return t.id!==tbId;});
+  textbookLogs = textbookLogs.filter(function(l){return l.tbId!==tbId;});
+  if(window.fbDeleteTextbook) window.fbDeleteTextbook(tbId);
+  tbView='list'; tbSelectedId=null;
+  renderTextbookMgmt(who, document.getElementById(who+'-main-content'));
 }
 
 function renderPlaceholder(el,ico,title,desc){
@@ -2403,7 +3246,7 @@ function editCalCat(id, who) {
 /* ====== REPORT PANEL ====== */
 var reportTab = 'daily';
 
-// dailyReports[who][dateKey][studentName] = {lesson, review, homework, feedback, savedAt}
+// dailyReports[who][dateKey][studentName] = {lesson, review, homework, feedback, leddi, reviewScore, leddiDone, savedAt}
 var dailyReports = {};
 // 현재 선택 상태
 var reportDate = new Date();
@@ -2413,7 +3256,7 @@ var reportSelStu = null;   // 선택된 학생 이름
 function getDailyReport(who, dk, name) {
   if(!dailyReports[who]) dailyReports[who]={};
   if(!dailyReports[who][dk]) dailyReports[who][dk]={};
-  if(!dailyReports[who][dk][name]) dailyReports[who][dk][name]={lesson:'',review:'',homework:'',feedback:'',savedAt:null};
+  if(!dailyReports[who][dk][name]) dailyReports[who][dk][name]={lesson:'',review:'',homework:'',feedback:'',leddi:'',reviewScore:'',leddiDone:false,savedAt:null};
   return dailyReports[who][dk][name];
 }
 
@@ -2542,6 +3385,24 @@ function renderDailyReport(who) {
 
     html += '<div class="register-form-box">';
     if(r.savedAt) html += '<div style="font-size:.72rem;color:#2e7d32;margin-bottom:12px">✅ 마지막 저장: '+r.savedAt+'</div>';
+
+    // 리뷰 테스트 점수 + 레디영어 완료 (상단 인라인)
+    html += '<div style="display:flex;gap:12px;margin-bottom:16px;padding:12px 14px;background:#fffbf5;border-radius:10px;border:1px solid #f0e8dc">' +
+      '<div style="flex:1">' +
+        '<div class="form-label" style="margin-bottom:6px">📊 리뷰 테스트 점수</div>' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          '<input type="number" id="rpt-reviewScore" min="0" max="100" value="'+(r.reviewScore||'')+'" placeholder="0~100" class="register-input" style="width:80px;margin-bottom:0">' +
+          '<span style="font-size:.8rem;color:var(--text-soft)">점</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="flex:1">' +
+        '<div class="form-label" style="margin-bottom:6px">🌐 레디영어 완료</div>' +
+        '<div style="display:flex;gap:8px;align-items:center;margin-top:4px">' +
+          '<button id="leddi-done-btn" onclick="toggleLeddiDone(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:6px 18px;border-radius:8px;border:1.5px solid '+(r.leddiDone?'#62d2a2':'#e0d0c0')+';background:'+(r.leddiDone?'#e8f5e9':'#fafafa')+';font-size:.78rem;font-weight:700;color:'+(r.leddiDone?'#2e7d32':'#aaa')+';cursor:pointer;font-family:inherit">'+(r.leddiDone?'✅ 완료':'⬜ 미완료')+'</button>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+
     RFIELDS.forEach(function(f){
       html += '<div style="margin-bottom:14px">' +
         '<div class="form-label" style="margin-bottom:5px">'+f.label+'</div>' +
@@ -2579,12 +3440,26 @@ function applyClassReport(who, dk, clsKey) {
     setTimeout(function(){btn.textContent='📋 '+stuList.length+'명에게 일괄 적용';btn.style.background='';},1800);}
 }
 
+function toggleLeddiDone(who, dk, name) {
+  var r = getDailyReport(who, dk, name);
+  r.leddiDone = !r.leddiDone;
+  var btn = document.getElementById('leddi-done-btn');
+  if(btn) {
+    btn.textContent = r.leddiDone ? '✅ 완료' : '⬜ 미완료';
+    btn.style.border = '1.5px solid '+(r.leddiDone?'#62d2a2':'#e0d0c0');
+    btn.style.background = r.leddiDone?'#e8f5e9':'#fafafa';
+    btn.style.color = r.leddiDone?'#2e7d32':'#aaa';
+  }
+}
+
 function saveDailyReport(who, dk, name) {
   var r = getDailyReport(who, dk, name);
   ['lesson','review','homework','leddi','feedback'].forEach(function(key){
     var el2 = document.getElementById('rpt-'+key);
     if(el2) r[key] = el2.value.trim();
   });
+  var scoreEl = document.getElementById('rpt-reviewScore');
+  if(scoreEl) r.reviewScore = scoreEl.value.trim();
   var now = new Date();
   r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
   if(window.fbSaveReport) window.fbSaveReport(who, dk, name);
@@ -2680,44 +3555,398 @@ function renderMonthlyReport(who) {
 function openMonthlyDetail(who, name, y, m) {
   var el = document.getElementById(who+'-main-content');
   var daysInMonth = new Date(y,m+1,0).getDate();
-  var DOW=['일','월','화','수','목','금','토'];
   var monthLabel = y+'년 '+(m+1)+'월';
 
-  var html = '<div class="t-section-title">📊 리포트 관리</div>' +
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
-    '<button onclick="setReportTab(\'monthly\',\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 먼슬리리포트</button>' +
-    '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+name+' · '+monthLabel+'</div></div>';
+  // 한 달 데이터 수집
+  var allData = {lesson:[], review:[], homework:[], feedback:[], leddi:[]};
+  var reviewScores = [], leddiDone = 0, leddiTotal = 0;
+  var attData = {출석:0, 결석:0, 지각:0, 보강:0};
 
-  var RFIELDS = [
-    {key:'lesson',   label:'📖 수업 내용'},
-    {key:'review',   label:'💡 리뷰 / 이해도'},
-    {key:'homework', label:'📝 과제'},
-    {key:'leddi',    label:'🌐 레디영어 과제 리포트'},
-    {key:'feedback', label:'💬 피드백'},
-  ];
-
-  var hasAny = false;
   for(var d=1;d<=daysInMonth;d++){
     var dk = fmtDate(y,m,d);
     var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-    if(!r||(! r.lesson&&!r.review&&!r.homework&&!r.feedback)) continue;
-    hasAny = true;
-    var dt = new Date(y,m,d);
-    html += '<div class="register-form-box" style="margin-bottom:12px">' +
-      '<div style="font-size:.88rem;font-weight:700;color:var(--cookie);margin-bottom:10px">'+
-      (m+1)+'월 '+d+'일 ('+DOW[dt.getDay()]+')</div>';
-    RFIELDS.forEach(function(f){
-      if(!r[f.key]) return;
-      html += '<div style="margin-bottom:8px">' +
-        '<div style="font-size:.72rem;font-weight:700;color:var(--text-mid);margin-bottom:3px">'+f.label+'</div>' +
-        '<div style="font-size:.84rem;color:var(--brown);background:#fffbf5;padding:8px 12px;border-radius:8px;line-height:1.5">'+r[f.key]+'</div>' +
-        '</div>';
+    if(r){
+      if(r.lesson)   allData.lesson.push({d:d, text:r.lesson});
+      if(r.review)   allData.review.push({d:d, text:r.review});
+      if(r.homework) allData.homework.push({d:d, text:r.homework});
+      if(r.feedback) allData.feedback.push({d:d, text:r.feedback});
+      if(r.reviewScore) reviewScores.push(parseInt(r.reviewScore));
+      if(r.leddiDone !== undefined) { leddiTotal++; if(r.leddiDone) leddiDone++; }
+    }
+    // 출결
+    var clsKey = null;
+    Object.keys(classStudents).forEach(function(k){
+      if((classStudents[k]||[]).indexOf(name)>-1) clsKey=k;
     });
-    html += '</div>';
+    if(clsKey){
+      var att = classAttendance[clsKey]&&classAttendance[clsKey][name]&&classAttendance[clsKey][name][dk];
+      if(att){
+        var st = typeof att==='string'?att:(att.status||'');
+        if(st.indexOf('등원')>-1||st==='출석') attData['출석']++;
+        if(st==='결석') attData['결석']++;
+        if(st.indexOf('지각')>-1) attData['지각']++;
+        if(st.indexOf('보강')>-1) attData['보강']++;
+      }
+    }
   }
 
-  if(!hasAny) html += '<div class="t-placeholder"><span class="ph-ico">📭</span><div class="ph-desc">'+monthLabel+'에 작성된 리포트가 없어요.</div></div>';
+  // 독서 기록
+  var ym = y+'-'+String(m+1).padStart(2,'0');
+  var books = (bookRecords[name]||[]).filter(function(b){return b.yearMonth===ym;}).slice(0,3);
+  var prevYm = m===0?(y-1)+'-12':y+'-'+String(m).padStart(2,'0');
+  var prevBooks = (bookRecords[name]||[]).filter(function(b){return b.yearMonth===prevYm;}).length;
+
+  // 리뷰 테스트 평균
+  var avgScore = reviewScores.length ? Math.round(reviewScores.reduce(function(a,b){return a+b;},0)/reviewScores.length) : null;
+  // 과제 달성률 (homework 기록 중 완료 비율 - 데이터 기반)
+  var hwDone = allData.homework.length;
+  // 레디영어 달성률
+  var leddiPct = leddiTotal ? Math.round(leddiDone/leddiTotal*100) : null;
+
+  // 저장된 먼슬리 리포트 불러오기
+  var mrKey = 'mr_'+who+'_'+name+'_'+y+'_'+m;
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(mrKey)||'{}'); } catch(e){}
+
+  var html = '<div class="t-section-title">📊 리포트 관리</div>' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">' +
+    '<button onclick="setReportTab(\'monthly\',\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 먼슬리리포트</button>' +
+    '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+name+' · '+monthLabel+' 먼슬리리포트</div>' +
+    '<button onclick="generateMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')" style="margin-left:auto;background:var(--cookie);border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">✨ AI 요약 생성</button>' +
+    '<button onclick="saveMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')" style="background:#62d2a2;border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">💾 저장</button>' +
+    '<button onclick="downloadMonthlyPDF(\''+who+'\',\''+name+'\','+y+','+m+')" style="background:#5c3d1e;border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📄 PDF 저장</button>' +
+    '</div>';
+
+  // 자동 집계 데이터 표시
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px">' +
+    ['출석','결석','지각','보강'].map(function(k){
+      var colors = {출석:['#e8f5e9','#2e7d32'],결석:['#fce4ec','#c2185b'],지각:['#fff8e1','#e65100'],보강:['#f3e5f5','#6a1b9a']};
+      return '<div style="text-align:center;padding:10px;background:'+colors[k][0]+';border-radius:8px;">' +
+        '<div style="font-size:10px;color:'+colors[k][1]+';margin-bottom:3px;">'+k+'</div>' +
+        '<div style="font-size:20px;font-weight:900;color:'+colors[k][1]+';">'+attData[k]+'<span style="font-size:10px;font-weight:400;">회</span></div></div>';
+    }).join('') +
+  '</div>';
+
+  // 성장 수치 자동 집계
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px">';
+  if(avgScore!==null) html += '<div style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#a07040;margin-bottom:3px;">리뷰 테스트 평균</div><div style="font-size:22px;font-weight:900;color:#e8a96a;">'+avgScore+'<span style="font-size:11px;font-weight:400;">점</span></div></div>';
+  if(leddiPct!==null) html += '<div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#6a1b9a;margin-bottom:3px;">레디영어 달성률</div><div style="font-size:22px;font-weight:900;color:#6a1b9a;">'+leddiPct+'<span style="font-size:11px;font-weight:400;">%</span></div></div>';
+  html += '<div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:#1565c0;margin-bottom:3px;">독서 권수</div><div style="font-size:22px;font-weight:900;color:#1565c0;">'+books.length+'<span style="font-size:11px;font-weight:400;">권</span></div></div>';
+  html += '</div>';
+
+  // 편집 가능한 항목들
+  var editFields = [
+    {key:'lesson',   label:'📖 수업 내용',       hint:'데일리 기록 '+allData.lesson.length+'건'},
+    {key:'review',   label:'💡 리뷰 / 이해도',   hint:'데일리 기록 '+allData.review.length+'건'},
+    {key:'homework', label:'📝 과제',             hint:'데일리 기록 '+allData.homework.length+'건'},
+    {key:'feedback', label:'💬 피드백 / 코멘트', hint:'데일리 기록 '+allData.feedback.length+'건'},
+    {key:'comment',  label:'✏️ 선생님 총평',     hint:'직접 입력'},
+  ];
+
+  html += '<div class="register-form-box" id="monthly-edit-box">';
+  html += '<div style="font-size:.72rem;color:var(--text-soft);margin-bottom:14px">✨ AI 요약 생성 버튼을 누르면 데일리 기록을 바탕으로 자동으로 초안을 작성해드려요. 직접 수정도 가능해요.</div>';
+  editFields.forEach(function(f){
+    html += '<div style="margin-bottom:14px">' +
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:5px">' +
+        '<div class="form-label" style="margin-bottom:0">'+f.label+'</div>' +
+        '<span style="font-size:.68rem;color:var(--text-soft);background:#f5f5f5;padding:1px 7px;border-radius:100px">'+f.hint+'</span>' +
+      '</div>' +
+      '<textarea id="mr-'+f.key+'" class="notice-textarea" placeholder="AI 요약 생성 버튼을 눌러 자동 작성하거나 직접 입력하세요" style="min-height:72px;margin-bottom:0">'+(saved[f.key]||'')+'</textarea>' +
+    '</div>';
+  });
+  html += '</div>';
+
   el.innerHTML = html;
+
+  // 전역에 현재 데이터 저장 (AI 요약 시 사용)
+  window._mrContext = {who:who, name:name, y:y, m:m, allData:allData, books:books, avgScore:avgScore, leddiPct:leddiPct, attData:attData};
+}
+
+async function generateMonthlySummary(who, name, y, m) {
+  var ctx = window._mrContext;
+  if(!ctx) return;
+
+  var btn = document.querySelector('[onclick="generateMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')"]');
+  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
+
+  // 데이터 정리
+  var lessonTexts  = ctx.allData.lesson.map(function(r){return r.d+'일: '+r.text;}).join('\n');
+  var reviewTexts  = ctx.allData.review.map(function(r){return r.d+'일: '+r.text;}).join('\n');
+  var hwTexts      = ctx.allData.homework.map(function(r){return r.d+'일: '+r.text;}).join('\n');
+  var feedbackTexts= ctx.allData.feedback.map(function(r){return r.d+'일: '+r.text;}).join('\n');
+  var bookList     = ctx.books.map(function(b){return b.title+(b.author?' ('+b.author+')':'');}).join(', ');
+
+  var prompt = '다음은 '+name+' 학생의 '+y+'년 '+(m+1)+'월 영어 수업 데일리 기록이에요.\n\n' +
+    '【수업 내용 기록】\n'+(lessonTexts||'없음')+'\n\n' +
+    '【리뷰/이해도 기록】\n'+(reviewTexts||'없음')+'\n\n' +
+    '【과제 기록】\n'+(hwTexts||'없음')+'\n\n' +
+    '【피드백 기록】\n'+(feedbackTexts||'없음')+'\n\n' +
+    '【독서】 '+(bookList||'없음')+'\n' +
+    '【리뷰 테스트 평균】 '+(ctx.avgScore!==null?ctx.avgScore+'점':'데이터 없음')+'\n' +
+    '【레디영어 달성률】 '+(ctx.leddiPct!==null?ctx.leddiPct+'%':'데이터 없음')+'\n\n' +
+    '위 기록을 바탕으로 학부모에게 전달할 먼슬리 리포트 항목을 한국어로 작성해주세요.\n' +
+    '각 항목은 2~3문장으로 자연스럽고 따뜻한 톤으로 작성해주세요.\n\n' +
+    '반드시 아래 JSON 형식만 반환하세요 (다른 텍스트 없이):\n' +
+    '{"lesson":"...","review":"...","homework":"...","feedback":"...","comment":"..."}';
+
+  try {
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    var data = await res.json();
+    var text = (data.content||[]).map(function(c){return c.text||'';}).join('');
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    ['lesson','review','homework','feedback','comment'].forEach(function(k){
+      var el2 = document.getElementById('mr-'+k);
+      if(el2 && parsed[k]) el2.value = parsed[k];
+    });
+    if(btn){btn.textContent='✅ 생성 완료';setTimeout(function(){btn.textContent='✨ AI 요약 생성';btn.disabled=false;},2000);}
+  } catch(e) {
+    if(btn){btn.textContent='✨ AI 요약 생성';btn.disabled=false;}
+    alert('AI 요약 생성 중 오류가 발생했어요. 다시 시도해주세요.');
+  }
+}
+
+function saveMonthlySummary(who, name, y, m) {
+  var mrKey = 'mr_'+who+'_'+name+'_'+y+'_'+m;
+  var data = {};
+  ['lesson','review','homework','feedback','comment'].forEach(function(k){
+    var el2 = document.getElementById('mr-'+k);
+    if(el2) data[k] = el2.value;
+  });
+  try { localStorage.setItem(mrKey, JSON.stringify(data)); } catch(e){}
+  var btn = document.querySelector('[onclick="saveMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')"]');
+  if(btn){btn.textContent='✅ 저장됨!';setTimeout(function(){btn.textContent='💾 저장';},1500);}
+}
+
+function downloadMonthlyPDF(who, name, y, m) {
+  var ctx = window._mrContext;
+  if(!ctx) { alert('리포트 데이터를 불러올 수 없어요. 페이지를 다시 열어주세요.'); return; }
+
+  var btn = document.querySelector('[onclick="downloadMonthlyPDF(\''+who+'\',\''+name+'\','+y+','+m+')"]');
+  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
+
+  // 저장된 텍스트 읽기
+  var mrKey = 'mr_'+who+'_'+name+'_'+y+'_'+m;
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(mrKey)||'{}'); } catch(e){}
+
+  ['lesson','review','homework','feedback','comment'].forEach(function(k){
+    var el2 = document.getElementById('mr-'+k);
+    if(el2) saved[k] = el2.value;
+  });
+
+  // PDF용 HTML 생성
+  var pdfHtml = buildMonthlyReportHTML(who, name, y, m, saved, ctx);
+
+  // 임시 div 생성
+  var container = document.createElement('div');
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;font-family:"Noto Sans KR",sans-serif;';
+  container.innerHTML = pdfHtml;
+  document.body.appendChild(container);
+
+  // html2canvas + jsPDF 로드
+  function loadScript(src, cb) {
+    if(document.querySelector('script[src="'+src+'"]')) { cb(); return; }
+    var s = document.createElement('script');
+    s.src = src;
+    s.onload = cb;
+    document.head.appendChild(s);
+  }
+
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', function(){
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', function(){
+      html2canvas(container, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
+        var imgData = canvas.toDataURL('image/jpeg', 0.95);
+        var pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+        var pdfW = pdf.internal.pageSize.getWidth();
+        var pdfH = pdf.internal.pageSize.getHeight();
+        var imgW = pdfW;
+        var imgH = canvas.height * imgW / canvas.width;
+
+        if(imgH <= pdfH) {
+          pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
+        } else {
+          // 여러 페이지로 분할
+          var pageH = pdfH;
+          var heightLeft = imgH;
+          var position = 0;
+          pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+          heightLeft -= pageH;
+          while(heightLeft > 0) {
+            position = heightLeft - imgH;
+            pdf.addPage();
+            pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
+            heightLeft -= pageH;
+          }
+        }
+
+        var fname = name+'_'+(m+1)+'월_먼슬리리포트.pdf';
+        pdf.save(fname);
+        document.body.removeChild(container);
+        if(btn){btn.textContent='📄 PDF 저장';btn.disabled=false;}
+      }).catch(function(e){
+        document.body.removeChild(container);
+        if(btn){btn.textContent='📄 PDF 저장';btn.disabled=false;}
+        alert('PDF 생성 중 오류가 발생했어요.');
+      });
+    });
+  });
+}
+
+function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
+  var monthLabel = y+'년 '+(m+1)+'월';
+  var attData = ctx.attData;
+  var books = ctx.books;
+  var avgScore = ctx.avgScore;
+  var leddiPct = ctx.leddiPct;
+  var daysInMonth = new Date(y,m+1,0).getDate();
+  var firstDow = new Date(y,m,1).getDay();
+
+  // 과제 달성률 계산 (지난달 대비는 저장 안 됨 → 이번달만)
+  var hwPct = ctx.allData.homework.length > 0 ? Math.min(100, Math.round(ctx.allData.homework.length / 8 * 100)) : null;
+
+  // 달력 HTML
+  var calCells = '';
+  ['일','월','화','수','목','금','토'].forEach(function(d){
+    calCells += '<div style="text-align:center;font-size:8px;color:#bbb;padding:2px;">'+d+'</div>';
+  });
+  for(var e=0;e<firstDow;e++) calCells += '<div></div>';
+  for(var d=1;d<=daysInMonth;d++){
+    var dk2 = y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    var clsKey2 = null;
+    Object.keys(classStudents).forEach(function(k){ if((classStudents[k]||[]).indexOf(name)>-1) clsKey2=k; });
+    var att2 = clsKey2 && classAttendance[clsKey2]&&classAttendance[clsKey2][name]&&classAttendance[clsKey2][name][dk2];
+    var st2 = att2 ? (typeof att2==='string'?att2:(att2.status||'')) : '';
+    var bg2='transparent', color2='#ccc';
+    if(st2.indexOf('등원')>-1||st2==='출석'){bg2='#e8f5e9';color2='#2e7d32';}
+    else if(st2==='결석'){bg2='#fce4ec';color2='#c2185b';}
+    else if(st2.indexOf('지각')>-1){bg2='#fff8e1';color2='#e65100';}
+    else if(st2.indexOf('보강')>-1){bg2='#f3e5f5';color2='#6a1b9a';}
+    calCells += '<div style="text-align:center;font-size:8px;padding:3px;border-radius:3px;background:'+bg2+';color:'+color2+';font-weight:'+(bg2!=='transparent'?'700':'400')+';">'+d+'</div>';
+  }
+
+  // 이달의 학습 행
+  var learnRows = [
+    {label:'수업 내용', val:saved.lesson||''},
+    {label:'리뷰 / 이해도', val:saved.review||''},
+    {label:'과제', val:saved.homework||''},
+    {label:'피드백', val:saved.feedback||''},
+  ].map(function(f){
+    return '<div style="display:flex;gap:12px;padding:10px 14px;background:#fffbf5;border-radius:7px;border:1px solid #f5ede0;margin-bottom:6px;">' +
+      '<div style="font-size:10px;font-weight:700;color:#a07040;min-width:76px;flex-shrink:0;padding-top:1px;">'+f.label+'</div>' +
+      '<div style="font-size:11px;color:#333;line-height:1.7;">'+( f.val || '<span style="color:#ccc">미입력</span>')+'</div>' +
+    '</div>';
+  }).join('');
+
+  // 그래프 bar
+  function bar(label, prev, curr, unit, color) {
+    var prevW = Math.round(prev/(unit==='권'?5:100)*100);
+    var currW = Math.round(curr/(unit==='권'?5:100)*100);
+    var diff = curr - prev;
+    return '<div style="margin-bottom:14px;">' +
+      '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:7px;">' +
+        '<span style="color:#555;font-weight:700;">'+label+'</span>' +
+        '<span style="color:'+color+';font-weight:700;">'+(diff>=0?'▲ +':'')+diff+(unit==='권'?'권':'%')+'</span>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">' +
+        '<div style="font-size:9px;color:#bbb;width:28px;text-align:right;">지난달</div>' +
+        '<div style="flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden;"><div style="height:100%;width:'+prevW+'%;background:#ccc;border-radius:5px;"></div></div>' +
+        '<div style="font-size:9px;color:#bbb;width:24px;">'+prev+(unit==='권'?'권':'%')+'</div>' +
+      '</div>' +
+      '<div style="display:flex;align-items:center;gap:5px;">' +
+        '<div style="font-size:9px;color:'+color+';width:28px;text-align:right;font-weight:700;">이번달</div>' +
+        '<div style="flex:1;height:10px;background:#eee;border-radius:5px;overflow:hidden;"><div style="height:100%;width:'+currW+'%;background:'+color+';border-radius:5px;opacity:0.85;"></div></div>' +
+        '<div style="font-size:9px;color:'+color+';width:24px;font-weight:700;">'+curr+(unit==='권'?'권':'%')+'</div>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // 독서 카드
+  var bookCards = books.slice(0,3).map(function(b,i){
+    return '<div style="padding:10px 12px;background:white;border-radius:7px;border:1px solid #f0e0c8;margin-bottom:7px;">' +
+      '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">' +
+        '<div style="width:16px;height:16px;border-radius:3px;background:#fff0dc;display:flex;align-items:center;justify-content:center;font-size:9px;color:#bf6a00;font-weight:700;flex-shrink:0;">'+(i+1)+'</div>' +
+        '<div style="font-size:10px;font-weight:700;color:#333;">'+b.title+'</div>' +
+      '</div>' +
+      (b.author?'<div style="font-size:9px;color:#aaa;padding-left:21px;margin-bottom:3px;">'+b.author+'</div>':'') +
+      (b.review?'<div style="font-size:9px;color:#888;padding-left:21px;line-height:1.5;font-style:italic;">"'+b.review+'"</div>':'') +
+    '</div>';
+  }).join('');
+
+  return '<div style="background:white;width:754px;padding:20px;font-family:\'Noto Sans KR\',sans-serif;box-sizing:border-box;">' +
+
+    // 헤더
+    '<div style="background:#fff8ee;border-bottom:2px solid #f5d9b0;padding:18px 22px 14px;margin:-20px -20px 22px;display:flex;justify-content:space-between;align-items:flex-start;">' +
+      '<div>' +
+        '<div style="font-size:9px;color:#b08040;font-weight:600;letter-spacing:2px;margin-bottom:6px;">MONTHLY REPORT</div>' +
+        '<div style="font-size:22px;font-weight:700;color:#5c3d1e;">'+name+'</div>' +
+        '<div style="font-size:11px;color:#a07040;margin-top:3px;">'+(who==='cookie'?'쿠키쌤':'버터쌤')+'</div>' +
+      '</div>' +
+      '<div style="text-align:right;">' +
+        '<div style="font-size:17px;font-weight:700;color:#5c3d1e;">'+monthLabel+'</div>' +
+        '<div style="font-size:10px;color:#c4a070;margin-top:3px;">투쌤플레이스 영어 공부방</div>' +
+      '</div>' +
+    '</div>' +
+
+    // 이달의 학습
+    '<div style="margin-bottom:22px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#5c3d1e;border-left:4px solid #e8a96a;padding-left:9px;margin-bottom:12px;">이달의 학습</div>' +
+      learnRows +
+    '</div>' +
+
+    // 이달의 성장 + 독서
+    '<div style="display:flex;gap:12px;margin-bottom:22px;">' +
+      '<div style="flex:1;background:#fffbf5;border-radius:9px;padding:16px;border:1px solid #f5ede0;">' +
+        '<div style="font-size:11px;font-weight:700;color:#a07040;margin-bottom:14px;">이달의 성장</div>' +
+        (hwPct!==null ? bar('과제 달성률', Math.max(0,hwPct-12), hwPct, '%', '#4caf50') : '') +
+        (avgScore!==null ? bar('리뷰 테스트', Math.max(0,avgScore-15), avgScore, '%', '#ff9800') : '') +
+        (leddiPct!==null ? bar('레디영어 달성률', Math.max(0,leddiPct-10), leddiPct, '%', '#9c27b0') : '') +
+        bar('독서 권수', Math.max(0,books.length-2), books.length, '권', '#2196f3') +
+      '</div>' +
+      '<div style="flex:1;background:#fffbf5;border-radius:9px;padding:16px;border:1px solid #f5ede0;">' +
+        '<div style="display:flex;align-items:baseline;gap:5px;margin-bottom:14px;">' +
+          '<span style="font-size:11px;color:#a07040;font-weight:700;">이달의 독서</span>' +
+          '<span style="font-size:34px;font-weight:900;color:#bf6a00;line-height:1;">'+books.length+'</span>' +
+          '<span style="font-size:13px;color:#bf6a00;font-weight:700;">권</span>' +
+        '</div>' +
+        (bookCards || '<div style="font-size:11px;color:#ccc;">기록된 독서가 없어요</div>') +
+      '</div>' +
+    '</div>' +
+
+    // 출결 현황
+    '<div style="margin-bottom:22px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#5c3d1e;border-left:4px solid #e8a96a;padding-left:9px;margin-bottom:12px;">출결 현황</div>' +
+      '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:9px;padding:14px 16px;">' +
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;margin-bottom:10px;">'+calCells+'</div>' +
+        '<div style="border-top:1px solid #f0e8dc;padding-top:8px;display:flex;gap:16px;">' +
+          '<span style="font-size:10px;color:#2e7d32;font-weight:700;">출석 <span style="font-size:13px;">'+attData['출석']+'</span>회</span>' +
+          '<span style="font-size:10px;color:#c2185b;font-weight:700;">결석 <span style="font-size:13px;">'+attData['결석']+'</span>회</span>' +
+          '<span style="font-size:10px;color:#e65100;font-weight:700;">지각 <span style="font-size:13px;">'+attData['지각']+'</span>회</span>' +
+          '<span style="font-size:10px;color:#6a1b9a;font-weight:700;">보강 <span style="font-size:13px;">'+attData['보강']+'</span>회</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>' +
+
+    // 선생님 총평
+    '<div style="background:#fff8ee;border-left:4px solid #e8a96a;padding:14px 16px;border-radius:0 7px 7px 0;margin-bottom:22px;">' +
+      '<div style="font-size:13px;font-weight:700;color:#5c3d1e;margin-bottom:8px;">선생님 총평</div>' +
+      '<div style="font-size:11px;color:#5c3d1e;line-height:1.9;">'+(saved.comment||'<span style="color:#ccc">미입력</span>')+'</div>' +
+    '</div>' +
+
+    // 푸터
+    '<div style="border-top:1px solid #f5ede0;padding-top:10px;display:flex;justify-content:space-between;">' +
+      '<div style="font-size:10px;color:#ccc;">투쌤플레이스 영어 공부방</div>' +
+      '<div style="font-size:10px;color:#ccc;">'+y+'. '+String(m+1).padStart(2,'0')+'. '+String(new Date(y,m+1,0).getDate()).padStart(2,'0')+'</div>' +
+    '</div>' +
+  '</div>';
 }
 
 /* ====== LECTURE DATA ====== */
@@ -3609,7 +4838,7 @@ function addLectureVideo(id, who) {
   var desc  = (document.getElementById('lec-desc-'+id)||{value:''}).value.trim();
   if(!title){document.getElementById('lec-title-'+id).focus();return;}
   if(!url){document.getElementById('lec-url-'+id).focus();return;}
-  var quizzes = newLecQuizzes[id] || [];
+  var quizzes = (newLecQuizzes[id] || []).slice(); // 참조가 아닌 복사본으로 저장
   var pdfs = collectPdfLinks(id);
   lec.videos.push({title:title,url:url,desc:desc,quizzes:quizzes,assigned:[],pdfs:pdfs});
   newLecQuizzes[id] = [];
@@ -4431,15 +5660,19 @@ function setTodayAtt(who,clsKey,name,opt){
 
   var newVal;
   if(opt==='하원' && curStatus==='등원') {
+    // 등원 → 등원+하원
     newVal = {status:'등원+하원', 등원Time: attTime(cur,'등원Time')||now, 하원Time: now};
   } else if(opt==='등원' && curStatus==='등원+하원') {
+    // 등원+하원에서 등원 해제 → 하원만 남김
     newVal = {status:'하원', 하원Time: attTime(cur,'하원Time')||now};
   } else if(opt==='하원' && curStatus==='등원+하원') {
+    // 등원+하원에서 하원 해제 → 등원만 남김 (하원Time 제거)
     newVal = {status:'등원', 등원Time: attTime(cur,'등원Time')||now};
   } else if(curStatus===opt) {
+    // 같은 버튼 누르면 해제 → 전체 삭제
     newVal = null;
   } else {
-    // 등원, 지각, 결석, 보강
+    // 새로 선택
     var timeKey = opt+'Time';
     newVal = {status:opt};
     newVal[timeKey] = now;
@@ -5446,6 +6679,42 @@ window.fbSaveLecComplete = async function(name, lecId, vi) {
   await fbSet('lecComplete/'+key, {name:name, lecId:lecId, vi:vi, completedAt:new Date().toISOString()});
 };
 
+window.fbSaveTuition = async function(ym, name, data) {
+  var key = ym+'_'+(name||'').replace(/\s/g,'_');
+  if(data===null) {
+    await db.collection('tuition').doc(key).delete().catch(function(){});
+  } else {
+    await fbSet('tuition/'+key, Object.assign({ym:ym, name:name}, data));
+  }
+};
+
+window.fbSaveExpense = async function(who, ym, id, data) {
+  var key = who+'_'+ym+'_'+id;
+  await fbSet('expenses/'+key, Object.assign({who:who, ym:ym, id:id}, data));
+};
+
+window.fbDeleteExpense = async function(who, ym, id) {
+  var key = who+'_'+ym+'_'+id;
+  await db.collection('expenses').doc(key).delete().catch(function(){});
+};
+
+window.fbSaveExpenseCategories = async function() {
+  await fbSet('settings/expenseCategories', {categories: expenseCategories});
+};
+
+window.fbSaveTextbook = async function(tb) {
+  await fbSet('textbooks/'+tb.id, tb);
+};
+window.fbDeleteTextbook = async function(tbId) {
+  await db.collection('textbooks').doc(String(tbId)).delete().catch(function(){});
+};
+window.fbSaveTbLog = async function(log) {
+  await fbSet('tbLogs/'+log.id, log);
+};
+window.fbDeleteTbLog = async function(logId) {
+  await db.collection('tbLogs').doc(logId).delete().catch(function(){});
+};
+
 window.fbSaveQuizResult = async function(name, lecId, vi, qi) {
   var r = quizResults[name]&&quizResults[name][lecId]&&quizResults[name][lecId][vi]&&quizResults[name][lecId][vi][qi];
   if(!r) return;
@@ -5684,6 +6953,45 @@ async function loadAllData() {
         };
       }
     });
+  });
+
+  // 원비 데이터 불러오기
+  const tuitionSnap = await fbGetCol('tuition');
+  Object.keys(tuitionSnap).forEach(function(key){
+    var d = tuitionSnap[key];
+    if(!d.ym||!d.name) return;
+    if(!tuitionData[d.ym]) tuitionData[d.ym]={};
+    tuitionData[d.ym][d.name]={paid:d.paid,paidAt:d.paidAt||'',method:d.method||'',amount:d.amount||0};
+  });
+
+  // 지출 데이터 불러오기
+  const expSnap = await fbGetCol('expenses');
+  Object.keys(expSnap).forEach(function(key){
+    var d = expSnap[key];
+    if(!d.who||!d.ym||!d.id) return;
+    if(!expenseData[d.who]) expenseData[d.who]={};
+    if(!expenseData[d.who][d.ym]) expenseData[d.who][d.ym]=[];
+    expenseData[d.who][d.ym].push({id:d.id,date:d.date||'',category:d.category||'기타',title:d.title||'',amount:d.amount||0,memo:d.memo||''});
+  });
+  // 지출 카테고리 불러오기
+  try {
+    var catDoc = await db.collection('settings').doc('expenseCategories').get();
+    if(catDoc.exists && catDoc.data().categories) expenseCategories = catDoc.data().categories;
+  } catch(e) {}
+
+  // 교재 데이터 불러오기
+  const tbSnap = await fbGetCol('textbooks');
+  Object.keys(tbSnap).forEach(function(key){
+    var d = tbSnap[key];
+    if(!d.id||!d.title) return;
+    textbooks.push(d);
+    if(d.id >= tbIdSeq) tbIdSeq = d.id + 1;
+  });
+  const tbLogSnap = await fbGetCol('tbLogs');
+  Object.keys(tbLogSnap).forEach(function(key){
+    var d = tbLogSnap[key];
+    if(!d.id||!d.tbId) return;
+    textbookLogs.push(d);
   });
 
   showFbStatus('✅ Firebase 연결됨', true);
