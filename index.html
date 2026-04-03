@@ -694,7 +694,7 @@ setTimeout(function(){
 <!-- STUDENT DASHBOARD -->
 <div id="student-dashboard" class="page">
   <header class="s-header">
-    <div class="s-header-brand">🧈🍪 투쌤플레이스</div>
+    <div class="s-header-brand"><span style="font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3">아이들과 꿈을 만드는 공간</span>투쌤플레이스</div>
     <div class="s-header-user">
       <button class="btn-back" id="s-back-btn" onclick="backToTeacher()">← 선생님 페이지로</button>
       <div class="s-avatar-chip"><div class="s-avatar-circle" id="s-av-letter">조</div><span class="s-avatar-name" id="s-av-name">조진혁</span></div>
@@ -737,9 +737,11 @@ setTimeout(function(){
 <!-- STUDENT LECTURE PAGE -->
 <div id="student-lecture-page" class="page">
   <header class="s-header">
-    <div class="s-header-brand">🎬 강의 듣기</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <button onclick="stuLecBack()" style="background:#f5ede0;border:none;border-radius:10px;width:34px;height:34px;font-size:1.1rem;cursor:pointer;color:var(--cookie);display:flex;align-items:center;justify-content:center;flex-shrink:0">←</button>
+      <div class="s-header-brand">🎬 강의 듣기</div>
+    </div>
     <div class="s-header-user">
-      <button class="btn-back" onclick="stuLecBack()" id="stu-lec-back-btn">← 돌아가기</button>
       <div class="s-avatar-chip"><div class="s-avatar-circle" id="stu-lec-av-letter">조</div><span class="s-avatar-name" id="stu-lec-av-name">학생</span></div>
     </div>
   </header>
@@ -819,6 +821,10 @@ var mgmtTab = 'active';
 var calYear = new Date().getFullYear();
 var calMonth = new Date().getMonth();
 var calSelDate = null;
+// 학생 과제 캘린더 전용
+var hwCalYear = new Date().getFullYear();
+var hwCalMonth = new Date().getMonth();
+var hwCalSelDate = null;
 var attSubTab = 'today';
 var currentClass, currentDay;
 var tAttCalYear = new Date().getFullYear();
@@ -1099,9 +1105,11 @@ function renderStuLecPage() {
         var doneVids = doneLec ? Object.keys(doneLec).length : 0;
         var totalVids = (lec.videos||[]).length;
         var allDone = totalVids > 0 && doneVids >= totalVids;
+        var isLecOpen = stuLecSelLec === lec.id;
 
-        html += '<div onclick="stuOpenLec('+lec.id+')" style="display:flex;align-items:center;gap:10px;padding:12px;background:#fafafa;border-radius:12px;border:1.5px solid '+lec.color+'22;cursor:pointer;transition:background .15s" '+
-          'onmouseover="this.style.background=\''+lec.colorBg+'\'" onmouseout="this.style.background=\'#fafafa\'">' +
+        // 강의 카드
+        html += '<div style="border-radius:12px;border:1.5px solid '+(isLecOpen?lec.color:'#e8e8e8')+';overflow:hidden;transition:border-color .15s">';
+        html += '<div onclick="stuOpenLec('+lec.id+')" style="display:flex;align-items:center;gap:10px;padding:12px;background:'+(isLecOpen?lec.colorBg:'#fafafa')+';cursor:pointer;transition:background .15s">' +
           '<div style="width:38px;height:38px;border-radius:10px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">'+lec.emoji+'</div>' +
           '<div style="flex:1">' +
             '<div style="font-size:.86rem;font-weight:700;color:var(--brown)">'+lec.title+'</div>' +
@@ -1109,8 +1117,32 @@ function renderStuLecPage() {
           '</div>' +
           (allDone
             ? '<span style="font-size:.68rem;font-weight:700;color:#66bb6a;background:#e8f5e9;padding:3px 8px;border-radius:100px">완료</span>'
-            : '<span style="font-size:.75rem;color:'+lec.color+'">▶</span>') +
+            : '<span style="font-size:.75rem;color:'+lec.color+';transition:transform .2s;display:inline-block;transform:'+(isLecOpen?'rotate(90deg)':'rotate(0)')+'"">▶</span>') +
         '</div>';
+
+        // 영상 목록 인라인 (선택된 강의만)
+        if(isLecOpen) {
+          if(totalVids === 0) {
+            html += '<div style="padding:12px 14px;font-size:.78rem;color:var(--text-soft);text-align:center;border-top:1px solid #f0e8dc">등록된 영상이 없어요.</div>';
+          } else {
+            html += '<div style="border-top:1px solid '+lec.color+'33;padding:8px 10px;display:flex;flex-direction:column;gap:6px">';
+            lec.videos.forEach(function(v, vi){
+              var isDone = doneLec && doneLec[vi];
+              html += '<div onclick="openLecPlayer('+lec.id+','+vi+')" style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:white;border-radius:10px;border:1px solid '+(isDone?'#a5d6a7':'#f0e8dc')+';cursor:pointer;transition:background .15s" '+
+                'onmouseover="this.style.background=\''+lec.colorBg+'\'" onmouseout="this.style.background=\'white\'">' +
+                '<div style="width:32px;height:32px;border-radius:8px;background:'+(isDone?'#e8f5e9':lec.colorBg)+';display:flex;align-items:center;justify-content:center;font-size:.9rem;flex-shrink:0">'+(isDone?'✅':'▶')+'</div>' +
+                '<div style="flex:1">' +
+                  '<div style="font-size:.84rem;font-weight:700;color:var(--brown)'+(isDone?';text-decoration:line-through;opacity:.6':'')+'">'+v.title+'</div>' +
+                  (v.desc?'<div style="font-size:.68rem;color:var(--text-soft);margin-top:1px">'+v.desc+'</div>':'') +
+                '</div>' +
+                '<span style="font-size:.72rem;font-weight:700;color:'+(isDone?'#66bb6a':lec.color)+'">'+(isDone?'완료':'시청')+'</span>' +
+              '</div>';
+            });
+            html += '</div>';
+          }
+        }
+
+        html += '</div>'; // 강의 카드 닫기
       });
       html += '</div>';
     }
@@ -1123,6 +1155,7 @@ function renderStuLecPage() {
 
 function stuLecToggleGroup(grpId) {
   stuLecGroup = (stuLecGroup === grpId) ? null : grpId;
+  stuLecSelLec = null;
   renderStuLecPage();
 }
 
@@ -1131,12 +1164,11 @@ function stuLecSelectGroup(grpId) {
   renderStuLecPage();
 }
 
+var stuLecSelLec = null; // 선택된 강의 id
+
 function stuOpenLec(id) {
-  var lec = lectures.find(function(l){return l.id===id;}); if(!lec) return;
-  if(lec.videos.length===0){alert('등록된 강의 영상이 없어요.');return;}
-  // 강의 목록 모달 표시
-  renderStuLecDetail(lec);
-  openModal('modal-stu-lec-detail');
+  stuLecSelLec = (stuLecSelLec === id) ? null : id;
+  renderStuLecPage();
 }
 
 function renderStuLecDetail(lec) {
@@ -1837,8 +1869,11 @@ function renderStudentDash(name){
   document.getElementById('s-banner-emoji').textContent=d.emoji;
   var todayHw=d.hw.filter(function(h){return !h.done&&isToday(h.deadline);});
   var overdueHw=d.hw.filter(function(h){return !h.done&&isOverdue(h.deadline);});
-  // 선생님이 부여한 과제도 합산
+  // 선생님이 부여한 과제도 합산 (deadline을 Date 객체로 변환)
   var assigned = getHwAssigned(name);
+  assigned.forEach(function(h){
+    if(h.deadline && !(h.deadline instanceof Date)) h.deadline = new Date(h.deadline);
+  });
   var todayAssigned = assigned.filter(function(h){return !h.done&&isToday(h.deadline);});
   var overdueAssigned = assigned.filter(function(h){return !h.done&&isOverdue(h.deadline);});
   var books=bookRecords[name]||[];
@@ -1866,6 +1901,7 @@ function renderStudentDash(name){
   renderBookModal(name);
   renderStudentNotices(name);
   calYear=new Date().getFullYear(); calMonth=new Date().getMonth(); calSelDate=null;
+  hwCalYear=new Date().getFullYear(); hwCalMonth=new Date().getMonth(); hwCalSelDate=null;
   renderHwCalendar(name);
   // 영역별 진도율 제거됨
   document.getElementById('s-sched-list').innerHTML=renderStudentSched(name);
@@ -1975,13 +2011,48 @@ function renderTodayModal(name){
 }
 function renderOverdueModal(name){
   var d=students[name];
-  var allOD=d.hw.filter(function(h){return isOverdue(h.deadline);});
+  var assigned = getHwAssigned(name)||[];
+
+  // hwAssigned deadline을 Date 객체로 변환 (문자열로 저장된 경우 대비)
+  assigned.forEach(function(h){
+    if(h.deadline && !(h.deadline instanceof Date)) {
+      h.deadline = new Date(h.deadline);
+    }
+  });
+
+  var allOD = d.hw.filter(function(h){return !h.done && isOverdue(h.deadline);});
+  var assignedOD = assigned.filter(function(h){return !h.done && isOverdue(h.deadline);});
+  var allItems = allOD.concat(assignedOD);
+
   var el=document.getElementById('modal-overdue-list');
-  if(allOD.length===0){el.innerHTML='<div class="modal-empty"><span class="empty-ico">✨</span>밀린 과제가 없어요!</div>';return;}
-  el.innerHTML=allOD.map(function(h){
-    var idx=d.hw.indexOf(h), done=!!h.done;
-    return '<div class="modal-hw-item modal-hw-overdue'+(done?' completed':'')+'"><div class="modal-hw-cb'+(done?' checked':'')+'" onclick="toggleHw('+idx+',\'overdue\')">'+(done?'✓':'')+'</div><span style="font-size:1.2rem;flex-shrink:0">'+h.ico+'</span><div style="flex:1"><div class="modal-hw-name">'+h.name+'</div><div class="modal-hw-due">'+formatDL(h.deadline)+'</div></div><span class="modal-hw-badge badge-overdue-m">'+(done?'완료 ✓':'제출 필요')+'</span></div>';
+  if(allItems.length===0){
+    el.innerHTML='<div class="modal-empty"><span class="empty-ico">✨</span>밀린 과제가 없어요!</div>';
+    return;
+  }
+  el.innerHTML=allItems.map(function(h){
+    var isAssigned = assignedOD.indexOf(h)>-1;
+    var idx = isAssigned ? assignedOD.indexOf(h) : d.hw.indexOf(h);
+    var done=!!h.done;
+    var toggleFn = isAssigned ? 'toggleHwAssignOverdue(\''+name+'\','+idx+')' : 'toggleHw('+idx+',\'overdue\')';
+    return '<div class="modal-hw-item modal-hw-overdue'+(done?' completed':'')+'"><div class="modal-hw-cb'+(done?' checked':'')+'" onclick="'+toggleFn+'">'+(done?'✓':'')+'</div><span style="font-size:1.2rem;flex-shrink:0">'+h.ico+'</span><div style="flex:1"><div class="modal-hw-name">'+h.name+'</div><div class="modal-hw-due">'+formatDL(h.deadline)+'</div></div><span class="modal-hw-badge badge-overdue-m">'+(done?'완료 ✓':'제출 필요')+'</span></div>';
   }).join('');
+}
+
+function toggleHwAssignOverdue(name, idx) {
+  var assigned = getHwAssigned(name)||[];
+  var overdueA = assigned.filter(function(h){return !h.done && isOverdue(h.deadline);});
+  // 완료 처리는 원본 배열에서
+  var h = overdueA[idx];
+  if(h) {
+    var origIdx = assigned.indexOf(h);
+    if(origIdx>-1) assigned[origIdx].done = !assigned[origIdx].done;
+  }
+  renderOverdueModal(name);
+  // 스탯 업데이트
+  var d = students[name];
+  document.getElementById('s-stat-overdue').textContent =
+    d.hw.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length +
+    assigned.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length;
 }
 function toggleHwAssignStudent(name, idx) {
   var assigned = getHwAssigned(name);
@@ -1997,9 +2068,14 @@ function toggleHwAssignStudent(name, idx) {
 function toggleHw(idx,type){
   var d=students[currentStudent];
   d.hw[idx].done=!d.hw[idx].done;
+  var assigned = getHwAssigned(currentStudent)||[];
   renderTodayModal(currentStudent); renderOverdueModal(currentStudent);
-  document.getElementById('s-stat-today').textContent=d.hw.filter(function(h){return !h.done&&isToday(h.deadline);}).length;
-  document.getElementById('s-stat-overdue').textContent=d.hw.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length;
+  document.getElementById('s-stat-today').textContent=
+    d.hw.filter(function(h){return !h.done&&isToday(h.deadline);}).length +
+    assigned.filter(function(h){return !h.done&&isToday(h.deadline);}).length;
+  document.getElementById('s-stat-overdue').textContent=
+    d.hw.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length +
+    assigned.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length;
   renderHwCalendar(currentStudent);
 }
 
@@ -2140,38 +2216,46 @@ function renderHwCalendar(name){
   if(!wrap) return;
   var d=students[name]||{hw:[]};
   var DOW=['일','월','화','수','목','금','토'];
-  var firstDay=new Date(calYear,calMonth,1).getDay(), days=new Date(calYear,calMonth+1,0).getDate(), prevDays=new Date(calYear,calMonth,0).getDate();
+  var firstDay=new Date(hwCalYear,hwCalMonth,1).getDay(), days=new Date(hwCalYear,hwCalMonth+1,0).getDate(), prevDays=new Date(hwCalYear,hwCalMonth,0).getDate();
   var hwByDate={};
+  // 학생 자체 과제
   d.hw.forEach(function(h){
     if(!h.deadline) return;
     var k=h.deadline.toISOString().slice(0,10);
     if(!hwByDate[k]) hwByDate[k]=[];
     hwByDate[k].push(h);
   });
+  // 선생님 부여 과제
+  (getHwAssigned(name)||[]).forEach(function(h){
+    if(!h.deadline) return;
+    var k = h.deadline instanceof Date ? h.deadline.toISOString().slice(0,10) : String(h.deadline).slice(0,10);
+    if(!hwByDate[k]) hwByDate[k]=[];
+    hwByDate[k].push(h);
+  });
   var total=Math.ceil((firstDay+days)/7)*7, cells='', tk=todayKey();
   for(var i=0;i<total;i++){
     var day2,dk,thisM=true;
-    if(i<firstDay){day2=prevDays-firstDay+i+1;dk=fmtDate(calYear,calMonth-1,day2);thisM=false;}
-    else if(i>=firstDay+days){day2=i-firstDay-days+1;dk=fmtDate(calYear,calMonth+1,day2);thisM=false;}
-    else{day2=i-firstDay+1;dk=fmtDate(calYear,calMonth,day2);}
+    if(i<firstDay){day2=prevDays-firstDay+i+1;dk=fmtDate(hwCalYear,hwCalMonth-1,day2);thisM=false;}
+    else if(i>=firstDay+days){day2=i-firstDay-days+1;dk=fmtDate(hwCalYear,hwCalMonth+1,day2);thisM=false;}
+    else{day2=i-firstDay+1;dk=fmtDate(hwCalYear,hwCalMonth,day2);}
     var hw2=hwByDate[dk]||[];
     var dots=hw2.map(function(h){var cls2='dot-future';if(h.done)cls2='dot-done';else if(h.deadline<todayMidnight)cls2='dot-overdue';else if(isToday(h.deadline))cls2='dot-today-cal';return '<div class="s-cal-dot '+cls2+'"></div>';}).join('');
     var cls='s-cal-cell';
     if(!thisM)cls+=' cal-other'; else if(dk===tk)cls+=' cal-today';
-    if(dk===calSelDate)cls+=' cal-selected';
-    cells+='<div class="'+cls+'" onclick="selCalDate(\''+dk+'\',\''+name+'\')"><div class="s-cal-day-num">'+day2+'</div><div class="s-cal-dots">'+dots+'</div></div>';
+    if(dk===hwCalSelDate)cls+=' cal-selected';
+    cells+='<div class="'+cls+'" onclick="selHwCalDate(\''+dk+'\',\''+name+'\')"><div class="s-cal-day-num">'+day2+'</div><div class="s-cal-dots">'+dots+'</div></div>';
   }
   var detail='';
-  if(!calSelDate){detail='<div class="s-cal-detail-empty">날짜를 클릭하면 과제를 확인할 수 있어요 📋</div>';}
+  if(!hwCalSelDate){detail='<div class="s-cal-detail-empty">날짜를 클릭하면 과제를 확인할 수 있어요 📋</div>';}
   else{
-    var dt3=new Date(calSelDate), lbl2=(dt3.getMonth()+1)+'월 '+dt3.getDate()+'일의 과제', hw3=hwByDate[calSelDate]||[];
+    var dt3=new Date(hwCalSelDate), lbl2=(dt3.getMonth()+1)+'월 '+dt3.getDate()+'일의 과제', hw3=hwByDate[hwCalSelDate]||[];
     if(hw3.length===0){detail='<div class="s-cal-detail-date">'+lbl2+'</div><div class="s-cal-detail-empty">이 날은 마감 과제가 없어요! 😊</div>';}
     else{detail='<div class="s-cal-detail-date">'+lbl2+'</div>'+hw3.map(function(h){var cls3='cal-ft',tc='tag-ft',lb='예정';if(h.done){cls3='cal-dn';tc='tag-dn';lb='완료 ✓';}else if(isOverdue(h.deadline)){cls3='cal-ov';tc='tag-ov';lb='밀린 과제';}else if(isToday(h.deadline)){cls3='cal-td';tc='tag-td';lb='오늘 마감';}return '<div class="s-cal-hw-item '+cls3+'"><span style="font-size:1.1rem;flex-shrink:0">'+h.ico+'</span><span class="s-cal-hw-name">'+h.name+'</span><span class="s-cal-hw-tag '+tc+'">'+lb+'</span></div>';}).join('');}
   }
-  wrap.innerHTML='<div class="s-cal-header"><button class="s-cal-nav-btn" onclick="changeCalMonth(-1,\''+name+'\')">◀</button><span class="s-cal-month-label">'+calYear+'년 '+(calMonth+1)+'월</span><button class="s-cal-nav-btn" onclick="changeCalMonth(1,\''+name+'\')">▶</button></div><div class="s-cal-grid">'+DOW.map(function(d2){return '<div class="s-cal-dow">'+d2+'</div>';}).join('')+cells+'</div><div class="s-cal-detail">'+detail+'</div>';
+  wrap.innerHTML='<div class="s-cal-header"><button class="s-cal-nav-btn" onclick="changeHwCalMonth(-1,\''+name+'\')">◀</button><span class="s-cal-month-label">'+hwCalYear+'년 '+(hwCalMonth+1)+'월</span><button class="s-cal-nav-btn" onclick="changeHwCalMonth(1,\''+name+'\')">▶</button></div><div class="s-cal-grid">'+DOW.map(function(d2){return '<div class="s-cal-dow">'+d2+'</div>';}).join('')+cells+'</div><div class="s-cal-detail">'+detail+'</div>';
 }
-function selCalDate(dk,name){ calSelDate=calSelDate===dk?null:dk; renderHwCalendar(name); }
-function changeCalMonth(dir,name){ calMonth+=dir; if(calMonth<0){calMonth=11;calYear--;}if(calMonth>11){calMonth=0;calYear++;}calSelDate=null; renderHwCalendar(name); }
+function selHwCalDate(dk,name){ hwCalSelDate=hwCalSelDate===dk?null:dk; renderHwCalendar(name); }
+function changeHwCalMonth(dir,name){ hwCalMonth+=dir; if(hwCalMonth<0){hwCalMonth=11;hwCalYear--;}if(hwCalMonth>11){hwCalMonth=0;hwCalYear++;}hwCalSelDate=null; renderHwCalendar(name); }
 
 /* ====== STUDENT NOTICES ====== */
 function getNoticesForStudent(name){
@@ -6255,18 +6339,6 @@ function toggleHwAssignFromCal(name, hwId, who) {
   renderHwMgmt(who, document.getElementById(who+'-main-content'));
 }
 
-function selHwCalDate(dk, who) {
-  hwCalSel = hwCalSel===dk ? null : dk;
-  renderHwMgmt(who, document.getElementById(who+'-main-content'));
-}
-
-function changeHwCalMonth(dir, who) {
-  hwCalMonth+=dir;
-  if(hwCalMonth<0){hwCalMonth=11;hwCalYear--;}
-  if(hwCalMonth>11){hwCalMonth=0;hwCalYear++;}
-  hwCalSel=null;
-  renderHwMgmt(who, document.getElementById(who+'-main-content'));
-}
 function openHwDetail(k,who){hwDetailKey=k;if(!hwSelectMap[k])hwSelectMap[k]=new Set();renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function closeHwDetail(who){hwDetailKey=null;renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function renderHwDetail(k,who){
@@ -6568,7 +6640,16 @@ function setTodayAtt(who,clsKey,name,opt){
   tAttCalYear = todayNow.getFullYear();
   tAttCalMonth = todayNow.getMonth();
 
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, window.classAttendance[clsKey][name][tk]||'');
+  if(window.fbSaveAttendance) {
+    var val = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk];
+    if(!val || (typeof val==='string' && !val)) {
+      // 상태가 없으면 Firebase에서 삭제
+      var delKey = (clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
+      if(window.fbDel) window.fbDel('attendance/'+delKey);
+    } else {
+      window.fbSaveAttendance(clsKey, name, tk, val);
+    }
+  }
   renderAttSub(who);
 }
 
@@ -6580,8 +6661,11 @@ function renderMonthlyAtt(who,el){
   Object.keys(window.classAttendance).forEach(function(clsKey){
     Object.keys(window.classAttendance[clsKey]).forEach(function(name){
       Object.keys(window.classAttendance[clsKey][name]).forEach(function(dk){
+        var val = window.classAttendance[clsKey][name][dk];
+        var s = attStatus(val);
+        if(!s) return; // 빈 상태 제외
         if(!byDate[dk]) byDate[dk]=[];
-        byDate[dk].push({name:name, clsKey:clsKey, status:attStatus(window.classAttendance[clsKey][name][dk])});
+        byDate[dk].push({name:name, clsKey:clsKey, status:s});
       });
     });
   });
@@ -6621,11 +6705,17 @@ function renderMonthlyAtt(who,el){
     if(recs2.length===0){
       detail='<div class="t-att-cal-detail-title">'+lbl2+'</div><div class="t-att-detail-empty">이 날 기록된 출결이 없어요.</div>';
     } else {
-      var groups={};ATT_OPTIONS.forEach(function(o){groups[o]=[];});
-      recs2.forEach(function(r){if(groups[r.status])groups[r.status].push(r);});
+      // '등원+하원'도 포함한 그룹 목록
+      var allStatuses = ATT_OPTIONS.concat(['등원+하원']);
+      var groups={};allStatuses.forEach(function(o){groups[o]=[];});
+      recs2.forEach(function(r){
+        var s = r.status;
+        if(groups[s]) groups[s].push(r);
+        else { groups[s]=[]; groups[s].push(r); }
+      });
       var html='<div class="t-att-cal-detail-title">'+lbl2+'</div>';
-      ATT_OPTIONS.forEach(function(status){
-        var list=groups[status];if(list.length===0)return;
+      allStatuses.forEach(function(status){
+        var list=groups[status];if(!list||list.length===0)return;
         html+='<div class="t-att-group-label"><span class="att-summary-chip chip-'+status+'">'+status+' '+list.length+'명</span></div>';
         html+=list.map(function(r,i){
           var safeClsKey = encodeURIComponent(r.clsKey);
@@ -7733,10 +7823,16 @@ try {
   // 🔴 실시간 출결 동기화
   db.collection('attendance').onSnapshot(function(snapshot) {
     snapshot.docChanges().forEach(function(change) {
-      if(change.type === 'added' || change.type === 'modified') {
-        var a = change.doc.data();
-        if(!a.clsKey || !a.name || !a.dateKey) return;
-        if(!window.classAttendance) window.classAttendance = {};
+      var a = change.doc.data();
+      if(!a.clsKey || !a.name || !a.dateKey) return;
+      if(!window.classAttendance) window.classAttendance = {};
+
+      if(change.type === 'removed') {
+        // 삭제된 문서 → 메모리에서도 제거
+        if(window.classAttendance[a.clsKey]&&window.classAttendance[a.clsKey][a.name]) {
+          delete window.classAttendance[a.clsKey][a.name][a.dateKey];
+        }
+      } else if(change.type === 'added' || change.type === 'modified') {
         if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey] = {};
         if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name] = {};
         var hasTime = a.등원Time || a.하원Time || a.지각Time || a.보강Time;
@@ -7750,10 +7846,10 @@ try {
         } else if(a.status) {
           window.classAttendance[a.clsKey][a.name][a.dateKey] = a.status;
         }
-        if(window.currentTeacher && window.activeMenu === 'att') {
-          var el = document.getElementById(window.currentTeacher+'-main-content');
-          if(el) renderAttSub(window.currentTeacher);
-        }
+      }
+      if(window.currentTeacher && window.activeMenu === 'att') {
+        var el = document.getElementById(window.currentTeacher+'-main-content');
+        if(el) renderAttSub(window.currentTeacher);
       }
     });
   }, function(err) { console.log('출결 동기화 오류:', err); });
