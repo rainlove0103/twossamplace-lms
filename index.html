@@ -2210,7 +2210,7 @@ function downloadReceiptsPDF(who, ym) {
   container.innerHTML = gridHtml;
   document.body.appendChild(container);
 
-  function loadScript(src, cb) {
+  var loadScript = function loadScript(src, cb) {
     if(document.querySelector('script[src="'+src+'"]')){cb();return;}
     var s=document.createElement('script'); s.src=src; s.onload=cb; document.head.appendChild(s);
   }
@@ -2253,6 +2253,7 @@ function downloadReceiptsPDF(who, ym) {
 /* ====== 회계 관리 ====== */
 var accountYm = (function(){var n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0');})();
 var accountTab = 'mine'; // 'mine' | 'all'
+var accountYear = new Date().getFullYear();
 
 function getRevenue(who, ym) {
   var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
@@ -2320,7 +2321,11 @@ function renderAccountMgmt(who, el) {
   // 최근 6개월 그래프
   html += renderAccountChart(who);
 
-  // 카테고리 관리
+  // 교재 추가 버튼
+  html += '<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:12px">' +
+    '<button id="receipt-pdf-btn-'+who+'" onclick="downloadReceiptMonthPDF(\''+who+'\',\''+ym+'\')" ' +
+    'style="background:#fff8ee;border:1.5px solid #f5d9b0;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit">🧾 영수증 PDF</button>' +
+  '</div>';
   html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:12px 16px;margin-bottom:16px">' +
     '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">' +
       '<div style="font-size:.85rem;font-weight:700;color:var(--brown)">📂 지출 카테고리</div>' +
@@ -2355,7 +2360,7 @@ function renderAccountMgmt(who, el) {
   '</div>';
 
   // 지출 목록
-  var expenses = (expenseData[who][ym]||[]).slice().reverse();
+  var expenses = (expenseData[who][ym]||[]).slice().sort(function(a,b){return a.date>b.date?1:a.date<b.date?-1:0;});
   if(expenses.length===0){
     html += '<div class="t-placeholder" style="padding:20px 0"><span class="ph-ico">📭</span><div class="ph-desc">이달의 지출 내역이 없어요.</div></div>';
   } else {
@@ -2372,6 +2377,8 @@ function renderAccountMgmt(who, el) {
           '<div style="font-size:.7rem;color:var(--text-soft)">'+e.date+(e.memo?' · '+e.memo:'')+'</div>' +
         '</div>' +
         '<div style="font-size:.9rem;font-weight:700;color:#c2185b;flex-shrink:0">-'+e.amount.toLocaleString()+'원</div>' +
+        '<button onclick="openReceiptViewer(\''+who+'\',\''+ym+'\',\''+e.id+'\')" title="영수증" style="background:none;border:none;color:'+(e.receiptUrl?'#ffb347':'#ddd')+';cursor:pointer;font-size:.85rem;flex-shrink:0">🧾</button>' +
+        '<button onclick="openEditExpense(\''+who+'\',\''+ym+'\',\''+e.id+'\')" style="background:none;border:none;color:#90caf9;cursor:pointer;font-size:.85rem;flex-shrink:0">✏️</button>' +
         '<button onclick="deleteExpense(\''+who+'\',\''+ym+'\',\''+e.id+'\')" style="background:none;border:none;color:#ddd;cursor:pointer;font-size:.85rem;flex-shrink:0">🗑️</button>' +
       '</div>';
     });
@@ -2382,9 +2389,15 @@ function renderAccountMgmt(who, el) {
 }
 
 function renderAccountAll(who) {
-  var now = new Date();
-  var y = now.getFullYear();
-  var html = '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:16px">'+y+'년 전체 현황</div>';
+  var y = accountYear;
+  var html = '';
+
+  // 연도 이동 버튼
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:20px">' +
+    '<button onclick="accountYear--;renderAccountMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">◀</button>' +
+    '<div style="font-size:1rem;font-weight:700;color:var(--brown);flex:1;text-align:center">'+y+'년 전체 현황</div>' +
+    '<button onclick="accountYear++;renderAccountMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 10px;font-size:.85rem;cursor:pointer">▶</button>' +
+  '</div>';
 
   // 연간 합계
   var totals = {cookie:{rev:0,exp:0}, butter:{rev:0,exp:0}};
@@ -2454,6 +2467,14 @@ function renderAccountAll(who) {
 }
 
 function renderAccountChart(who) {
+  var ym = accountYm;
+  var ymParts = ym.split('-');
+  var y = parseInt(ymParts[0]), mo = parseInt(ymParts[1])-1;
+  var prevMo = mo===0?11:mo-1, prevY = mo===0?y-1:y;
+  var prevYm = prevY+'-'+String(prevMo+1).padStart(2,'0');
+  var ymLabel = (mo+1)+'월', prevLabel = (prevMo+1)+'월';
+
+  // ── 최근 6개월 매출/지출 막대 ──
   var now = new Date();
   var months = [];
   for(var i=5;i>=0;i--){
@@ -2461,32 +2482,100 @@ function renderAccountChart(who) {
     months.push({ym:d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'), label:(d.getMonth()+1)+'월'});
   }
   var maxVal = 0;
-  var data = months.map(function(m){
+  var mData = months.map(function(m){
     var r=getRevenue(who,m.ym), e=getExpenseTotal(who,m.ym);
     maxVal=Math.max(maxVal,r,e);
-    return {label:m.label, rev:r, exp:e};
+    return {label:m.label, rev:r, exp:e, isCur:m.ym===ym};
   });
-  if(maxVal===0) return '';
-  var html = '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px 16px;margin-bottom:16px">' +
-    '<div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:12px">📈 최근 6개월</div>' +
-    '<div style="display:flex;align-items:flex-end;gap:8px;height:80px">';
-  data.forEach(function(d){
-    var rH=maxVal?Math.round(d.rev/maxVal*70):0;
-    var eH=maxVal?Math.round(d.exp/maxVal*70):0;
-    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
-      '<div style="display:flex;align-items:flex-end;gap:2px;height:70px">' +
-        '<div style="width:10px;background:#a5d6a7;border-radius:3px 3px 0 0;height:'+rH+'px;"></div>' +
-        '<div style="width:10px;background:#f48fb1;border-radius:3px 3px 0 0;height:'+eH+'px;"></div>' +
+
+  var html = '';
+  if(maxVal>0){
+    html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px 16px;margin-bottom:14px">' +
+      '<div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:12px">📈 최근 6개월 매출 vs 지출</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:8px;height:90px">';
+    mData.forEach(function(d){
+      var rH=Math.round(d.rev/maxVal*74), eH=Math.round(d.exp/maxVal*74);
+      html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:2px">' +
+        '<div style="display:flex;align-items:flex-end;gap:2px;height:74px">' +
+          '<div style="width:11px;background:'+(d.isCur?'#66bb6a':'#a5d6a7')+';border-radius:3px 3px 0 0;height:'+rH+'px;"></div>' +
+          '<div style="width:11px;background:'+(d.isCur?'#e57373':'#f48fb1')+';border-radius:3px 3px 0 0;height:'+eH+'px;"></div>' +
+        '</div>' +
+        '<div style="font-size:.62rem;color:'+(d.isCur?'var(--brown)':'var(--text-soft)')+';font-weight:'+(d.isCur?'700':'400')+'">'+d.label+'</div>' +
+      '</div>';
+    });
+    html += '</div>' +
+      '<div style="display:flex;gap:14px;margin-top:8px">' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#2e7d32"><div style="width:10px;height:10px;border-radius:2px;background:#a5d6a7"></div>매출</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#c2185b"><div style="width:10px;height:10px;border-radius:2px;background:#f48fb1"></div>지출</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:var(--text-soft);margin-left:4px"><div style="width:10px;height:10px;border-radius:2px;background:#66bb6a"></div>이달</div>' +
+      '</div></div>';
+  }
+
+  // ── 카테고리별 지출 (이번달 vs 지난달) ──
+  var curExp  = expenseData[who][ym]||[];
+  var prevExp = expenseData[who][prevYm]||[];
+
+  var catColors2 = {'교재비':'#1565c0','소모품비':'#6a1b9a','간식비':'#e65100','임대료':'#c2185b','광고비':'#2e7d32','비품비':'#bf360c','구독료':'#0277bd','기타':'#666'};
+
+  // 카테고리별 합계
+  var catTotals = {};
+  expenseCategories.forEach(function(cat){
+    var cur  = curExp.filter(function(e){return e.category===cat;}).reduce(function(a,e){return a+e.amount;},0);
+    var prev = prevExp.filter(function(e){return e.category===cat;}).reduce(function(a,e){return a+e.amount;},0);
+    if(cur>0||prev>0) catTotals[cat]={cur:cur, prev:prev};
+  });
+
+  if(Object.keys(catTotals).length===0) return html;
+
+  var maxCat = Object.values(catTotals).reduce(function(a,v){return Math.max(a,v.cur,v.prev);},0);
+
+  html += '<div style="background:#fffbf5;border:1px solid #f5ede0;border-radius:12px;padding:14px 16px;margin-bottom:14px">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+      '<div style="font-size:.85rem;font-weight:700;color:var(--brown)">📊 카테고리별 지출</div>' +
+      '<div style="display:flex;gap:10px">' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-soft)"><div style="width:24px;height:6px;border-radius:3px;background:#e0e0e0;"></div>'+prevLabel+'</div>' +
+        '<div style="display:flex;align-items:center;gap:4px;font-size:.68rem;color:var(--text-soft)"><div style="width:24px;height:6px;border-radius:3px;background:var(--cookie);"></div>'+ymLabel+'</div>' +
       '</div>' +
-      '<div style="font-size:.62rem;color:var(--text-soft)">'+d.label+'</div>' +
+    '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:10px">';
+
+  Object.keys(catTotals).forEach(function(cat){
+    var v = catTotals[cat];
+    var color = catColors2[cat]||'#888';
+    var curW  = maxCat ? Math.round(v.cur/maxCat*100)  : 0;
+    var prevW = maxCat ? Math.round(v.prev/maxCat*100) : 0;
+    var diff  = v.cur - v.prev;
+    var diffStr = diff===0 ? '' : (diff>0?'<span style="font-size:.65rem;color:#e53935;margin-left:4px">▲ +'+diff.toLocaleString()+'</span>':'<span style="font-size:.65rem;color:#2e7d32;margin-left:4px">▼ '+Math.abs(diff).toLocaleString()+'</span>');
+
+    html += '<div>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+          '<div style="width:8px;height:8px;border-radius:50%;background:'+color+'"></div>' +
+          '<span style="font-size:.78rem;font-weight:700;color:var(--brown)">'+cat+'</span>' +
+          diffStr +
+        '</div>' +
+        '<span style="font-size:.75rem;font-weight:700;color:'+color+'">'+v.cur.toLocaleString()+'원</span>' +
+      '</div>' +
+      // 지난달 바
+      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:3px">' +
+        '<div style="font-size:.65rem;color:#bbb;width:26px;text-align:right;">'+prevLabel+'</div>' +
+        '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;">' +
+          '<div style="height:100%;width:'+prevW+'%;background:#e0e0e0;border-radius:4px;"></div>' +
+        '</div>' +
+        '<div style="font-size:.65rem;color:#bbb;width:52px;text-align:right;">'+v.prev.toLocaleString()+'원</div>' +
+      '</div>' +
+      // 이번달 바
+      '<div style="display:flex;align-items:center;gap:6px">' +
+        '<div style="font-size:.65rem;color:'+color+';width:26px;text-align:right;font-weight:700;">'+ymLabel+'</div>' +
+        '<div style="flex:1;height:8px;background:#f0f0f0;border-radius:4px;overflow:hidden;">' +
+          '<div style="height:100%;width:'+curW+'%;background:'+color+';border-radius:4px;opacity:0.85;"></div>' +
+        '</div>' +
+        '<div style="font-size:.65rem;color:'+color+';width:52px;text-align:right;font-weight:700;">'+v.cur.toLocaleString()+'원</div>' +
+      '</div>' +
     '</div>';
   });
-  html += '</div>' +
-    '<div style="display:flex;gap:12px;margin-top:8px">' +
-      '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#2e7d32"><div style="width:10px;height:10px;border-radius:2px;background:#a5d6a7"></div>매출</div>' +
-      '<div style="display:flex;align-items:center;gap:4px;font-size:.7rem;color:#c2185b"><div style="width:10px;height:10px;border-radius:2px;background:#f48fb1"></div>지출</div>' +
-    '</div>' +
-  '</div>';
+
+  html += '</div></div>';
   return html;
 }
 
@@ -2516,6 +2605,216 @@ function deleteExpense(who, ym, id) {
   if(!confirm('지출 내역을 삭제할까요?')) return;
   expenseData[who][ym] = (expenseData[who][ym]||[]).filter(function(e){return e.id!==id;});
   if(window.fbDeleteExpense) window.fbDeleteExpense(who, ym, id);
+  renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function openReceiptViewer(who, ym, id) {
+  var list = expenseData[who][ym]||[];
+  var e = list.find(function(x){return x.id===id;});
+  if(!e) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'receipt-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+
+  var inner = '<div style="background:white;border-radius:20px;padding:24px;width:360px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.3)">' +
+    '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">' +
+      '<div style="font-size:.95rem;font-weight:700;color:var(--brown)">🧾 영수증</div>' +
+      '<button onclick="document.getElementById(\'receipt-overlay\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#aaa">✕</button>' +
+    '</div>' +
+    '<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:14px">'+e.date+' · '+e.category+' · '+e.title+'</div>';
+
+  if(e.receiptUrl) {
+    inner += '<img src="'+e.receiptUrl+'" style="width:100%;border-radius:10px;margin-bottom:14px;object-fit:contain;max-height:300px">';
+    inner += '<div style="display:flex;gap:8px">' +
+      '<button onclick="uploadReceipt(\''+who+'\',\''+ym+'\',\''+id+'\')" style="flex:1;padding:9px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.78rem;font-weight:700;color:#888;cursor:pointer;font-family:inherit">🔄 교체</button>' +
+      '<a href="'+e.receiptUrl+'" target="_blank" style="flex:1;padding:9px;border-radius:10px;border:none;background:var(--cookie);font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;display:flex;align-items:center;justify-content:center">🔍 크게 보기</a>' +
+    '</div>';
+  } else {
+    inner += '<div style="text-align:center;padding:30px;background:#fafafa;border-radius:10px;border:2px dashed #f0e8dc;margin-bottom:14px">' +
+      '<div style="font-size:2rem;margin-bottom:8px">📷</div>' +
+      '<div style="font-size:.8rem;color:#bbb;margin-bottom:12px">영수증 사진을 업로드해요</div>' +
+      '<button onclick="uploadReceipt(\''+who+'\',\''+ym+'\',\''+id+'\')" style="background:var(--cookie);border:none;border-radius:10px;padding:8px 20px;font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📷 사진 선택</button>' +
+    '</div>';
+  }
+
+  inner += '</div>';
+  overlay.innerHTML = inner;
+  document.body.appendChild(overlay);
+
+  // 파일 input 숨김 처리
+  var inp = document.createElement('input');
+  inp.type='file'; inp.id='receipt-file-input'; inp.accept='image/*';
+  inp.style.display='none';
+  inp.onchange = function(ev){
+    var file = ev.target.files[0]; if(!file) return;
+    doUploadReceipt(who, ym, id, file);
+  };
+  document.body.appendChild(inp);
+}
+
+function uploadReceipt(who, ym, id) {
+  var inp = document.getElementById('receipt-file-input');
+  if(inp) inp.click();
+}
+
+async function doUploadReceipt(who, ym, id, file) {
+  var overlay = document.getElementById('receipt-overlay');
+  if(overlay) overlay.innerHTML = '<div style="color:white;font-size:1rem;font-weight:700;text-align:center;width:100%;padding-top:45vh">⏳ 업로드 중...</div>';
+
+  try {
+    var path = 'receipts/'+who+'/'+ym+'/'+id+'_'+Date.now();
+    var ref = storage.ref(path);
+    await ref.put(file);
+    var url = await ref.getDownloadURL();
+
+    // Firestore + 로컬 저장
+    var list = expenseData[who][ym]||[];
+    var e = list.find(function(x){return x.id===id;});
+    if(e) e.receiptUrl = url;
+    await fbSet('expenses/'+who+'_'+ym+'_'+id, Object.assign({who:who,ym:ym,id:id}, e));
+
+    var inp2 = document.getElementById('receipt-file-input');
+    if(inp2) inp2.remove();
+    if(overlay) overlay.remove();
+    renderAccountMgmt(who, document.getElementById(who+'-main-content'));
+    // 다시 열어서 확인
+    setTimeout(function(){ openReceiptViewer(who, ym, id); }, 200);
+  } catch(err) {
+    alert('업로드 실패: '+err.message);
+    var inp3 = document.getElementById('receipt-file-input');
+    if(inp3) inp3.remove();
+    var o2 = document.getElementById('receipt-overlay');
+    if(o2) o2.remove();
+  }
+}
+
+async function downloadReceiptMonthPDF(who, ym) {
+  var ymLabel = ym.replace('-','년 ')+'월';
+  var whoLabel = who==='cookie'?'쿠키쌤':'버터쌤';
+  var expenses = (expenseData[who][ym]||[]).filter(function(e){return e.receiptUrl;});
+
+  if(expenses.length===0){alert('첨부된 영수증이 없어요.');return;}
+
+  var btn = document.getElementById('receipt-pdf-btn-'+who);
+  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
+
+  var loadScript = function loadScript(src, cb){
+    if(document.querySelector('script[src="'+src+'"]')){cb();return;}
+    var s=document.createElement('script');s.src=src;s.onload=cb;document.head.appendChild(s);
+  }
+
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', async function(){
+    var pdf = new window.jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
+    var pdfW = pdf.internal.pageSize.getWidth();
+    var pdfH = pdf.internal.pageSize.getHeight();
+    var isFirst = true;
+
+    // 표지
+    pdf.setFillColor(255,248,238);
+    pdf.rect(0,0,pdfW,pdfH,'F');
+    pdf.setFontSize(11); pdf.setTextColor(176,128,64);
+    pdf.text('EXPENSE RECEIPTS', pdfW/2, 40, {align:'center'});
+    pdf.setFontSize(22); pdf.setTextColor(92,61,30);
+    pdf.text(ymLabel+' 지출 영수증 모음', pdfW/2, 56, {align:'center'});
+    pdf.setFontSize(11); pdf.setTextColor(150,120,80);
+    pdf.text(whoLabel+' · 총 '+expenses.length+'건 · 발행일 '+new Date().toLocaleDateString('ko-KR'), pdfW/2, 68, {align:'center'});
+    pdf.setDrawColor(232,169,106); pdf.setLineWidth(0.5);
+    pdf.line(20,76,pdfW-20,76);
+
+    // 목록
+    var y2 = 88;
+    pdf.setFontSize(10); pdf.setTextColor(92,61,30);
+    expenses.forEach(function(e,i){
+      pdf.text((i+1)+'. '+e.date+'  '+e.category+'  '+e.title+'  -'+e.amount.toLocaleString()+'원', 20, y2);
+      y2+=7;
+    });
+
+    // 영수증 이미지 (페이지별)
+    for(var i=0;i<expenses.length;i++){
+      var e2=expenses[i];
+      try {
+        var imgData = await getImgAsBase64(e2.receiptUrl);
+        pdf.addPage();
+        pdf.setFillColor(255,255,255); pdf.rect(0,0,pdfW,pdfH,'F');
+        pdf.setFontSize(9); pdf.setTextColor(150,120,80);
+        pdf.text((i+1)+'/'+expenses.length+'  '+e2.date+'  '+e2.category+'  '+e2.title+'  -'+e2.amount.toLocaleString()+'원', 10, 12);
+        pdf.setDrawColor(240,232,220); pdf.line(10,15,pdfW-10,15);
+        // 이미지 비율 유지
+        var imgProps = pdf.getImageProperties(imgData);
+        var maxW=pdfW-20, maxH=pdfH-28;
+        var ratio=Math.min(maxW/imgProps.width, maxH/imgProps.height);
+        var iw=imgProps.width*ratio, ih=imgProps.height*ratio;
+        var ix=(pdfW-iw)/2, iy=20;
+        pdf.addImage(imgData,'JPEG',ix,iy,iw,ih);
+      } catch(err){ console.warn('이미지 로드 실패:',err); }
+    }
+
+    pdf.save(ym+'_'+whoLabel+'_지출영수증.pdf');
+    if(btn){btn.textContent='🧾 영수증 PDF';btn.disabled=false;}
+  });
+}
+
+function getImgAsBase64(url) {
+  return new Promise(function(resolve, reject){
+    var img = new Image();
+    img.crossOrigin='anonymous';
+    img.onload = function(){
+      var c=document.createElement('canvas');
+      c.width=img.naturalWidth; c.height=img.naturalHeight;
+      c.getContext('2d').drawImage(img,0,0);
+      resolve(c.toDataURL('image/jpeg',0.85));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
+}
+  var list = expenseData[who][ym]||[];
+  var e = list.find(function(x){return x.id===id;});
+  if(!e) return;
+
+  var overlay = document.createElement('div');
+  overlay.id = 'exp-edit-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:20px;padding:26px;width:340px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2);max-height:90vh;overflow-y:auto">' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:16px">✏️ 지출 내역 수정</div>' +
+      '<div class="form-label" style="margin-bottom:5px">날짜</div>' +
+      '<input type="date" id="edit-exp-date" value="'+e.date+'" class="register-input" style="margin-bottom:12px">' +
+      '<div class="form-label" style="margin-bottom:5px">카테고리</div>' +
+      '<select id="edit-exp-cat" class="register-input" style="margin-bottom:12px">' +
+        expenseCategories.map(function(c){return '<option'+(c===e.category?' selected':'')+'>'+c+'</option>';}).join('') +
+      '</select>' +
+      '<div class="form-label" style="margin-bottom:5px">항목명</div>' +
+      '<input id="edit-exp-title" class="register-input" value="'+e.title+'" style="margin-bottom:12px">' +
+      '<div class="form-label" style="margin-bottom:5px">금액 (원)</div>' +
+      '<input type="number" id="edit-exp-amount" class="register-input" value="'+e.amount+'" style="margin-bottom:12px">' +
+      '<div class="form-label" style="margin-bottom:5px">메모</div>' +
+      '<input id="edit-exp-memo" class="register-input" value="'+(e.memo||'')+'" placeholder="메모" style="margin-bottom:20px">' +
+      '<div style="display:flex;gap:8px">' +
+        '<button onclick="closeExpEditModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.8rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">취소</button>' +
+        '<button onclick="saveEditExpense(\''+who+'\',\''+ym+'\',\''+id+'\')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--cookie);font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">저장</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+}
+
+function closeExpEditModal() {
+  var o = document.getElementById('exp-edit-overlay');
+  if(o) o.remove();
+}
+
+function saveEditExpense(who, ym, id) {
+  var list = expenseData[who][ym]||[];
+  var e = list.find(function(x){return x.id===id;});
+  if(!e) return;
+  e.date     = (document.getElementById('edit-exp-date')||{value:e.date}).value;
+  e.category = (document.getElementById('edit-exp-cat')||{value:e.category}).value;
+  e.title    = (document.getElementById('edit-exp-title')||{value:e.title}).value.trim();
+  e.amount   = parseInt((document.getElementById('edit-exp-amount')||{value:'0'}).value)||0;
+  e.memo     = (document.getElementById('edit-exp-memo')||{value:''}).value.trim();
+  if(window.fbSaveExpense) window.fbSaveExpense(who, ym, id, e);
+  closeExpEditModal();
   renderAccountMgmt(who, document.getElementById(who+'-main-content'));
 }
 
@@ -3753,7 +4052,7 @@ function downloadMonthlyPDF(who, name, y, m) {
   document.body.appendChild(container);
 
   // html2canvas + jsPDF 로드
-  function loadScript(src, cb) {
+  var loadScript = function loadScript(src, cb) {
     if(document.querySelector('script[src="'+src+'"]')) { cb(); return; }
     var s = document.createElement('script');
     s.src = src;
@@ -3847,7 +4146,7 @@ function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
   }).join('');
 
   // 그래프 bar
-  function bar(label, prev, curr, unit, color) {
+  var bar = function(label, prev, curr, unit, color) {
     var prevW = Math.round(prev/(unit==='권'?5:100)*100);
     var currW = Math.round(curr/(unit==='권'?5:100)*100);
     var diff = curr - prev;
@@ -6506,6 +6805,7 @@ function deleteNotice(who,id){
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 // Firebase 로드 대기 후 초기화
 function initFirebase() {
@@ -6513,7 +6813,7 @@ function initFirebase() {
     setTimeout(initFirebase, 100);
     return;
   }
-const firebaseConfig = {
+var firebaseConfig = {
   apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
   authDomain: "twossamplace-lms.firebaseapp.com",
   projectId: "twossamplace-lms",
@@ -6523,13 +6823,14 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+var db = firebase.firestore();
+var storage = firebase.storage();
 
 /* ── 저장 헬퍼 ── */
 async function fbSet(path, data) {
   try {
-    const parts = path.split('/');
-    let ref;
+    var parts = path.split('/');
+    var ref;
     if (parts.length === 2) {
       ref = db.collection(parts[0]).doc(parts[1]);
     } else {
@@ -6541,22 +6842,22 @@ async function fbSet(path, data) {
 
 async function fbGet(path) {
   try {
-    const parts = path.split('/');
-    let ref;
+    var parts = path.split('/');
+    var ref;
     if (parts.length === 2) {
       ref = db.collection(parts[0]).doc(parts[1]);
     } else {
       ref = db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
     }
-    const snap = await ref.get();
+    var snap = await ref.get();
     return snap.exists ? snap.data() : null;
   } catch(e) { console.error('fbGet error', path, e); return null; }
 }
 
 async function fbGetCol(colPath) {
   try {
-    const snap = await db.collection(colPath).get();
-    const result = {};
+    var snap = await db.collection(colPath).get();
+    var result = {};
     snap.forEach(d => { result[d.id] = d.data(); });
     return result;
   } catch(e) { console.error('fbGetCol error', colPath, e); return {}; }
@@ -6564,7 +6865,7 @@ async function fbGetCol(colPath) {
 
 async function fbDel(path) {
   try {
-    const parts = path.split('/');
+    var parts = path.split('/');
     await db.collection(parts[0]).doc(parts[1]).delete();
   } catch(e) { console.error('fbDel error', path, e); }
 }
@@ -6582,44 +6883,44 @@ window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
 };
 
 window.fbSaveMemberRoster = async function(who) {
-  const roster = window.memberRoster[who] || [];
+  var roster = window.memberRoster[who] || [];
   await fbSet('memberRoster/' + who, { roster: JSON.stringify(roster) });
 };
 
 window.fbSaveHwAssigned = async function(name) {
-  const hw = window.hwAssigned[name] || [];
-  const safe = hw.map(function(h) {
+  var hw = window.hwAssigned[name] || [];
+  var safe = hw.map(function(h) {
     return Object.assign({}, h, { deadline: h.deadline ? h.deadline.toISOString() : null });
   });
   await fbSet('hwAssigned/' + name, { hw: JSON.stringify(safe) });
 };
 
 window.fbSaveReport = async function(who, dateKey, name) {
-  const r = window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name];
+  var r = window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name];
   if (!r) return;
-  const safe = Object.assign({}, r, { who: who, dateKey: dateKey, name: name });
+  var safe = Object.assign({}, r, { who: who, dateKey: dateKey, name: name });
   await fbSet('reports/' + who + '_' + dateKey + '_' + name, safe);
 };
 
 window.fbSaveNotices = async function(who) {
-  const list = window.notices.filter(function(n){ return n.who === who; });
+  var list = window.notices.filter(function(n){ return n.who === who; });
   await fbSet('notices/' + who, { notices: JSON.stringify(list) });
 };
 
 window.fbSaveCounsel = async function(name) {
-  const rec = window.counselRecords[name] || {};
+  var rec = window.counselRecords[name] || {};
   await fbSet('counsel/' + name, { data: JSON.stringify(rec) });
 };
 
 window.fbSaveSyllabus = async function(clsKey, dateKey) {
-  const d = window.syllabusData[clsKey] && window.syllabusData[clsKey][dateKey];
+  var d = window.syllabusData[clsKey] && window.syllabusData[clsKey][dateKey];
   if (!d) return;
-  const safeKey = clsKey.replace(/\//g, '_');
+  var safeKey = clsKey.replace(/\//g, '_');
   await fbSet('syllabus/' + safeKey + '_' + dateKey, Object.assign({}, d, { clsKey: clsKey, dateKey: dateKey }));
 };
 
 window.fbSaveCalEvents = async function(dateKey) {
-  const evs = window.calEvents[dateKey] || [];
+  var evs = window.calEvents[dateKey] || [];
   await fbSet('calEvents/' + dateKey, { events: JSON.stringify(evs) });
 };
 
@@ -6723,7 +7024,7 @@ window.fbSaveQuizResult = async function(name, lecId, vi, qi) {
 };
 
 window.fbSaveLecStudents = async function(lecId) {
-  const sel = window.lectureStudents[lecId] ? Array.from(window.lectureStudents[lecId]) : [];
+  var sel = window.lectureStudents[lecId] ? Array.from(window.lectureStudents[lecId]) : [];
   await fbSet('lecStudents/' + lecId, { students: sel });
 };
 
@@ -6760,67 +7061,67 @@ window.fbSaveClassReport = async function(who, dk, clsKey) {
 async function loadAllData() {
   showFbStatus('🔄 데이터 불러오는 중...');
 
-  for (const who of ['cookie', 'butter']) {
-    const d = await fbGet('memberRoster/' + who);
+  for (var who of ['cookie', 'butter']) {
+    var d = await fbGet('memberRoster/' + who);
     if (d && d.roster) {
       try { window.memberRoster[who] = JSON.parse(d.roster); } catch(e) {}
     }
   }
 
-  const hwData = await fbGetCol('hwAssigned');
+  var hwData = await fbGetCol('hwAssigned');
   Object.keys(hwData).forEach(function(name) {
     try {
-      const hw = JSON.parse(hwData[name].hw || '[]');
+      var hw = JSON.parse(hwData[name].hw || '[]');
       hw.forEach(function(h) { if(h.deadline) h.deadline = new Date(h.deadline); });
       window.hwAssigned[name] = hw;
     } catch(e) {}
   });
 
-  const rptData = await fbGetCol('reports');
+  var rptData = await fbGetCol('reports');
   Object.keys(rptData).forEach(function(key) {
-    const r = rptData[key];
+    var r = rptData[key];
     if (!r.who || !r.dateKey || !r.name) return;
     if (!window.dailyReports[r.who]) window.dailyReports[r.who] = {};
     if (!window.dailyReports[r.who][r.dateKey]) window.dailyReports[r.who][r.dateKey] = {};
     window.dailyReports[r.who][r.dateKey][r.name] = r;
   });
 
-  for (const who of ['cookie', 'butter']) {
-    const d = await fbGet('notices/' + who);
+  for (var who of ['cookie', 'butter']) {
+    var d = await fbGet('notices/' + who);
     if (d && d.notices) {
       try {
-        const list = JSON.parse(d.notices);
+        var list = JSON.parse(d.notices);
         window.notices = window.notices.filter(function(n){ return n.who !== who; }).concat(list);
       } catch(e) {}
     }
   }
 
-  const counselData = await fbGetCol('counsel');
+  var counselData = await fbGetCol('counsel');
   Object.keys(counselData).forEach(function(name) {
     try { window.counselRecords[name] = JSON.parse(counselData[name].data || '{}'); } catch(e) {}
   });
 
-  const sylData = await fbGetCol('syllabus');
+  var sylData = await fbGetCol('syllabus');
   Object.keys(sylData).forEach(function(key) {
-    const d = sylData[key];
+    var d = sylData[key];
     if (!d.clsKey || !d.dateKey) return;
     if (!window.syllabusData[d.clsKey]) window.syllabusData[d.clsKey] = {};
     window.syllabusData[d.clsKey][d.dateKey] = { plan: d.plan||'', execute: d.execute||'', feedback: d.feedback||'' };
   });
 
-  const calData = await fbGetCol('calEvents');
+  var calData = await fbGetCol('calEvents');
   Object.keys(calData).forEach(function(dateKey) {
     try { window.calEvents[dateKey] = JSON.parse(calData[dateKey].events || '[]'); } catch(e) {}
   });
 
-  const lecData = await fbGetCol('lecStudents');
+  var lecData = await fbGetCol('lecStudents');
   Object.keys(lecData).forEach(function(lecId) {
     window.lectureStudents[parseInt(lecId)] = new Set(lecData[lecId].students || []);
   });
 
   // 퀴즈 결과
   // 수업 날짜 커스텀/삭제 불러오기
-  const schedData = await fbGetCol('scheduleDates');
+  var schedData = await fbGetCol('scheduleDates');
   Object.keys(schedData).forEach(function(key) {
     var d = schedData[key];
     if(!d.clsKey || !d.ym) return;
@@ -6831,7 +7132,7 @@ async function loadAllData() {
   });
 
   // 강의 데이터 불러오기
-  const lecMainData = await fbGet('lectureData/main');
+  var lecMainData = await fbGet('lectureData/main');
   if(lecMainData && lecMainData.groups) {
     try {
       var savedGroups = JSON.parse(lecMainData.groups);
@@ -6860,7 +7161,7 @@ async function loadAllData() {
   }
 
   // 강의 완료 기록
-  const lcData = await fbGetCol('lecComplete');
+  var lcData = await fbGetCol('lecComplete');
   Object.keys(lcData).forEach(function(key){
     var d=lcData[key];
     if(!d.name||d.lecId===undefined||d.vi===undefined) return;
@@ -6869,7 +7170,7 @@ async function loadAllData() {
     window.lecCompleted[d.name][d.lecId][d.vi]=true;
   });
 
-  const qrData = await fbGetCol('quizResults');
+  var qrData = await fbGetCol('quizResults');
   Object.keys(qrData).forEach(function(key) {
     var r = qrData[key];
     if(!r.name||r.lecId===undefined||r.vi===undefined||r.qi===undefined) return;
@@ -6879,30 +7180,30 @@ async function loadAllData() {
     window.quizResults[r.name][r.lecId][r.vi][r.qi] = {answer:r.answer, correct:r.correct, submittedAt:r.submittedAt};
   });
 
-  const guide = await fbGet('guide/items');
+  var guide = await fbGet('guide/items');
   if (guide && guide.items) {
     try { window.guideItems = JSON.parse(guide.items); } catch(e) {}
   }
 
   // 독서 기록
-  const bookData = await fbGetCol('bookRecords');
+  var bookData = await fbGetCol('bookRecords');
   Object.keys(bookData).forEach(function(name) {
     try { window.bookRecords[name] = JSON.parse(bookData[name].books || '[]'); } catch(e) {}
   });
 
   // 클래스 커리큘럼
-  const currData = await fbGetCol('curriculum');
+  var currData = await fbGetCol('curriculum');
   Object.keys(currData).forEach(function(key) {
-    const d = currData[key];
+    var d = currData[key];
     if(!d.clsKey || !d.quarter) return;
     if(!window.syllabusData) window.syllabusData = {};
     if(!window.syllabusData[d.clsKey]) window.syllabusData[d.clsKey] = {};
     window.syllabusData[d.clsKey][d.quarter] = { plan: d.plan||'', execute: d.execute||'', feedback: d.feedback||'' };
   });
 
-  const attData = await fbGetCol('attendance');
+  var attData = await fbGetCol('attendance');
   Object.keys(attData).forEach(function(key) {
-    const a = attData[key];
+    var a = attData[key];
     if(!a.clsKey||!a.name||!a.dateKey||!a.status) return;
     if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey]={};
     if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name]={};
@@ -6922,9 +7223,9 @@ async function loadAllData() {
     }
   });
 
-  const absData = await fbGetCol('absenceReasons');
+  var absData = await fbGetCol('absenceReasons');
   Object.keys(absData).forEach(function(key) {
-    const a = absData[key];
+    var a = absData[key];
     if(!a.clsKey||!a.name||!a.dateKey) return;
     if(!window.absenceReasons[a.clsKey]) window.absenceReasons[a.clsKey]={};
     if(!window.absenceReasons[a.clsKey][a.name]) window.absenceReasons[a.clsKey][a.name]={};
@@ -6956,7 +7257,7 @@ async function loadAllData() {
   });
 
   // 원비 데이터 불러오기
-  const tuitionSnap = await fbGetCol('tuition');
+  var tuitionSnap = await fbGetCol('tuition');
   Object.keys(tuitionSnap).forEach(function(key){
     var d = tuitionSnap[key];
     if(!d.ym||!d.name) return;
@@ -6965,7 +7266,7 @@ async function loadAllData() {
   });
 
   // 지출 데이터 불러오기
-  const expSnap = await fbGetCol('expenses');
+  var expSnap = await fbGetCol('expenses');
   Object.keys(expSnap).forEach(function(key){
     var d = expSnap[key];
     if(!d.who||!d.ym||!d.id) return;
@@ -6980,14 +7281,14 @@ async function loadAllData() {
   } catch(e) {}
 
   // 교재 데이터 불러오기
-  const tbSnap = await fbGetCol('textbooks');
+  var tbSnap = await fbGetCol('textbooks');
   Object.keys(tbSnap).forEach(function(key){
     var d = tbSnap[key];
     if(!d.id||!d.title) return;
     textbooks.push(d);
     if(d.id >= tbIdSeq) tbIdSeq = d.id + 1;
   });
-  const tbLogSnap = await fbGetCol('tbLogs');
+  var tbLogSnap = await fbGetCol('tbLogs');
   Object.keys(tbLogSnap).forEach(function(key){
     var d = tbLogSnap[key];
     if(!d.id||!d.tbId) return;
