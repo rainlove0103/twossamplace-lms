@@ -622,6 +622,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
     <div style="height:100%;width:60%;background:var(--cookie);border-radius:100px;animation:loadingBar 1.2s ease-in-out infinite alternate"></div>
   </div>
 </div>
+<script>
+// 3초 후에도 로딩 중이면 강제로 랜딩 페이지 표시
+setTimeout(function(){
+  var ov = document.getElementById('loading-overlay');
+  if(ov && ov.style.display !== 'none') {
+    ov.style.display = 'none';
+    if(typeof showPage === 'function') showPage('landing');
+  }
+}, 3000);
+</script>
 
 <!-- LANDING -->
 <div id="landing" class="page active">
@@ -768,7 +778,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 </div>
 
 <script>
-/* ====== YOUTUBE EMBED ====== */
 function getYoutubeEmbedUrl(url) {
   var videoId = '';
   var m;
@@ -7286,35 +7295,42 @@ window.populateStudentSelect = function(){};  // placeholder, 실제 함수는 �
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
+// Firebase 초기화
 var db = null;
 var storage = null;
-try {
-    var firebaseConfig = {
-      apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
-      authDomain: "twossamplace-lms.firebaseapp.com",
-      projectId: "twossamplace-lms",
-      storageBucket: "twossamplace-lms.firebasestorage.app",
-      messagingSenderId: "115444457876",
-      appId: "1:115444457876:web:3cc4e437d2aae757edef81"
-    };
-    if(!firebase.apps || firebase.apps.length === 0) {
-      firebase.initializeApp(firebaseConfig);
-    }
-    db = firebase.firestore();
-    storage = firebase.storage ? firebase.storage() : null;
-  } catch(initErr) {
-    console.error('Firebase 초기화 오류:', initErr);
-    var ov = document.getElementById('loading-overlay');
-    if(ov) {
-      ov.innerHTML = '<div style="text-align:center;padding:40px;font-family:\'Noto Sans KR\',sans-serif">' +
-        '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
-        '<div style="font-size:.9rem;font-weight:700;color:#5c3d1e;margin-bottom:8px">연결에 실패했어요</div>' +
-        '<div style="font-size:.78rem;color:#aaa;margin-bottom:20px">페이지를 새로고침 해주세요</div>' +
-        '<button onclick="location.reload()" style="background:#c47a3a;border:none;border-radius:10px;padding:10px 24px;font-size:.85rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">새로고침</button>' +
-      '</div>';
-    }
+
+(function _fbInit() {
+  if(typeof firebase === 'undefined') {
+    setTimeout(_fbInit, 100);
     return;
   }
+try {
+  var firebaseConfig = {
+    apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+    authDomain: "twossamplace-lms.firebaseapp.com",
+    projectId: "twossamplace-lms",
+    storageBucket: "twossamplace-lms.firebasestorage.app",
+    messagingSenderId: "115444457876",
+    appId: "1:115444457876:web:3cc4e437d2aae757edef81"
+  };
+  if(!firebase.apps || firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  db = firebase.firestore();
+  storage = firebase.storage ? firebase.storage() : null;
+} catch(initErr) {
+  console.error('Firebase 초기화 오류:', initErr);
+  var ov = document.getElementById('loading-overlay');
+  if(ov) {
+    ov.innerHTML = '<div style="text-align:center;padding:40px;font-family:\'Noto Sans KR\',sans-serif">' +
+      '<div style="font-size:2rem;margin-bottom:12px">⚠️</div>' +
+      '<div style="font-size:.9rem;font-weight:700;color:#5c3d1e;margin-bottom:8px">연결에 실패했어요</div>' +
+      '<div style="font-size:.78rem;color:#aaa;margin-bottom:20px">페이지를 새로고침 해주세요</div>' +
+      '<button onclick="location.reload()" style="background:#c47a3a;border:none;border-radius:10px;padding:10px 24px;font-size:.85rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">새로고침</button>' +
+    '</div>';
+  }
+  return;
+}
 
   // 🔴 실시간 출결 동기화
   db.collection('attendance').onSnapshot(function(snapshot) {
@@ -7908,6 +7924,7 @@ function showFbStatus(msg, autoHide) {
 window._fbDb = db;
 window._fbSet = fbSet;
 window._fbDel = fbDel;
+})();
 
 </script>
 
