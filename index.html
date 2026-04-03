@@ -4110,9 +4110,11 @@ function renderReportPanel(who, el) {
   var tabs = '<div class="att-sub-tabs" style="margin-bottom:20px">' +
     '<div class="att-sub-tab'+(reportTab==='daily'?' active':'')+'" onclick="setReportTab(\'daily\',\''+who+'\')">📋 데일리리포트</div>' +
     '<div class="att-sub-tab'+(reportTab==='monthly'?' active':'')+'" onclick="setReportTab(\'monthly\',\''+who+'\')">📅 먼슬리리포트</div>' +
+    '<div class="att-sub-tab'+(reportTab==='upload'?' active':'')+'" onclick="setReportTab(\'upload\',\''+who+'\')">📤 학부모 리포트 업로드</div>' +
     '</div>';
   var html = '<div class="t-section-title">📊 리포트 관리</div>' + tabs;
-  html += reportTab==='daily' ? renderDailyReport(who) : renderMonthlyReport(who);
+  if(reportTab==='upload') html += renderParentReportUpload(who);
+  else html += reportTab==='daily' ? renderDailyReport(who) : renderMonthlyReport(who);
   el.innerHTML = html;
 }
 
@@ -4120,6 +4122,165 @@ function setReportTab(tab, who) {
   reportTab = tab;
   reportSelClass = null;
   reportSelStu = null;
+  renderReportPanel(who, document.getElementById(who+'-main-content'));
+}
+
+/* ── 학부모 리포트 업로드 ── */
+var parentReports = {}; // {name: [{id, type, date, ym, title, fileUrl, fileType, fileName}]}
+var prUploadType = 'daily'; // 'daily' | 'monthly'
+var prUploadWho = null;
+
+function renderParentReportUpload(who) {
+  prUploadWho = who;
+  var roster = (window.memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  roster.sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+
+  var now = new Date();
+  var todayVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+  var monthVal = now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+
+  var stuOpts = '<option value="">학생 선택</option>'+roster.map(function(s){
+    return '<option value="'+s.name+'">'+s.name+' ('+s.class+' '+s.day+')</option>';
+  }).join('');
+
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">';
+
+  // 업로드 폼
+  html += '<div class="class-mgmt-card">';
+  html += '<div style="font-size:.9rem;font-weight:700;color:var(--brown);margin-bottom:14px">📤 리포트 파일 업로드</div>';
+  html += '<div style="margin-bottom:10px"><div class="form-label" style="font-size:.75rem">리포트 종류</div>'+
+    '<div style="display:flex;gap:6px;margin-top:4px">'+
+    '<button id="prtype-daily" onclick="setPrType(\'daily\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(prUploadType==='daily'?'var(--cookie)':'#e0d0c0')+';background:'+(prUploadType==='daily'?'#fff0dc':'white')+';font-family:inherit;font-size:.78rem;font-weight:700;color:'+(prUploadType==='daily'?'var(--cookie)':'var(--text-soft)')+';cursor:pointer">📋 데일리</button>'+
+    '<button id="prtype-monthly" onclick="setPrType(\'monthly\')" style="flex:1;padding:7px;border-radius:8px;border:2px solid '+(prUploadType==='monthly'?'var(--cookie)':'#e0d0c0')+';background:'+(prUploadType==='monthly'?'#fff0dc':'white')+';font-family:inherit;font-size:.78rem;font-weight:700;color:'+(prUploadType==='monthly'?'var(--cookie)':'var(--text-soft)')+';cursor:pointer">📅 먼슬리</button>'+
+    '</div></div>';
+  html += '<div style="margin-bottom:10px"><div class="form-label" style="font-size:.75rem">학생</div>'+
+    '<select id="pr-stu" class="register-select" style="margin-top:4px">'+stuOpts+'</select></div>';
+  html += '<div id="pr-date-wrap" style="margin-bottom:10px"><div class="form-label" style="font-size:.75rem">'+(prUploadType==='daily'?'날짜':'연월')+'</div>'+
+    (prUploadType==='daily'
+      ? '<input type="date" id="pr-date" class="register-input" value="'+todayVal+'" style="margin-top:4px">'
+      : '<input type="month" id="pr-date" class="register-input" value="'+monthVal+'" style="margin-top:4px">'
+    )+'</div>';
+  html += '<div style="margin-bottom:10px"><div class="form-label" style="font-size:.75rem">리포트 제목</div>'+
+    '<input type="text" id="pr-title" class="register-input" placeholder="예: 4월 3일 수업 리포트" style="margin-top:4px"></div>';
+  html += '<div style="margin-bottom:14px"><div class="form-label" style="font-size:.75rem">파일 선택 (PDF 또는 이미지)</div>'+
+    '<label style="display:flex;align-items:center;gap:8px;margin-top:6px;padding:10px 14px;border:2px dashed #f0d8b0;border-radius:10px;cursor:pointer;background:#fffbf5;transition:background .15s" onmouseover="this.style.background=\'#fff0dc\'" onmouseout="this.style.background=\'#fffbf5\'">'+
+    '<span style="font-size:1.4rem">📎</span><span id="pr-file-label" style="font-size:.8rem;color:var(--text-soft)">파일을 선택해주세요</span>'+
+    '<input type="file" id="pr-file" accept=".pdf,image/*" style="display:none" onchange="onPrFileChange(this)"></label></div>';
+  html += '<button onclick="uploadParentReport(\''+who+'\')" style="width:100%;padding:10px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--cookie-lt),var(--cookie));color:white;font-family:\'Noto Sans KR\',sans-serif;font-size:.95rem;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(196,122,58,.3)">📤 업로드</button>';
+  html += '<div id="pr-upload-status" style="margin-top:8px;font-size:.78rem;text-align:center;color:var(--text-soft)"></div>';
+  html += '</div>';
+
+  // 업로드된 목록
+  html += '<div class="class-mgmt-card" style="max-height:520px;overflow-y:auto">';
+  html += '<div style="font-size:.9rem;font-weight:700;color:var(--brown);margin-bottom:12px">📁 업로드된 리포트</div>';
+
+  var allReports = [];
+  Object.keys(parentReports).forEach(function(name){
+    (parentReports[name]||[]).forEach(function(p){
+      allReports.push(Object.assign({studentName:name}, p));
+    });
+  });
+  // who 선생님 학생 것만 필터
+  var whoStudents = roster.map(function(s){return s.name;});
+  allReports = allReports.filter(function(p){return whoStudents.indexOf(p.studentName)>-1;});
+  allReports.sort(function(a,b){return (b.date||b.ym||'').localeCompare(a.date||a.ym||'');});
+
+  if(allReports.length===0){
+    html += '<div style="text-align:center;padding:30px 0;font-size:.82rem;color:var(--text-soft)">아직 업로드된 리포트가 없어요!</div>';
+  } else {
+    allReports.forEach(function(p){
+      var typeLabel = p.type==='daily'?'📋 데일리':'📅 먼슬리';
+      var typeBg    = p.type==='daily'?'#fff0dc':'#f3e5f5';
+      var typeColor = p.type==='daily'?'var(--cookie)':'#6a1b9a';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fffbf5;border-radius:10px;border:1px solid #f0e8dc;margin-bottom:6px">';
+      html += '<div style="flex:1;min-width:0">';
+      html += '<div style="display:flex;align-items:center;gap:5px;margin-bottom:2px">'+
+        '<span style="font-size:.72rem;font-weight:700;padding:1px 7px;border-radius:100px;background:'+typeBg+';color:'+typeColor+'">'+typeLabel+'</span>'+
+        '<span style="font-size:.78rem;font-weight:700;color:var(--brown)">'+p.studentName+'</span>'+
+        '</div>';
+      html += '<div style="font-size:.74rem;color:var(--text-soft)">'+p.title+' · '+(p.date||p.ym||'')+'</div>';
+      html += '</div>';
+      if(p.fileUrl){
+        html += '<a href="'+p.fileUrl+'" target="_blank" style="background:#f0f8ff;border:1px solid #c0d8f0;border-radius:7px;padding:4px 9px;font-size:.72rem;font-weight:700;color:#1565c0;text-decoration:none;white-space:nowrap;flex-shrink:0">보기</a>';
+      }
+      html += '<button onclick="deleteParentReport(\''+who+'\',\''+p.studentName+'\',\''+p.id+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.85rem;padding:2px 6px;border-radius:6px;flex-shrink:0" title="삭제">🗑️</button>';
+      html += '</div>';
+    });
+  }
+  html += '</div></div>';
+  return html;
+}
+
+function setPrType(type) {
+  prUploadType = type;
+  if(prUploadWho) renderReportPanel(prUploadWho, document.getElementById(prUploadWho+'-main-content'));
+}
+
+function onPrFileChange(inp) {
+  var label = document.getElementById('pr-file-label');
+  if(inp.files&&inp.files[0]) label.textContent = inp.files[0].name;
+  else label.textContent = '파일을 선택해주세요';
+}
+
+async function uploadParentReport(who) {
+  var stu   = document.getElementById('pr-stu').value;
+  var title = document.getElementById('pr-title').value.trim();
+  var dateEl = document.getElementById('pr-date');
+  var dateVal = dateEl ? dateEl.value : '';
+  var fileInp = document.getElementById('pr-file');
+  var file  = fileInp && fileInp.files[0];
+  var status = document.getElementById('pr-upload-status');
+
+  if(!stu)   { status.textContent='학생을 선택해주세요.'; return; }
+  if(!title) { status.textContent='리포트 제목을 입력해주세요.'; return; }
+  if(!file)  { status.textContent='파일을 선택해주세요.'; return; }
+
+  status.textContent='⏳ 업로드 중...';
+  status.style.color='var(--text-soft)';
+
+  try {
+    var id   = Date.now()+'_'+Math.random().toString(36).slice(2,7);
+    var ext  = file.name.split('.').pop().toLowerCase();
+    var fileType = ext==='pdf'?'pdf':'image';
+    var path = 'parentReports/'+stu+'/'+id+'_'+file.name.replace(/\s/g,'_');
+    var ref  = window._fbStorage ? window._fbStorage.ref(path) : (storage?storage.ref(path):null);
+    if(!ref){ status.textContent='스토리지 미초기화. 잠시 후 다시 시도해주세요.'; return; }
+
+    await ref.put(file);
+    var url = await ref.getDownloadURL();
+
+    var record = {
+      id: id, name: stu, type: prUploadType,
+      date: prUploadType==='daily' ? dateVal : dateVal+'-01',
+      ym:   prUploadType==='monthly' ? dateVal : dateVal.slice(0,7),
+      title: title, fileUrl: url, fileType: fileType, fileName: file.name,
+      uploadedBy: who, uploadedAt: new Date().toISOString()
+    };
+
+    // Firestore 저장
+    if(window._fbDb) await window._fbDb.collection('parentReports').doc(id).set(record);
+
+    // 로컬 반영
+    if(!parentReports[stu]) parentReports[stu]=[];
+    parentReports[stu].push(record);
+
+    status.textContent='✅ 업로드 완료!';
+    status.style.color='#2e7d32';
+    setTimeout(function(){
+      renderReportPanel(who, document.getElementById(who+'-main-content'));
+    }, 800);
+  } catch(e) {
+    console.error(e);
+    status.textContent='❌ 업로드 실패: '+e.message;
+    status.style.color='#b71c1c';
+  }
+}
+
+async function deleteParentReport(who, name, id) {
+  if(!confirm('리포트를 삭제할까요?')) return;
+  if(!parentReports[name]) return;
+  parentReports[name] = parentReports[name].filter(function(p){return p.id!==id;});
+  if(window._fbDb) await window._fbDb.collection('parentReports').doc(id).delete();
   renderReportPanel(who, document.getElementById(who+'-main-content'));
 }
 
@@ -8481,6 +8642,15 @@ async function loadAllData() {
     textbookLogs.push(d);
   });
 
+  // 학부모 리포트 파일 불러오기
+  var prSnap = await fbGetCol('parentReports');
+  Object.keys(prSnap).forEach(function(key){
+    var d = prSnap[key];
+    if(!d.name) return;
+    if(!parentReports[d.name]) parentReports[d.name]=[];
+    parentReports[d.name].push(d);
+  });
+
   showFbStatus('✅ Firebase 연결됨', true);
   console.log('✅ Firebase 데이터 로드 완료');
 
@@ -8560,6 +8730,7 @@ function showFbStatus(msg, autoHide) {
 }
 
 window._fbDb = db;
+window._fbStorage = storage;
 window._fbSet = fbSet;
 window._fbDel = fbDel;
 })();

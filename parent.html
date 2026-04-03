@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>투쌤플레이스 학부모 페이지</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<style>
+:root{--cream:#fffbf0;--warm:#fff4d6;--cookie:#c47a3a;--cookie-lt:#e8a96a;--cookie-bg:#fff0dc;--butter:#f5c842;--brown:#6b3e1e;--mint:#62d2a2;--sky:#7ec8e3;--lavender:#c4b5fd;--text:#4a3000;--text-mid:#8b6914;--text-soft:#b89d6a;
+--parent:#7c6fcd;--parent-lt:#b4acf0;--parent-bg:#f3f0ff;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;}
+.page{display:none;min-height:100vh;position:relative;}
+.page.active{display:flex;flex-direction:column;animation:popIn .35s cubic-bezier(.34,1.4,.64,1);}
+@keyframes popIn{from{opacity:0;transform:scale(.97) translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+
+/* ── LANDING ── */
+#landing{align-items:center;justify-content:center;background:linear-gradient(160deg,#f3f0ff 0%,#fff8ee 50%,#f0fff8 100%);min-height:100vh;padding:40px 20px;}
+.landing-inner{text-align:center;max-width:480px;width:100%;}
+.logo-emoji{font-size:4rem;display:block;animation:bounce 2.2s ease-in-out infinite;margin-bottom:6px;}
+.brand-name{font-family:'Gaegu',cursive;font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;color:var(--brown);line-height:1;margin-bottom:6px;}
+.brand-sub{font-family:'Gaegu',cursive;font-size:1.1rem;color:var(--text-soft);margin-bottom:36px;}
+.login-card{background:white;border-radius:32px;padding:40px 36px;box-shadow:0 8px 48px rgba(124,111,205,.15);border:2px solid var(--parent-lt);}
+.login-face{font-size:3rem;text-align:center;display:block;margin-bottom:12px;}
+.login-title{font-family:'Noto Sans KR',sans-serif;font-size:1.8rem;font-weight:700;text-align:center;color:var(--brown);margin-bottom:4px;}
+.login-sub{text-align:center;font-size:.8rem;color:var(--text-soft);margin-bottom:28px;}
+.form-group{margin-bottom:14px;}
+.form-label-sm{display:block;font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:6px;}
+.form-select,.form-input{width:100%;border-radius:12px;padding:12px 16px;font-size:.92rem;font-family:inherit;outline:none;border:2px solid var(--parent-lt);background:#faf8ff;color:var(--brown);transition:border-color .2s;-webkit-appearance:none;appearance:none;}
+.form-select:focus,.form-input:focus{border-color:var(--parent);}
+.btn-login{width:100%;padding:14px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--parent-lt),var(--parent));color:white;font-family:'Noto Sans KR',sans-serif;font-size:1.1rem;font-weight:700;cursor:pointer;margin-top:6px;transition:opacity .2s,transform .15s;box-shadow:0 4px 16px rgba(124,111,205,.35);}
+.btn-login:hover{opacity:.9;transform:translateY(-1px);}
+.login-hint{margin-top:16px;background:var(--parent-bg);border-radius:12px;padding:11px 14px;font-size:.74rem;color:var(--text-soft);text-align:center;line-height:1.8;}
+.login-hint b{color:var(--parent);}
+
+/* ── HEADER ── */
+.p-header{background:white;border-bottom:2px solid #ebe7ff;padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(124,111,205,.1);}
+.p-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.3rem;font-weight:700;color:var(--brown);}
+.p-header-brand span{font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3;}
+.p-avatar-chip{display:flex;align-items:center;gap:8px;background:var(--parent-bg);border:2px solid var(--parent-lt);border-radius:100px;padding:4px 14px 4px 6px;}
+.p-avatar-circle{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--parent-lt),var(--parent));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;color:white;}
+.p-avatar-name{font-size:.82rem;font-weight:700;color:var(--brown);}
+.btn-out{background:#ffeee8;border:2px solid #ffcbb8;color:#c45a30;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
+.btn-out:hover{background:#c45a30;color:white;}
+
+/* ── BODY ── */
+#dashboard{background:linear-gradient(180deg,#f3f0ff 0%,#fffbf0 100%);}
+.p-body{padding:28px 28px 60px;max-width:1060px;margin:0 auto;width:100%;}
+@media(max-width:700px){.p-body{padding:16px 16px 60px;}.p-header{padding:0 16px;}}
+
+/* ── BANNER ── */
+.p-banner{background:linear-gradient(135deg,var(--parent-lt),var(--parent));border-radius:24px;padding:24px 28px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 24px rgba(124,111,205,.3);position:relative;overflow:hidden;}
+.p-banner-text h2{font-family:'Gaegu',cursive;font-size:2rem;color:white;margin-bottom:4px;}
+.p-banner-text p{font-size:.84rem;color:rgba(255,255,255,.85);}
+.p-banner-emoji{font-size:3.5rem;}
+
+/* ── STATS ── */
+.p-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:24px;}
+@media(max-width:500px){.p-stats{grid-template-columns:repeat(3,1fr);}}
+.p-stat{background:white;border-radius:18px;padding:16px 12px;text-align:center;border:2px solid transparent;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.p-stat:nth-child(1){border-color:#ffd0a0;}
+.p-stat:nth-child(2){border-color:#fce4ec;}
+.p-stat:nth-child(3){border-color:var(--parent-lt);}
+.p-stat-ico{font-size:1.4rem;margin-bottom:5px;}
+.p-stat-val{font-size:1.6rem;font-weight:700;color:var(--brown);}
+.p-stat-lbl{font-size:.68rem;color:var(--text-soft);}
+
+/* ── GRID ── */
+.p-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:20px;}
+@media(max-width:700px){.p-grid{grid-template-columns:1fr;}}
+.p-section-title{font-size:1.05rem;font-weight:700;color:var(--brown);margin-bottom:12px;display:flex;align-items:center;gap:6px;}
+
+/* ── ATT CALENDAR ── */
+.p-cal-wrap{background:white;border-radius:20px;box-shadow:0 3px 16px rgba(0,0,0,.07);overflow:hidden;border:1.5px solid #ebe7ff;margin-bottom:20px;}
+.p-cal-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px 10px;background:linear-gradient(135deg,#f3f0ff,#ebe7ff);border-bottom:1.5px solid #ddd8f8;}
+.p-cal-nav{background:white;border:2px solid #ddd8f8;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;color:var(--parent);transition:all .15s;}
+.p-cal-nav:hover{background:var(--parent);color:white;border-color:var(--parent);}
+.p-cal-month{font-family:'Noto Sans KR',sans-serif;font-size:1.1rem;font-weight:700;color:var(--brown);}
+.p-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);}
+.p-cal-dow{text-align:center;font-size:.65rem;font-weight:700;color:var(--text-soft);padding:8px 0 6px;background:#faf8ff;border-bottom:1px solid #ebe7ff;}
+.p-cal-dow:first-child{color:#e05;}.p-cal-dow:last-child{color:var(--parent);}
+.p-cal-cell{min-height:48px;padding:5px 4px;border-right:1px solid #ebe7ff;border-bottom:1px solid #ebe7ff;text-align:center;}
+.p-cal-cell:nth-child(7n){border-right:none;}
+.p-cal-day-num{font-size:.72rem;font-weight:700;color:var(--brown);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;}
+.p-cal-cell.cal-today .p-cal-day-num{background:var(--parent);color:white;border-radius:50%;}
+.p-cal-cell.cal-other .p-cal-day-num{color:#ccc;}
+.att-chip{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:100px;display:inline-block;margin:1px;}
+.chip-등원{background:#e8f5e9;color:#2e7d32;}.chip-하원{background:#e3f2fd;color:#1565c0;}
+.chip-지각{background:#fff8e1;color:#e65100;}.chip-결석{background:#fce4ec;color:#b71c1c;}
+.chip-보강{background:#f3e5f5;color:#6a1b9a;}.chip-등원\+하원,.chip-등하원{background:#e8f5e9;color:#2e7d32;}
+.chip-보강\+하원{background:#f3e5f5;color:#6a1b9a;}
+
+/* ── SCHEDULE ── */
+.p-sched{background:white;border-radius:14px;padding:12px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);border:1.5px solid #f0e8dc;}
+.p-sched-time{font-size:.78rem;font-weight:900;color:var(--cookie);min-width:44px;}
+.p-sched-name{font-size:.86rem;font-weight:700;color:var(--brown);}
+.sched-badge{font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:100px;margin-left:auto;white-space:nowrap;flex-shrink:0;}
+.sched-badge-regular{background:#e8f5e9;color:#2e7d32;}.sched-badge-makeup{background:#fce4ec;color:#b71c1c;}
+
+/* ── NOTICE ── */
+.p-notice{background:white;border-radius:14px;padding:13px 15px;margin-bottom:8px;border-left:3px solid var(--parent-lt);box-shadow:0 2px 8px rgba(0,0,0,.04);}
+.p-notice-date{font-size:.68rem;color:var(--text-soft);margin-bottom:3px;}
+.p-notice-title{font-weight:700;font-size:.86rem;color:var(--brown);margin-bottom:3px;}
+.p-notice-text{font-size:.82rem;color:var(--text);line-height:1.6;}
+
+/* ── REPORT SECTION ── */
+.report-tabs{display:flex;gap:8px;margin-bottom:16px;background:white;border-radius:14px;padding:6px;box-shadow:0 2px 8px rgba(0,0,0,.05);border:1.5px solid #ebe7ff;}
+.report-tab{flex:1;padding:8px 0;border-radius:10px;border:none;font-family:'Noto Sans KR',sans-serif;font-size:.82rem;font-weight:700;cursor:pointer;color:var(--text-soft);background:transparent;transition:all .15s;}
+.report-tab.active{background:var(--parent);color:white;box-shadow:0 2px 8px rgba(124,111,205,.3);}
+.report-month-nav{display:flex;align-items:center;gap:8px;margin-bottom:14px;}
+.report-month-btn{background:#f3f0ff;border:none;border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:.9rem;color:var(--parent);transition:background .15s;}
+.report-month-btn:hover{background:var(--parent);color:white;}
+.report-month-label{flex:1;text-align:center;font-size:.92rem;font-weight:700;color:var(--brown);}
+.report-card{background:white;border-radius:16px;overflow:hidden;box-shadow:0 3px 14px rgba(0,0,0,.07);border:1.5px solid #ebe7ff;margin-bottom:12px;transition:transform .15s,box-shadow .15s;}
+.report-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(124,111,205,.15);}
+.report-card-header{padding:14px 16px;background:linear-gradient(135deg,#faf8ff,#f3f0ff);border-bottom:1px solid #ebe7ff;display:flex;align-items:center;gap:12px;}
+.report-card-date{font-size:.78rem;font-weight:700;color:var(--parent);}
+.report-card-title{font-size:.88rem;font-weight:700;color:var(--brown);flex:1;}
+.report-card-type{font-size:.62rem;font-weight:700;padding:2px 8px;border-radius:100px;white-space:nowrap;}
+.rtype-daily{background:#fff0dc;color:var(--cookie);}
+.rtype-monthly{background:#f3f0ff;color:var(--parent);}
+.report-card-body{padding:14px 16px;}
+.report-thumb{width:100%;border-radius:10px;object-fit:cover;cursor:pointer;transition:opacity .15s;}
+.report-thumb:hover{opacity:.9;}
+.report-pdf-btn{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#faf8ff;border-radius:10px;border:1.5px solid var(--parent-lt);cursor:pointer;transition:background .15s;text-decoration:none;}
+.report-pdf-btn:hover{background:#ede9ff;}
+.report-pdf-icon{font-size:1.8rem;flex-shrink:0;}
+.report-pdf-name{font-size:.84rem;font-weight:700;color:var(--brown);flex:1;word-break:break-all;}
+.report-pdf-arrow{color:var(--parent);font-size:1rem;flex-shrink:0;}
+.report-empty{text-align:center;padding:40px 20px;background:white;border-radius:16px;border:1.5px dashed #ddd8f8;}
+.report-empty-ico{font-size:3rem;display:block;margin-bottom:12px;}
+.report-empty-msg{font-size:.86rem;color:var(--text-soft);}
+
+/* ── DAILY REPORT TEXT ── */
+.daily-field{margin-bottom:12px;padding:10px 14px;background:#faf8ff;border-radius:10px;border-left:3px solid var(--parent-lt);}
+.daily-field-label{font-size:.7rem;font-weight:700;color:var(--parent);margin-bottom:4px;}
+.daily-field-text{font-size:.84rem;color:var(--brown);line-height:1.7;white-space:pre-line;}
+
+/* ── IMAGE VIEWER ── */
+.img-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;align-items:center;justify-content:center;}
+.img-overlay.show{display:flex;}
+.img-overlay img{max-width:92vw;max-height:88vh;border-radius:12px;object-fit:contain;}
+.img-overlay-close{position:fixed;top:16px;right:20px;color:white;font-size:1.8rem;cursor:pointer;background:none;border:none;line-height:1;}
+</style>
+</head>
+<body>
+
+<!-- LANDING / LOGIN -->
+<div id="landing" class="page active">
+  <div class="landing-inner">
+    <span class="logo-emoji">💌</span>
+    <div class="brand-name">투쌤플레이스</div>
+    <div class="brand-sub">학부모 페이지</div>
+    <div class="login-card">
+      <span class="login-face">👨‍👩‍👧</span>
+      <div class="login-title">학부모 로그인</div>
+      <div class="login-sub">자녀의 학습 현황을 확인해보세요!</div>
+      <div class="form-group">
+        <label class="form-label-sm">자녀 이름 선택</label>
+        <select id="p-name" class="form-select">
+          <option value="">자녀 이름을 골라주세요 😊</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label-sm">비밀번호 (출결번호)</label>
+        <input type="password" id="p-pw" class="form-input" placeholder="출결번호를 입력하세요 🔒">
+      </div>
+      <button class="btn-login" onclick="parentLogin()">로그인</button>
+      <div class="login-hint">자녀의 <b>출결번호</b>가 비밀번호예요.<br>모르시면 선생님께 문의해주세요!</div>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="page">
+  <header class="p-header">
+    <div class="p-header-brand">
+      <span>아이들과 꿈을 만드는 공간</span>
+      투쌤플레이스
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="p-avatar-chip">
+        <div class="p-avatar-circle" id="p-av-letter">김</div>
+        <span class="p-avatar-name" id="p-av-name">학생 학부모</span>
+      </div>
+      <button class="btn-out" onclick="parentLogout()">로그아웃</button>
+    </div>
+  </header>
+  <div class="p-body">
+    <!-- BANNER -->
+    <div class="p-banner">
+      <div class="p-banner-text">
+        <h2 id="p-greet">안녕하세요! 👋</h2>
+        <p id="p-banner-sub">자녀의 학습 현황을 확인해보세요.</p>
+      </div>
+      <div class="p-banner-emoji">💌</div>
+    </div>
+
+    <!-- STATS -->
+    <div class="p-stats">
+      <div class="p-stat"><div class="p-stat-ico">📅</div><div class="p-stat-val" id="p-stat-att">-</div><div class="p-stat-lbl">이달 출석</div></div>
+      <div class="p-stat"><div class="p-stat-ico">🚫</div><div class="p-stat-val" id="p-stat-absent">-</div><div class="p-stat-lbl">이달 결석</div></div>
+      <div class="p-stat"><div class="p-stat-ico">📋</div><div class="p-stat-val" id="p-stat-report">-</div><div class="p-stat-lbl">리포트</div></div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="p-grid">
+      <!-- LEFT: 출결 + 일정 -->
+      <div>
+        <div class="p-section-title">📆 이달의 출결</div>
+        <div class="p-cal-wrap">
+          <div class="p-cal-header">
+            <button class="p-cal-nav" onclick="changeParentCalMonth(-1)">◀</button>
+            <span class="p-cal-month" id="p-cal-label">2025년 4월</span>
+            <button class="p-cal-nav" onclick="changeParentCalMonth(1)">▶</button>
+          </div>
+          <div class="p-cal-grid">
+            <div class="p-cal-dow">일</div><div class="p-cal-dow">월</div><div class="p-cal-dow">화</div>
+            <div class="p-cal-dow">수</div><div class="p-cal-dow">목</div><div class="p-cal-dow">금</div><div class="p-cal-dow">토</div>
+          </div>
+          <div class="p-cal-grid" id="p-cal-cells"></div>
+        </div>
+
+        <div class="p-section-title">🗓️ 이달의 수업 일정</div>
+        <div id="p-sched-list"></div>
+      </div>
+
+      <!-- RIGHT: 공지 + 리포트 -->
+      <div>
+        <div class="p-section-title">📣 공지사항</div>
+        <div id="p-notice-list" style="margin-bottom:24px"></div>
+
+        <div class="p-section-title">📊 리포트</div>
+        <div class="report-tabs">
+          <button class="report-tab active" id="rtab-daily" onclick="setParentReportTab('daily')">📋 데일리</button>
+          <button class="report-tab" id="rtab-monthly" onclick="setParentReportTab('monthly')">📅 먼슬리</button>
+        </div>
+        <div class="report-month-nav">
+          <button class="report-month-btn" onclick="changeReportMonth(-1)">◀</button>
+          <div class="report-month-label" id="report-month-label">2025년 4월</div>
+          <button class="report-month-btn" onclick="changeReportMonth(1)">▶</button>
+        </div>
+        <div id="p-report-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMAGE VIEWER -->
+<div class="img-overlay" id="img-overlay" onclick="closeImgOverlay()">
+  <button class="img-overlay-close" onclick="closeImgOverlay()">✕</button>
+  <img id="img-overlay-img" src="" alt="">
+</div>
+
+<script>
+/* ====== FIREBASE ====== */
+var db, storage;
+var memberRoster = {cookie:[], butter:[]};
+var classStudents = {};
+var classAttendance = {};
+var dailyReports = {};
+var parentReports = {}; // {name: [{id, type, date, title, fileUrl, fileType, ym}]}
+var notices = {cookie:[], butter:[]};
+var makeupSchedules = {};
+var scheduleDates = {};
+
+var currentParent = null; // {name, who, attCode, clsKey}
+var parentCalYear = new Date().getFullYear();
+var parentCalMonth = new Date().getMonth();
+var reportTab = 'daily';
+var reportYear = new Date().getFullYear();
+var reportMonth = new Date().getMonth();
+
+(function initFirebase(){
+  if(typeof firebase === 'undefined'){ setTimeout(initFirebase, 100); return; }
+  firebase.initializeApp({
+    apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+    authDomain: "twossamplace-lms.firebaseapp.com",
+    projectId: "twossamplace-lms",
+    storageBucket: "twossamplace-lms.firebasestorage.app",
+    messagingSenderId: "115444457876",
+    appId: "1:115444457876:web:3cc4e437d2aae757edef81"
+  });
+  db = firebase.firestore();
+  storage = firebase.storage();
+  loadAllData();
+})();
+
+async function loadAllData() {
+  try {
+    // 학생 명단
+    var s1 = await db.collection('memberRoster').get();
+    s1.forEach(function(doc){
+      try{ memberRoster[doc.id] = JSON.parse(doc.data().roster||'[]'); }catch(e){}
+    });
+
+    // 클래스 학생
+    var s2 = await db.collection('classStudents').get();
+    s2.forEach(function(doc){
+      try{ classStudents[doc.id] = JSON.parse(doc.data().students||'[]'); }catch(e){}
+    });
+    // memberRoster 기반으로도 classStudents 보완
+    ['cookie','butter'].forEach(function(who){
+      (memberRoster[who]||[]).forEach(function(s){
+        if(s.status==='active'){
+          var k = s.class+'-'+s.day;
+          if(!classStudents[k]) classStudents[k]=[];
+          if(classStudents[k].indexOf(s.name)<0) classStudents[k].push(s.name);
+        }
+      });
+    });
+
+    // 출결
+    var s3 = await db.collection('attendance').get();
+    s3.forEach(function(doc){
+      var a = doc.data();
+      if(!a.clsKey||!a.name||!a.dateKey||!a.status) return;
+      if(!classAttendance[a.clsKey]) classAttendance[a.clsKey]={};
+      if(!classAttendance[a.clsKey][a.name]) classAttendance[a.clsKey][a.name]={};
+      var hasTime = a.등원Time||a.하원Time||a.지각Time||a.보강Time;
+      if(hasTime){
+        var obj={status:a.status};
+        if(a.등원Time) obj.등원Time=a.등원Time;
+        if(a.하원Time) obj.하원Time=a.하원Time;
+        if(a.지각Time) obj.지각Time=a.지각Time;
+        if(a.보강Time) obj.보강Time=a.보강Time;
+        classAttendance[a.clsKey][a.name][a.dateKey]=obj;
+      } else {
+        classAttendance[a.clsKey][a.name][a.dateKey]=a.status;
+      }
+    });
+
+    // 데일리 리포트 (텍스트)
+    var s4 = await db.collection('reports').get();
+    s4.forEach(function(doc){
+      var r = doc.data();
+      if(!r.who||!r.dateKey||!r.name) return;
+      if(!dailyReports[r.who]) dailyReports[r.who]={};
+      if(!dailyReports[r.who][r.dateKey]) dailyReports[r.who][r.dateKey]={};
+      dailyReports[r.who][r.dateKey][r.name]=r;
+    });
+
+    // 공지
+    var s5 = await db.collection('notices').get();
+    s5.forEach(function(doc){
+      try{ notices[doc.id]=JSON.parse(doc.data().notices||'[]'); }catch(e){}
+    });
+
+    // 학부모 리포트 파일
+    var s6 = await db.collection('parentReports').get();
+    s6.forEach(function(doc){
+      var d = doc.data();
+      if(!d.name) return;
+      if(!parentReports[d.name]) parentReports[d.name]=[];
+      parentReports[d.name].push(d);
+    });
+
+    // 수업 일정
+    var s7 = await db.collection('scheduleDates').get();
+    s7.forEach(function(doc){
+      var d = doc.data();
+      if(d.clsKey) scheduleDates[doc.id]=d;
+    });
+
+    // 보강 일정
+    var s8 = await db.collection('makeupSchedules').get();
+    s8.forEach(function(doc){
+      var d = doc.data();
+      if(d.name && d.dates) makeupSchedules[d.name] = d.dates;
+    });
+
+    populateStudentSelect();
+    autoLogin();
+  } catch(e){ console.error('데이터 로드 오류:', e); }
+}
+
+function populateStudentSelect() {
+  var sel = document.getElementById('p-name');
+  var all = [];
+  ['cookie','butter'].forEach(function(who){
+    (memberRoster[who]||[]).forEach(function(s){
+      if(s.status==='active') all.push({name:s.name, cls:s.class, day:s.day});
+    });
+  });
+  all.sort(function(a,b){return a.name.localeCompare(b.name,'ko');});
+  sel.innerHTML = '<option value="">자녀 이름을 골라주세요 😊</option>';
+  all.forEach(function(s){
+    var opt = document.createElement('option');
+    opt.value = s.name;
+    opt.textContent = s.name + ' ('+s.cls+', '+s.day+')';
+    sel.appendChild(opt);
+  });
+}
+
+function autoLogin() {
+  var saved = sessionStorage.getItem('parentLogin');
+  if(!saved) return;
+  try {
+    var info = JSON.parse(saved);
+    currentParent = info;
+    renderDashboard();
+    showPage('dashboard');
+  } catch(e){}
+}
+
+/* ====== 로그인 ====== */
+function parentLogin() {
+  var name = document.getElementById('p-name').value;
+  var pw   = document.getElementById('p-pw').value.trim();
+  if(!name){ alert('자녀 이름을 선택해주세요!'); return; }
+  if(!pw)  { alert('비밀번호(출결번호)를 입력해주세요!'); return; }
+
+  // 출결번호 확인
+  var found = null;
+  ['cookie','butter'].forEach(function(who){
+    (memberRoster[who]||[]).forEach(function(s){
+      if(s.status==='active' && s.name===name && String(s.attCode||s.attNo||'')===pw)
+        found = {name:s.name, who:who, attCode:pw, class:s.class, day:s.day};
+    });
+  });
+
+  if(!found){ alert('비밀번호가 맞지 않아요. 출결번호를 다시 확인해주세요! 🔒'); return; }
+
+  // clsKey 찾기
+  var clsKey = null;
+  Object.keys(classStudents).forEach(function(k){
+    if((classStudents[k]||[]).indexOf(found.name) > -1) clsKey = k;
+  });
+  if(!clsKey) clsKey = found.class+'-'+found.day;
+  found.clsKey = clsKey;
+
+  currentParent = found;
+  sessionStorage.setItem('parentLogin', JSON.stringify(found));
+  renderDashboard();
+  showPage('dashboard');
+}
+
+function parentLogout() {
+  sessionStorage.removeItem('parentLogin');
+  currentParent = null;
+  showPage('landing');
+}
+
+/* ====== 페이지 전환 ====== */
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(function(p){ p.classList.remove('active'); });
+  var el = document.getElementById(id);
+  if(el) el.classList.add('active');
+}
+
+/* ====== 대시보드 렌더 ====== */
+function renderDashboard() {
+  if(!currentParent) return;
+  var name = currentParent.name;
+
+  document.getElementById('p-av-letter').textContent = name[0];
+  document.getElementById('p-av-name').textContent   = name + ' 학부모님';
+  document.getElementById('p-greet').textContent     = name + ' 학부모님, 안녕하세요! 👋';
+  document.getElementById('p-banner-sub').textContent = name + ' 학생의 학습 현황이에요.';
+
+  parentCalYear  = new Date().getFullYear();
+  parentCalMonth = new Date().getMonth();
+  reportYear  = new Date().getFullYear();
+  reportMonth = new Date().getMonth();
+
+  renderAttStats();
+  renderParentCal();
+  renderParentSched();
+  renderParentNotices();
+  renderParentReports();
+}
+
+/* ====== 출결 통계 ====== */
+function renderAttStats() {
+  var name = currentParent.name;
+  var clsKey = currentParent.clsKey;
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth();
+  var mPrefix = y+'-'+String(m+1).padStart(2,'0');
+  var rec = (classAttendance[clsKey]||{})[name]||{};
+
+  var att=0, absent=0;
+  Object.keys(rec).forEach(function(dk){
+    if(!dk.startsWith(mPrefix)) return;
+    var st = typeof rec[dk]==='object'?rec[dk].status:rec[dk];
+    if(!st) return;
+    if(st.indexOf('결석')>-1) absent++;
+    else if(st.indexOf('등원')>-1||st.indexOf('보강')>-1||st.indexOf('지각')>-1) att++;
+  });
+
+  var rpts = (parentReports[name]||[]).length +
+    countDailyReports(name, y, m);
+
+  document.getElementById('p-stat-att').textContent    = att+'회';
+  document.getElementById('p-stat-absent').textContent = absent+'회';
+  document.getElementById('p-stat-report').textContent = rpts+'건';
+}
+
+function countDailyReports(name, y, m) {
+  var who = currentParent.who;
+  var cnt = 0;
+  var daysInMonth = new Date(y,m+1,0).getDate();
+  for(var d=1;d<=daysInMonth;d++){
+    var dk = fmtDate(y,m,d);
+    var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
+    if(r&&(r.lesson||r.review||r.homework||r.feedback)) cnt++;
+  }
+  return cnt;
+}
+
+/* ====== 출결 캘린더 ====== */
+function changeParentCalMonth(dir) {
+  parentCalMonth += dir;
+  if(parentCalMonth<0){parentCalMonth=11;parentCalYear--;}
+  if(parentCalMonth>11){parentCalMonth=0;parentCalYear++;}
+  renderParentCal();
+}
+
+function renderParentCal() {
+  var y = parentCalYear, m = parentCalMonth;
+  document.getElementById('p-cal-label').textContent = y+'년 '+(m+1)+'월';
+  var name   = currentParent.name;
+  var clsKey = currentParent.clsKey;
+  var rec    = (classAttendance[clsKey]||{})[name]||{};
+  var DOW    = ['일','월','화','수','목','금','토'];
+  var today  = new Date(); var todayKey = fmtDate(today.getFullYear(),today.getMonth(),today.getDate());
+  var firstDay = new Date(y,m,1).getDay();
+  var daysInMonth = new Date(y,m+1,0).getDate();
+  var prevDays = new Date(y,m,0).getDate();
+
+  var html = '';
+  for(var i=0;i<firstDay;i++){
+    var pd = prevDays-firstDay+1+i;
+    html += '<div class="p-cal-cell cal-other"><div class="p-cal-day-num">'+pd+'</div></div>';
+  }
+  for(var d=1;d<=daysInMonth;d++){
+    var dk = fmtDate(y,m,d);
+    var isToday = dk===todayKey;
+    var cls = 'p-cal-cell'+(isToday?' cal-today':'');
+    var attVal = rec[dk];
+    var st = attVal ? (typeof attVal==='object'?attVal.status:attVal) : '';
+    var chipHtml = '';
+    if(st){
+      var chipCls = 'chip-'+(st.replace('+','+'));
+      chipHtml = '<span class="att-chip '+chipCls+'">'+st+'</span>';
+    }
+    html += '<div class="'+cls+'"><div class="p-cal-day-num">'+d+'</div>'+chipHtml+'</div>';
+  }
+  var totalCells = firstDay + daysInMonth;
+  var remaining = totalCells%7===0?0:7-(totalCells%7);
+  for(var j=1;j<=remaining;j++){
+    html += '<div class="p-cal-cell cal-other"><div class="p-cal-day-num">'+j+'</div></div>';
+  }
+  document.getElementById('p-cal-cells').innerHTML = html;
+}
+
+/* ====== 수업 일정 ====== */
+function renderParentSched() {
+  var name   = currentParent.name;
+  var who    = currentParent.who;
+  var clsKey = currentParent.clsKey;
+  var now    = new Date(), y=now.getFullYear(), m=now.getMonth();
+  var mPrefix = y+'-'+String(m+1).padStart(2,'0');
+  var DOW_KO = ['일','월','화','수','목','금','토'];
+  var todayStr = fmtDate(y,m,now.getDate());
+
+  // 정규 수업 날짜
+  var regularDates = getClassDatesForMonth(clsKey, y, m);
+  // 보강 날짜
+  var makeupDates = (makeupSchedules[name]||[]).filter(function(s){return s.date.startsWith(mPrefix);});
+
+  var allItems = [];
+  regularDates.forEach(function(dk){
+    allItems.push({date:dk, type:'regular'});
+  });
+  makeupDates.forEach(function(s){
+    allItems.push({date:s.date, time:s.time, type:'makeup'});
+  });
+  allItems.sort(function(a,b){return a.date.localeCompare(b.date);});
+  allItems = allItems.filter(function(item){return item.date>=todayStr;});
+
+  if(allItems.length===0){
+    document.getElementById('p-sched-list').innerHTML='<div style="font-size:.82rem;color:var(--text-soft);text-align:center;padding:14px 0">이달 남은 수업 일정이 없어요!</div>';
+    return;
+  }
+  document.getElementById('p-sched-list').innerHTML = allItems.map(function(item){
+    var dt = new Date(item.date);
+    var lbl = (dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+DOW_KO[dt.getDay()]+')';
+    var isT = item.date===todayStr;
+    var badge = item.type==='makeup'
+      ? '<span class="sched-badge sched-badge-makeup">보강</span>'
+      : '<span class="sched-badge sched-badge-regular">'+(isT?'오늘':'정규')+'</span>';
+    return '<div class="p-sched" style="'+(isT?'border-color:#62d2a2;':'')+'">'+
+      '<div><div class="p-sched-time">'+(item.time||'')+'</div><div style="font-size:.65rem;color:var(--text-soft)">'+lbl+'</div></div>'+
+      '<div style="flex:1"><div class="p-sched-name">'+clsKey.split('-')[0]+' 수업</div></div>'+
+      badge+'</div>';
+  }).join('');
+}
+
+function getClassDatesForMonth(clsKey, y, m) {
+  // scheduleDates에서 먼저 찾기
+  var ym = y+'-'+String(m+1).padStart(2,'0');
+  var found = null;
+  Object.keys(scheduleDates).forEach(function(k){
+    var d = scheduleDates[k];
+    if(d.clsKey===clsKey && d.ym===ym) found=d;
+  });
+  if(found){
+    var base=[];
+    var daysInMonth=new Date(y,m+1,0).getDate();
+    var dayStr=clsKey.split('-').slice(1).join('-');
+    var wds=[];
+    if(dayStr.indexOf('월')>-1)wds.push(1);if(dayStr.indexOf('화')>-1)wds.push(2);
+    if(dayStr.indexOf('수')>-1)wds.push(3);if(dayStr.indexOf('목')>-1)wds.push(4);
+    if(dayStr.indexOf('금')>-1)wds.push(5);
+    for(var d=1;d<=daysInMonth;d++){
+      var dt=new Date(y,m,d);
+      if(wds.indexOf(dt.getDay())>-1) base.push(fmtDate(y,m,d));
+    }
+    var deleted=found.deleted||[];
+    var custom=found.custom||[];
+    return base.filter(function(dk){return deleted.indexOf(dk)<0;}).concat(custom);
+  }
+  // fallback: 요일 기반
+  var dayStr2=clsKey.split('-').slice(1).join('-');
+  var wds2=[];
+  if(dayStr2.indexOf('월')>-1)wds2.push(1);if(dayStr2.indexOf('화')>-1)wds2.push(2);
+  if(dayStr2.indexOf('수')>-1)wds2.push(3);if(dayStr2.indexOf('목')>-1)wds2.push(4);
+  if(dayStr2.indexOf('금')>-1)wds2.push(5);
+  var dates=[], dim=new Date(y,m+1,0).getDate();
+  for(var d=1;d<=dim;d++){
+    var dt2=new Date(y,m,d);
+    if(wds2.indexOf(dt2.getDay())>-1) dates.push(fmtDate(y,m,d));
+  }
+  return dates;
+}
+
+/* ====== 공지사항 ====== */
+function renderParentNotices() {
+  var name = currentParent.name;
+  var who  = currentParent.who;
+  var clsKey = currentParent.clsKey;
+  var list = (notices[who]||[]).filter(function(n){
+    if(!n.recipients||n.recipients.length===0) return true;
+    return n.recipients.indexOf('전체')>-1 ||
+           n.recipients.indexOf(clsKey)>-1 ||
+           n.recipients.indexOf(name)>-1;
+  }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');}).slice(0,5);
+
+  if(list.length===0){
+    document.getElementById('p-notice-list').innerHTML='<div style="font-size:.82rem;color:var(--text-soft);text-align:center;padding:14px 0">공지사항이 없어요!</div>';
+    return;
+  }
+  document.getElementById('p-notice-list').innerHTML = list.map(function(n){
+    return '<div class="p-notice"><div class="p-notice-date">'+n.date+'</div>'+
+      '<div class="p-notice-title">'+n.title+'</div>'+
+      '<div class="p-notice-text">'+n.content+'</div></div>';
+  }).join('');
+}
+
+/* ====== 리포트 ====== */
+function setParentReportTab(tab) {
+  reportTab = tab;
+  document.getElementById('rtab-daily').classList.toggle('active', tab==='daily');
+  document.getElementById('rtab-monthly').classList.toggle('active', tab==='monthly');
+  renderParentReports();
+}
+
+function changeReportMonth(dir) {
+  reportMonth += dir;
+  if(reportMonth<0){reportMonth=11;reportYear--;}
+  if(reportMonth>11){reportMonth=0;reportYear++;}
+  document.getElementById('report-month-label').textContent = reportYear+'년 '+(reportMonth+1)+'월';
+  renderParentReports();
+}
+
+function renderParentReports() {
+  document.getElementById('report-month-label').textContent = reportYear+'년 '+(reportMonth+1)+'월';
+  if(reportTab==='daily') renderDailyReports();
+  else renderMonthlyReports();
+}
+
+function renderDailyReports() {
+  var name = currentParent.name;
+  var who  = currentParent.who;
+  var y = reportYear, m = reportMonth;
+  var daysInMonth = new Date(y,m+1,0).getDate();
+  var DOW_KO = ['일','월','화','수','목','금','토'];
+
+  // 텍스트 데일리 리포트 수집
+  var textReports = [];
+  for(var d=daysInMonth;d>=1;d--){
+    var dk = fmtDate(y,m,d);
+    var r  = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
+    if(r&&(r.lesson||r.review||r.homework||r.feedback)){
+      textReports.push({dk:dk, day:d, r:r});
+    }
+  }
+
+  // 파일 리포트 (데일리 타입)
+  var mPrefix = y+'-'+String(m+1).padStart(2,'0');
+  var fileReports = (parentReports[name]||[]).filter(function(p){
+    return p.type==='daily' && (p.date||'').startsWith(mPrefix);
+  }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+
+  var el = document.getElementById('p-report-list');
+  if(textReports.length===0 && fileReports.length===0){
+    el.innerHTML = '<div class="report-empty"><span class="report-empty-ico">📋</span><div class="report-empty-msg">이달 데일리 리포트가 없어요.<br>선생님이 작성하면 여기서 확인할 수 있어요!</div></div>';
+    return;
+  }
+
+  var html = '';
+
+  // 파일 리포트 먼저
+  fileReports.forEach(function(p){
+    var dt = new Date(p.date);
+    var lbl = (dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+DOW_KO[dt.getDay()]+')';
+    html += '<div class="report-card">';
+    html += '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div><div class="report-card-title">'+p.title+'</div></div><span class="report-card-type rtype-daily">데일리</span></div>';
+    html += '<div class="report-card-body">'+renderFilePreview(p)+'</div></div>';
+  });
+
+  // 텍스트 리포트
+  textReports.forEach(function(item){
+    var dt = new Date(item.dk);
+    var lbl = (dt.getMonth()+1)+'월 '+item.day+'일 ('+DOW_KO[dt.getDay()]+')';
+    var r = item.r;
+    html += '<div class="report-card">';
+    html += '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div><div class="report-card-title">수업 리포트</div></div><span class="report-card-type rtype-daily">데일리</span></div>';
+    html += '<div class="report-card-body">';
+    if(r.lesson)   html += mkField('📖 수업 내용', r.lesson);
+    if(r.review)   html += mkField('📝 복습 포인트', r.review);
+    if(r.homework) html += mkField('🏠 숙제', r.homework);
+    if(r.feedback) html += mkField('💬 선생님 한마디', r.feedback);
+    html += '</div></div>';
+  });
+
+  el.innerHTML = html;
+}
+
+function renderMonthlyReports() {
+  var name = currentParent.name;
+  var who  = currentParent.who;
+  var y = reportYear, m = reportMonth;
+  var mym = y+'-'+String(m+1).padStart(2,'0');
+  var DOW_KO = ['일','월','화','수','목','금','토'];
+
+  // 파일 리포트 (먼슬리 타입)
+  var fileReports = (parentReports[name]||[]).filter(function(p){
+    return p.type==='monthly' && (p.ym===mym||(p.date||'').startsWith(mym));
+  }).sort(function(a,b){return (b.date||'').localeCompare(a.date||'');});
+
+  var el = document.getElementById('p-report-list');
+  if(fileReports.length===0){
+    el.innerHTML = '<div class="report-empty"><span class="report-empty-ico">📅</span><div class="report-empty-msg">이달 먼슬리 리포트가 없어요.<br>선생님이 업로드하면 여기서 확인할 수 있어요!</div></div>';
+    return;
+  }
+  el.innerHTML = fileReports.map(function(p){
+    var dt = new Date(p.date||mym+'-01');
+    var lbl = dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월';
+    return '<div class="report-card">' +
+      '<div class="report-card-header"><div><div class="report-card-date">'+lbl+'</div><div class="report-card-title">'+p.title+'</div></div><span class="report-card-type rtype-monthly">먼슬리</span></div>' +
+      '<div class="report-card-body">'+renderFilePreview(p)+'</div></div>';
+  }).join('');
+}
+
+function renderFilePreview(p) {
+  if(!p.fileUrl) return '<div style="font-size:.8rem;color:var(--text-soft)">파일 없음</div>';
+  if(p.fileType==='pdf'){
+    return '<a class="report-pdf-btn" href="'+p.fileUrl+'" target="_blank">' +
+      '<span class="report-pdf-icon">📄</span>' +
+      '<span class="report-pdf-name">'+p.fileName+'</span>' +
+      '<span class="report-pdf-arrow">↗</span></a>';
+  }
+  // 이미지
+  return '<img class="report-thumb" src="'+p.fileUrl+'" alt="'+p.title+'" onclick="openImgOverlay(\''+p.fileUrl+'\')">';
+}
+
+function mkField(label, text){
+  return '<div class="daily-field"><div class="daily-field-label">'+label+'</div><div class="daily-field-text">'+text+'</div></div>';
+}
+
+/* ====== 이미지 뷰어 ====== */
+function openImgOverlay(url){
+  document.getElementById('img-overlay-img').src=url;
+  document.getElementById('img-overlay').classList.add('show');
+}
+function closeImgOverlay(){
+  document.getElementById('img-overlay').classList.remove('show');
+  document.getElementById('img-overlay-img').src='';
+}
+
+/* ====== 날짜 유틸 ====== */
+function fmtDate(y,m,d){
+  return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+}
+</script>
+</body>
+</html>
