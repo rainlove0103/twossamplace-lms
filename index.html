@@ -3903,7 +3903,6 @@ function toggleLeddiDone(who, dk, name) {
     if(label) label.style.color = r.leddiDone ? '#2e7d32' : '#a07040';
   }
 }
-}
 
 function saveDailyReport(who, dk, name) {
   var r = getDailyReport(who, dk, name);
@@ -7209,26 +7208,66 @@ function deleteNotice(who,id){
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
 // Firebase 로드 대기 후 초기화
-function initFirebase() {
+var db = null;
+var storage = null;
+
+function _doInitFirebase() {
   if(typeof firebase === 'undefined') {
-    setTimeout(initFirebase, 100);
+    setTimeout(_doInitFirebase, 100);
     return;
   }
-var firebaseConfig = {
-  apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
-  authDomain: "twossamplace-lms.firebaseapp.com",
-  projectId: "twossamplace-lms",
-  storageBucket: "twossamplace-lms.firebasestorage.app",
-  messagingSenderId: "115444457876",
-  appId: "1:115444457876:web:3cc4e437d2aae757edef81"
-};
+  var firebaseConfig = {
+    apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+    authDomain: "twossamplace-lms.firebaseapp.com",
+    projectId: "twossamplace-lms",
+    storageBucket: "twossamplace-lms.firebasestorage.app",
+    messagingSenderId: "115444457876",
+    appId: "1:115444457876:web:3cc4e437d2aae757edef81"
+  };
+  firebase.initializeApp(firebaseConfig);
+  db = firebase.firestore();
+  storage = firebase.storage();
 
-firebase.initializeApp(firebaseConfig);
-var db = firebase.firestore();
-var storage = firebase.storage();
+  // 🔴 실시간 출결 동기화 (db 초기화 후 시작)
+  db.collection('attendance').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      if(change.type === 'added' || change.type === 'modified') {
+        var a = change.doc.data();
+        if(!a.clsKey || !a.name || !a.dateKey) return;
+        if(!window.classAttendance) window.classAttendance = {};
+        if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey] = {};
+        if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name] = {};
+        var hasTime = a.등원Time || a.하원Time || a.지각Time || a.보강Time;
+        if(hasTime) {
+          var obj = {status: a.status};
+          if(a.등원Time) obj.등원Time = a.등원Time;
+          if(a.하원Time) obj.하원Time = a.하원Time;
+          if(a.지각Time) obj.지각Time = a.지각Time;
+          if(a.보강Time) obj.보강Time = a.보강Time;
+          window.classAttendance[a.clsKey][a.name][a.dateKey] = obj;
+        } else if(a.status) {
+          window.classAttendance[a.clsKey][a.name][a.dateKey] = a.status;
+        }
+        if(window.currentTeacher && window.activeMenu === 'att') {
+          var el = document.getElementById(window.currentTeacher+'-main-content');
+          if(el) renderAttSub(window.currentTeacher);
+        }
+      }
+    });
+  }, function(err) { console.log('출결 실시간 동기화 오류:', err); });
 
-/* ── 저장 헬퍼 ── */
-async function fbSet(path, data) {
+  // db/storage 준비 완료 후 데이터 로드
+  if(document.readyState === 'complete' || document.readyState === 'interactive') {
+    setTimeout(function(){ loadAllData(); }, 0);
+  } else {
+    window.addEventListener('load', function(){ loadAllData(); });
+  }
+}
+_doInitFirebase();
+
+/* ── 저장 헬퍼 (전역 노출) ── */
+window.fbSet = async function fbSet(path, data) {
+  if(!db) return;
   try {
     var parts = path.split('/');
     var ref;
@@ -7239,9 +7278,11 @@ async function fbSet(path, data) {
     }
     await ref.set(data, { merge: true });
   } catch(e) { console.error('fbSet error', path, e); }
-}
+};
+var fbSet = window.fbSet;
 
-async function fbGet(path) {
+window.fbGet = async function fbGet(path) {
+  if(!db) return null;
   try {
     var parts = path.split('/');
     var ref;
@@ -7253,23 +7294,28 @@ async function fbGet(path) {
     var snap = await ref.get();
     return snap.exists ? snap.data() : null;
   } catch(e) { console.error('fbGet error', path, e); return null; }
-}
+};
+var fbGet = window.fbGet;
 
-async function fbGetCol(colPath) {
+window.fbGetCol = async function fbGetCol(colPath) {
+  if(!db) return {};
   try {
     var snap = await db.collection(colPath).get();
     var result = {};
-    snap.forEach(d => { result[d.id] = d.data(); });
+    snap.forEach(function(d){ result[d.id] = d.data(); });
     return result;
   } catch(e) { console.error('fbGetCol error', colPath, e); return {}; }
-}
+};
+var fbGetCol = window.fbGetCol;
 
-async function fbDel(path) {
+window.fbDel = async function fbDel(path) {
+  if(!db) return;
   try {
     var parts = path.split('/');
     await db.collection(parts[0]).doc(parts[1]).delete();
   } catch(e) { console.error('fbDel error', path, e); }
-}
+};
+var fbDel = window.fbDel;
 
 /* ── DB 저장 함수들 ── */
 window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
@@ -7348,33 +7394,7 @@ window.fbSaveLectures = async function() {
   await fbSet('lectureData/main', data);
 };
 
-// 🔴 실시간 출결 동기화
-db.collection('attendance').onSnapshot(function(snapshot) {
-  snapshot.docChanges().forEach(function(change) {
-    if(change.type === 'added' || change.type === 'modified') {
-      var a = change.doc.data();
-      if(!a.clsKey || !a.name || !a.dateKey) return;
-      if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey] = {};
-      if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name] = {};
-      var hasTime = a.등원Time || a.하원Time || a.지각Time || a.보강Time;
-      if(hasTime) {
-        var obj = {status: a.status};
-        if(a.등원Time) obj.등원Time = a.등원Time;
-        if(a.하원Time) obj.하원Time = a.하원Time;
-        if(a.지각Time) obj.지각Time = a.지각Time;
-        if(a.보강Time) obj.보강Time = a.보강Time;
-        window.classAttendance[a.clsKey][a.name][a.dateKey] = obj;
-      } else if(a.status) {
-        window.classAttendance[a.clsKey][a.name][a.dateKey] = a.status;
-      }
-      // 출결 관리 화면이 열려있으면 자동 갱신
-      if(window.currentTeacher && window.activeMenu === 'att') {
-        var el = document.getElementById(window.currentTeacher+'-main-content');
-        if(el) renderAttSub(window.currentTeacher);
-      }
-    }
-  });
-}, function(err) { console.log('출결 실시간 동기화 오류:', err); });
+// 🔴 실시간 출결 동기화는 _doInitFirebase() 안으로 이동됨
 
 window.fbSaveLecComplete = async function(name, lecId, vi) {
   var key = (name+'_'+lecId+'_'+vi).replace(/\s/g,'_');
@@ -7740,7 +7760,7 @@ async function loadAllData() {
     console.error('데이터 로드 오류:', err);
     var overlay2 = document.getElementById('loading-overlay');
     if(overlay2) overlay2.style.display='none';
-    showPage('landing');
+    if(typeof showPage === 'function') showPage('landing');
   }
 }
 
@@ -7782,16 +7802,9 @@ function showFbStatus(msg, autoHide) {
   if (autoHide) setTimeout(function(){ el.style.opacity = '0'; }, 2000);
 }
 
-window.addEventListener('load', function() {
-  loadAllData();
-});
-
-// 전역 노출
 window._fbDb = db;
 window._fbSet = fbSet;
 window._fbDel = fbDel;
-}
-initFirebase();
 </script>
 </body>
 </html>
