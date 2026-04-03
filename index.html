@@ -6870,8 +6870,9 @@ function renderMonthlyAtt(who,el){
       unrecorded.forEach(function(name){
         var clsKey=null;
         CLASSES.forEach(function(cls){DAY_GROUPS.forEach(function(day){var k=cls+'-'+day;if((classStudents[k]||[]).indexOf(name)>-1)clsKey=k;});});
-        detail += '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #f5ede0;flex-wrap:wrap">';
-        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);min-width:60px">'+name+'</div>';
+        detail += '<div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:7px 0;border-bottom:1px solid #f5ede0;">';
+        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);flex-shrink:0">'+name+'</div>';
+        detail += '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;justify-content:flex-end">';
         var allOpts = [
           {label:'등원', bg:'#e8f5e9', color:'#2e7d32'},
           {label:'하원', bg:'#e3f2fd', color:'#1565c0'},
@@ -6885,6 +6886,7 @@ function renderMonthlyAtt(who,el){
         detail += allOpts.map(function(o){
           return '<button onclick="addNewAtt(\''+who+'\',\''+(clsKey||'')+'\',\''+name+'\',\''+tAttCalSel+'\',\''+o.label+'\')" style="background:'+o.bg+';border:none;border-radius:6px;padding:3px 7px;font-size:.65rem;font-weight:700;color:'+o.color+';cursor:pointer;font-family:inherit;white-space:nowrap">'+o.label+'</button>';
         }).join('');
+        detail += '</div>';
         detail += '</div>';
       });
       detail += '</div>';
