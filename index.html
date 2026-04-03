@@ -734,6 +734,19 @@ setTimeout(function(){
     </div>
   </div>
 </div>
+<!-- STUDENT LECTURE PAGE -->
+<div id="student-lecture-page" class="page">
+  <header class="s-header">
+    <div class="s-header-brand">🎬 강의 듣기</div>
+    <div class="s-header-user">
+      <button class="btn-back" onclick="stuLecBack()" id="stu-lec-back-btn">← 돌아가기</button>
+      <div class="s-avatar-chip"><div class="s-avatar-circle" id="stu-lec-av-letter">조</div><span class="s-avatar-name" id="stu-lec-av-name">학생</span></div>
+    </div>
+  </header>
+  <div class="s-body">
+    <div id="stu-lec-content"></div>
+  </div>
+</div>
 <!-- COOKIE DASH -->
 <div id="cookie-dash" class="page t-dash">
   <header class="t-header">
@@ -1021,63 +1034,117 @@ function addGuideItem(who) {
   renderGuideEditor(who, document.getElementById(who+'-main-content'));
 }
 
+var stuLecGroup = null; // 선택된 그룹 id
+var stuLecPhase = 'groups'; // 'groups' | 'lecs'
+
 function openStuLecture() {
-  var modal = document.getElementById('modal-stu-lecture');
-  if(!modal) return;
-  renderStuLectureModal();
-  modal.classList.add('open');
+  stuLecPhase = 'groups';
+  stuLecGroup = null;
+  // 아바타 동기화
+  var avLetter = document.getElementById('stu-lec-av-letter');
+  var avName   = document.getElementById('stu-lec-av-name');
+  if(avLetter && currentStudent) avLetter.textContent = currentStudent[0];
+  if(avName   && currentStudent) avName.textContent   = currentStudent;
+  renderStuLecPage();
+  showPage('student-lecture-page');
 }
 
-var stuLecGroup = null; // 선택된 그룹 id
+function stuLecBack() {
+  if(stuLecPhase === 'lecs') {
+    // 강의 목록 → 그룹 목록으로
+    stuLecPhase = 'groups';
+    stuLecGroup = null;
+    renderStuLecPage();
+  } else {
+    // 그룹 목록 → 학생 대시보드로
+    showPage('student-dashboard');
+  }
+}
 
-function renderStuLectureModal() {
-  var body = document.getElementById('stu-lecture-body');
-  if(!body) return;
+function renderStuLecPage() {
+  var el = document.getElementById('stu-lec-content');
+  if(!el) return;
   var name = currentStudent;
 
-  // 배정된 모든 강의를 그룹별로 묶어서 바로 표시 (그룹 클릭 단계 제거)
-  var visibleGroups = lectureGroups.filter(function(grp){
-    return lectures.some(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);});
-  });
-
-  if(visibleGroups.length === 0) {
-    body.innerHTML = '<div class="t-placeholder"><span class="ph-ico">🎬</span><div class="ph-desc">선생님이 아직 강의를 배정하지 않았어요.</div></div>';
-    return;
-  }
-
-  var html = '<div style="display:flex;flex-direction:column;gap:16px">';
-  visibleGroups.forEach(function(grp){
-    var accessibleLecs = lectures.filter(function(l){return l.group===grp.id && canStudentAccessLec(name,l.id);});
-    if(accessibleLecs.length===0) return;
-
-    html += '<div>';
-    html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid #f0e8dc">';
-    html += '<div style="width:28px;height:28px;border-radius:8px;background:'+grp.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1rem">'+grp.emoji+'</div>';
-    html += '<span style="font-size:.9rem;font-weight:700;color:var(--brown)">'+grp.title+'</span>';
-    html += '<span style="font-size:.68rem;color:var(--text-soft);margin-left:auto">'+accessibleLecs.length+'개</span>';
-    html += '</div>';
-    html += '<div style="display:flex;flex-direction:column;gap:6px">';
-    accessibleLecs.forEach(function(lec){
-      var isDone = lecCompleted[name]&&lecCompleted[name][lec.id];
-      var doneCount = isDone ? Object.keys(lecCompleted[name][lec.id]).length : 0;
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fafafa;border-radius:10px;border:1.5px solid '+lec.color+'22;cursor:pointer" onclick="stuOpenLec('+lec.id+')">';
-      html += '<div style="width:32px;height:32px;border-radius:8px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">'+lec.emoji+'</div>';
-      html += '<div style="flex:1"><div style="font-size:.85rem;font-weight:700;color:var(--brown)">'+lec.title+'</div>';
-      html += '<div style="font-size:.68rem;color:var(--text-soft);margin-top:1px">강의 '+lec.videos.length+'개'+(doneCount>0?' · ✅ '+doneCount+'개 완료':'')+'</div></div>';
-      html += '<span style="font-size:.72rem;color:'+lec.color+'">▶</span>';
-      html += '</div>';
+  if(stuLecPhase === 'groups') {
+    // ── 그룹(스탯박스) 목록 ──
+    var visibleGroups = (window.lectureGroups||[]).filter(function(grp){
+      return (window.lectures||[]).some(function(l){
+        return l.group===grp.id && canStudentAccessLec(name, l.id);
+      });
     });
-    html += '</div></div>';
-  });
-  html += '</div>';
-  body.innerHTML = html;
+
+    if(visibleGroups.length === 0) {
+      el.innerHTML = '<div class="t-placeholder" style="padding:40px 0"><span class="ph-ico">🎬</span><div class="ph-desc">선생님이 아직 강의를 배정하지 않았어요.</div></div>';
+      return;
+    }
+
+    var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">';
+    visibleGroups.forEach(function(grp){
+      var accessibleLecs = (window.lectures||[]).filter(function(l){
+        return l.group===grp.id && canStudentAccessLec(name, l.id);
+      });
+      var doneCount = accessibleLecs.filter(function(l){
+        return window.lecCompleted&&window.lecCompleted[name]&&window.lecCompleted[name][l.id];
+      }).length;
+
+      html += '<div onclick="stuLecSelectGroup(\''+grp.id+'\')" style="background:white;border-radius:16px;border:2px solid '+grp.color+'44;padding:18px 14px;cursor:pointer;transition:all .18s;box-shadow:0 2px 10px rgba(0,0,0,.05)" ' +
+        'onmouseover="this.style.transform=\'translateY(-3px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.1)\'" ' +
+        'onmouseout="this.style.transform=\'\';this.style.boxShadow=\'0 2px 10px rgba(0,0,0,.05)\'">' +
+        '<div style="width:48px;height:48px;border-radius:14px;background:'+grp.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.6rem;margin-bottom:10px">'+grp.emoji+'</div>' +
+        '<div style="font-size:.9rem;font-weight:700;color:var(--brown);margin-bottom:4px">'+grp.title+'</div>' +
+        '<div style="font-size:.72rem;color:var(--text-soft)">강의 '+accessibleLecs.length+'개</div>' +
+        (doneCount>0 ? '<div style="font-size:.68rem;color:#66bb6a;font-weight:700;margin-top:4px">✅ '+doneCount+'/'+accessibleLecs.length+' 완료</div>' : '') +
+        '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+
+  } else {
+    // ── 선택된 그룹의 강의 목록 ──
+    var grp = (window.lectureGroups||[]).find(function(g){return g.id===stuLecGroup;});
+    if(!grp) { stuLecPhase='groups'; renderStuLecPage(); return; }
+
+    var accessibleLecs = (window.lectures||[]).filter(function(l){
+      return l.group===grp.id && canStudentAccessLec(name, l.id);
+    });
+
+    var html = '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:2px solid #f0e8dc">' +
+      '<div style="width:36px;height:36px;border-radius:10px;background:'+grp.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.2rem">'+grp.emoji+'</div>' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+grp.title+'</div>' +
+      '<span style="margin-left:auto;font-size:.72rem;color:var(--text-soft)">'+accessibleLecs.length+'개 강의</span>' +
+    '</div>';
+
+    html += '<div style="display:flex;flex-direction:column;gap:10px">';
+    accessibleLecs.forEach(function(lec){
+      var doneLec = window.lecCompleted&&window.lecCompleted[name]&&window.lecCompleted[name][lec.id];
+      var doneVids = doneLec ? Object.keys(doneLec).length : 0;
+      var totalVids = lec.videos ? lec.videos.length : 0;
+
+      html += '<div onclick="stuOpenLec('+lec.id+')" style="display:flex;align-items:center;gap:12px;padding:14px;background:white;border-radius:14px;border:1.5px solid '+lec.color+'33;cursor:pointer;transition:all .15s" ' +
+        'onmouseover="this.style.background=\''+lec.colorBg+'\'" onmouseout="this.style.background=\'white\'">' +
+        '<div style="width:44px;height:44px;border-radius:12px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0">'+lec.emoji+'</div>' +
+        '<div style="flex:1">' +
+          '<div style="font-size:.9rem;font-weight:700;color:var(--brown)">'+lec.title+'</div>' +
+          '<div style="font-size:.72rem;color:var(--text-soft);margin-top:2px">영상 '+totalVids+'개' + (doneVids>0?' · ✅ '+doneVids+'/'+totalVids+' 완료':'') + '</div>' +
+        '</div>' +
+        (doneVids===totalVids&&totalVids>0 ? '<span style="font-size:.7rem;font-weight:700;color:#66bb6a;background:#e8f5e9;padding:3px 8px;border-radius:100px">완료</span>' : '<span style="font-size:.7rem;color:'+lec.color+'">▶</span>') +
+      '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  }
+}
+
+function stuLecSelectGroup(grpId) {
+  stuLecGroup = grpId;
+  stuLecPhase = 'lecs';
+  renderStuLecPage();
 }
 
 function stuOpenLec(id) {
   var lec = lectures.find(function(l){return l.id===id;}); if(!lec) return;
   if(lec.videos.length===0){alert('등록된 강의 영상이 없어요.');return;}
-  closeModal('modal-stu-lecture');
-  stuLecGroup=null;
   // 강의 목록 모달 표시
   renderStuLecDetail(lec);
   openModal('modal-stu-lec-detail');
@@ -3724,15 +3791,9 @@ function renderCalDateDetail(who) {
     html+='</div>';
   }
 
-  // 빠른 일정 추가
-  var catOpts=calCategories.map(function(c){return '<option value="'+c.id+'">'+c.name+'</option>';}).join('');
-  html+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">' +
-    '<input class="register-input" id="cal-quick-title" placeholder="일정 추가..." style="flex:2;min-width:120px;margin-bottom:0;font-size:.82rem">' +
-    '<select class="register-select" id="cal-quick-cat" style="flex:1;min-width:90px;margin-bottom:0;font-size:.78rem">'+catOpts+'</select>' +
-    '<input class="register-input" type="time" id="cal-quick-time" style="width:90px;margin-bottom:0;font-size:.78rem">' +
-    '<button class="btn-reg-submit" style="font-size:.78rem;padding:6px 12px;white-space:nowrap" onclick="calQuickAdd(\''+calSelDate+'\',\''+who+'\')">+ 추가</button>' +
-    '</div>' +
-    '</div>';
+  // 일정 추가 폼 (기간/반복 포함)
+  html += renderCalAddForm(calSelDate, who);
+  html += '</div>';
   return html;
 }
 
@@ -3759,36 +3820,46 @@ var CAL_COLORS=[
 ];
 
 function openCalCatMgr(who) {
-  var el=document.getElementById(who+'-main-content');
-  var html='<div class="t-section-title">📅 캘린더</div>' +
-    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
-    '<button onclick="renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 캘린더</button>' +
-    '<div style="font-size:1rem;font-weight:700;color:var(--brown)">🏷️ 카테고리 관리</div></div>';
+  // 토글: 이미 열려있으면 닫기
+  var existing = document.getElementById('cal-cat-mgr-box');
+  if(existing) { existing.remove(); return; }
 
-  html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">';
+  var el = getCalEl(who);
+  if(!el) return;
+
+  var box = document.createElement('div');
+  box.id = 'cal-cat-mgr-box';
+  box.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:12px;border:1.5px solid #f0e8dc;box-shadow:0 4px 16px rgba(180,120,40,.08)';
+
+  var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
+    '<div style="font-size:.92rem;font-weight:700;color:var(--brown)">🏷️ 카테고리 관리</div>' +
+    '<button onclick="openCalCatMgr(\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✕ 닫기</button>' +
+  '</div>';
+
+  html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
   calCategories.forEach(function(c){
-    html+='<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:white;border-radius:12px;border:1.5px solid '+c.color+'33">' +
-      '<div style="width:14px;height:14px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>' +
-      '<span style="flex:1;font-size:.86rem;font-weight:600;color:var(--brown)">'+c.name+'</span>' +
-      '<div style="display:flex;gap:4px">' +
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fffbf5;border-radius:10px;border:1.5px solid '+c.color+'33">' +
+      '<div style="width:12px;height:12px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>' +
+      '<span style="flex:1;font-size:.84rem;font-weight:600;color:var(--brown)">'+c.name+'</span>' +
       '<button onclick="editCalCat(\''+c.id+'\',\''+who+'\')" style="background:#fff8e1;border:none;border-radius:7px;padding:3px 9px;font-size:.7rem;font-weight:700;color:#e65100;cursor:pointer;font-family:inherit">수정</button>' +
-      '<button onclick="deleteCalCat(\''+c.id+'\',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem">🗑️</button>' +
-      '</div></div>';
+      '<button onclick="deleteCalCat(\''+c.id+'\',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem;padding:2px">🗑️</button>' +
+    '</div>';
   });
   html += '</div>';
 
-  // 카테고리 추가 폼
-  html += '<div class="register-form-box">' +
-    '<div class="register-form-title" style="font-size:.92rem;margin-bottom:10px">+ 카테고리 추가</div>' +
-    '<div><div class="form-label">카테고리 이름 *</div><input class="register-input" id="cal-cat-name" placeholder="예: 시험일정" style="margin-bottom:10px"></div>' +
-    '<div class="form-label" style="margin-bottom:6px">색상 선택</div>' +
-    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
-    CAL_COLORS.map(function(c,i){return '<div id="cal-col-'+i+'" onclick="selCalColor('+i+')" style="width:28px;height:28px;border-radius:50%;background:'+c.color+';cursor:pointer;border:3px solid transparent;transition:border-color .15s"></div>';}).join('') +
+  html += '<div style="border-top:1px solid #f5ede0;padding-top:12px">' +
+    '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:8px">+ 카테고리 추가</div>' +
+    '<div style="display:flex;gap:8px;margin-bottom:8px">' +
+    '<input class="register-input" id="cal-cat-name" placeholder="카테고리 이름" style="margin-bottom:0;flex:1;font-size:.82rem">' +
     '</div>' +
-    '<div class="register-form-actions"><button class="btn-reg-submit" style="font-size:.8rem;padding:6px 14px" onclick="addCalCat(\''+who+'\')">+ 추가</button></div>' +
-    '</div>';
+    '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">' +
+    CAL_COLORS.map(function(c,i){return '<div id="cal-col-'+i+'" onclick="selCalColor('+i+')" style="width:24px;height:24px;border-radius:50%;background:'+c.color+';cursor:pointer;border:3px solid transparent;transition:all .15s"></div>';}).join('') +
+    '</div>' +
+    '<button class="btn-reg-submit" style="font-size:.78rem;padding:5px 14px" onclick="addCalCat(\''+who+'\')">+ 추가</button>' +
+  '</div>';
 
-  el.innerHTML = html;
+  box.innerHTML = html;
+  el.appendChild(box);
 }
 
 var selCalColorIdx = 0;
@@ -3804,16 +3875,22 @@ function addCalCat(who) {
   if(!name) return;
   var c=CAL_COLORS[selCalColorIdx]||CAL_COLORS[0];
   calCategories.push({id:'cat'+calCatIdSeq++,name:name,color:c.color,bg:c.bg});
+  var existing=document.getElementById('cal-cat-mgr-box');
+  if(existing) existing.remove();
   openCalCatMgr(who);
 }
 function deleteCalCat(id, who) {
   calCategories=calCategories.filter(function(c){return c.id!==id;});
+  var existing=document.getElementById('cal-cat-mgr-box');
+  if(existing) existing.remove();
   openCalCatMgr(who);
 }
 function editCalCat(id, who) {
   var c=calCategories.find(function(c){return c.id===id;}); if(!c) return;
   var newName=prompt('카테고리 이름 수정:', c.name);
   if(newName&&newName.trim()) c.name=newName.trim();
+  var existing=document.getElementById('cal-cat-mgr-box');
+  if(existing) existing.remove();
   openCalCatMgr(who);
 }
 /* ====== REPORT PANEL ====== */
@@ -6454,12 +6531,15 @@ function renderMonthlyAtt(who,el){
         var list=groups[status];if(list.length===0)return;
         html+='<div class="t-att-group-label"><span class="att-summary-chip chip-'+status+'">'+status+' '+list.length+'명</span></div>';
         html+=list.map(function(r,i){
-          return '<div class="t-att-detail-row" style="gap:8px">' +
+          var safeClsKey = encodeURIComponent(r.clsKey);
+          var safeName   = encodeURIComponent(r.name);
+          var safeDk     = encodeURIComponent(tAttCalSel);
+          return '<div class="t-att-detail-row" style="gap:8px" data-cls="'+safeClsKey+'" data-name="'+safeName+'" data-dk="'+safeDk+'">' +
             '<div class="t-att-detail-avatar" style="background:'+avatarPalette[i%7]+'">'+r.name[0]+'</div>' +
             '<div style="flex:1"><div class="t-att-detail-name">'+r.name+'</div><div class="t-att-detail-cls">'+r.clsKey+'</div></div>' +
             '<span class="att-summary-chip chip-'+status+'">'+status+'</span>' +
-            '<button onclick="openAttEditModal(\''+who+'\',\''+r.clsKey+'\',\''+r.name+'\',\''+tAttCalSel+'\')" style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit;flex-shrink:0">✏️ 수정</button>' +
-            '<button onclick="deleteMonthlyAtt(\''+who+'\',\''+r.clsKey+'\',\''+r.name+'\',\''+tAttCalSel+'\')" style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">🗑️</button>' +
+            '<button class="att-edit-btn" style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit;flex-shrink:0">✏️ 수정</button>' +
+            '<button class="att-del-btn" style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">🗑️</button>' +
           '</div>';
         }).join('');
       });
@@ -6487,6 +6567,20 @@ function renderMonthlyAtt(who,el){
     }
   }
   el.innerHTML='<div class="t-att-cal-wrap"><div class="t-att-cal-header"><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',-1)">◀</button><span class="t-att-cal-label">'+tAttCalYear+'년 '+(tAttCalMonth+1)+'월</span><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',1)">▶</button></div><div class="t-att-cal-grid">'+DOW.map(function(d){return '<div class="t-att-cal-dow">'+d+'</div>';}).join('')+cells+'</div><div class="t-att-cal-detail">'+detail+'</div></div>'+renderMakeupNeeded(who);
+
+  // 이벤트 위임 - 수정/삭제 버튼
+  el.addEventListener('click', function(e) {
+    var editBtn = e.target.closest('.att-edit-btn');
+    var delBtn  = e.target.closest('.att-del-btn');
+    if(!editBtn && !delBtn) return;
+    var row = e.target.closest('[data-cls]');
+    if(!row) return;
+    var clsKey2 = decodeURIComponent(row.getAttribute('data-cls'));
+    var name2   = decodeURIComponent(row.getAttribute('data-name'));
+    var dk2     = decodeURIComponent(row.getAttribute('data-dk'));
+    if(editBtn) openAttEditModal(who, clsKey2, name2, dk2);
+    if(delBtn)  deleteMonthlyAtt(who, clsKey2, name2, dk2);
+  });
 }
 function toggleAttAddPanel(who, dk) {
   var panel = document.getElementById('att-add-panel');
@@ -6560,9 +6654,9 @@ function openAttEditModal(who, clsKey, name, dk) {
             '보강':'background:#f3e5f5;border:2px solid #ce93d8;color:#6a1b9a'
           };
           var isSelected = curStatus===opt || (curStatus==='등원+하원'&&(opt==='등원'||opt==='하원'));
-          return '<button onclick="applyAttEdit(\''+who+'\',\''+clsKey+'\',\''+name+'\',\''+dk+'\',\''+opt+'\')" style="'+
+          return '<button id="att-edit-btn-'+opt+'" onclick="applyAttEdit(\''+who+'\',\''+clsKey+'\',\''+name+'\',\''+dk+'\',\''+opt+'\')" style="'+
             (isSelected ? chipColors[opt]||'background:#f5ede0;border:2px solid var(--cookie);color:var(--brown)' : 'background:#fafafa;border:2px solid #e0d0c0;color:#aaa')+
-            ';padding:9px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit">'+opt+'</button>';
+            ';padding:9px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%">'+opt+'</button>';
         }).join('') +
       '</div>' +
       '<button onclick="document.getElementById(\'att-edit-overlay\').remove()" style="width:100%;padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.8rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">취소</button>' +
@@ -6573,12 +6667,49 @@ function openAttEditModal(who, clsKey, name, dk) {
 function applyAttEdit(who, clsKey, name, dk, newStatus) {
   if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
   if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
+  var cur = window.classAttendance[clsKey][name][dk];
+  var curStatus = attStatus(cur);
   var now = nowTimeStr();
-  var newVal = {status:newStatus};
-  newVal[newStatus+'Time'] = now;
-  window.classAttendance[clsKey][name][dk] = newVal;
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
-  document.getElementById('att-edit-overlay').remove();
+  var newVal;
+
+  if(newStatus==='등원') {
+    if(curStatus==='등원') { newVal=null; } // 해제
+    else if(curStatus==='등원+하원') { newVal={status:'하원', 하원Time:attTime(cur,'하원Time')||now}; }
+    else if(curStatus==='하원') { newVal={status:'등원+하원', 등원Time:now, 하원Time:attTime(cur,'하원Time')||now}; }
+    else { newVal={status:'등원', 등원Time:now}; }
+  } else if(newStatus==='하원') {
+    if(curStatus==='하원') { newVal=null; } // 해제
+    else if(curStatus==='등원+하원') { newVal={status:'등원', 등원Time:attTime(cur,'등원Time')||now}; }
+    else if(curStatus==='등원') { newVal={status:'등원+하원', 등원Time:attTime(cur,'등원Time')||now, 하원Time:now}; }
+    else { newVal={status:'하원', 하원Time:now}; }
+  } else {
+    // 지각/결석/보강은 단순 선택 (같으면 해제)
+    if(curStatus===newStatus) { newVal=null; }
+    else { newVal={status:newStatus}; newVal[newStatus+'Time']=now; }
+  }
+
+  if(newVal===null) delete window.classAttendance[clsKey][name][dk];
+  else window.classAttendance[clsKey][name][dk] = newVal;
+
+  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+
+  // 모달 버튼 상태 갱신
+  var newCurStatus = newVal ? attStatus(newVal) : '';
+  var chipColors = {
+    '등원':'background:#e8f5e9;border:2px solid #66bb6a;color:#2e7d32',
+    '하원':'background:#e3f2fd;border:2px solid #64b5f6;color:#1565c0',
+    '지각':'background:#fff8e1;border:2px solid #ffd54f;color:#e65100',
+    '결석':'background:#fce4ec;border:2px solid #f48fb1;color:#c2185b',
+    '보강':'background:#f3e5f5;border:2px solid #ce93d8;color:#6a1b9a'
+  };
+  ATT_OPTIONS.forEach(function(opt){
+    var btn = document.getElementById('att-edit-btn-'+opt);
+    if(!btn) return;
+    var sel = newCurStatus===opt || (newCurStatus==='등원+하원'&&(opt==='등원'||opt==='하원'));
+    btn.style.cssText = (sel ? chipColors[opt] : 'background:#fafafa;border:2px solid #e0d0c0;color:#aaa') +
+      ';padding:9px;border-radius:10px;font-size:.8rem;font-weight:700;cursor:pointer;font-family:inherit;width:100%';
+  });
+
   renderAttSub(who);
 }
 
