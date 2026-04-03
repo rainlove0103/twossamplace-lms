@@ -826,6 +826,7 @@ function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
 
 /* ====== STUDENT DATA ====== */
 var students = {};
+window.students = students;
 
 var bookRecords = {};
 // tuitionData[ym][name] = {paid:true/false, paidAt:'', method:'', amount:0}
@@ -1567,6 +1568,7 @@ function saveQuizResult(name, lecId, vi, qi, answer, correct) {
 }
 
 var lecCompleted = {}; // lecCompleted[name][lecId][vi] = true
+window.lecCompleted = lecCompleted;
 function markLecComplete(name, lecId, vi) {
   if(!lecCompleted[name]) lecCompleted[name]={};
   if(!lecCompleted[name][lecId]) lecCompleted[name][lecId]={};
@@ -4153,6 +4155,8 @@ function renderMonthlyReport(who) {
 
   return html;
 }
+
+function openMonthlyDetail(who, name, y, m) {
   var el = document.getElementById(who+'-main-content');
   var daysInMonth = new Date(y,m+1,0).getDate();
   var monthLabel = y+'년 '+(m+1)+'월';
@@ -4589,10 +4593,15 @@ var lectures = [
 ];
 var lectureIdSeq = 12;
 var lectureGroupIdSeq = 100;
+window.lectureGroups = lectureGroups;
+window.lectures = lectures;
+window.lectureIdSeq = lectureIdSeq;
+window.lectureGroupIdSeq = lectureGroupIdSeq;
 
 // 수강 학생: lectureStudents[lecId] = Set of names
 // 그룹 수강 학생: lectureGroupStudents[groupId] = Set of names
 var lectureStudents = {};
+window.lectureStudents = lectureStudents;
 var lectureGroupStudents = {};
 // quizResults[studentName][lecId][videoIdx][quizIdx] = {answer, correct, submittedAt}
 var quizResults = {};
@@ -7271,21 +7280,15 @@ window.selectMenu = selectMenu;
 window.renderAttSub = renderAttSub;
 window.renderReportPanel = renderReportPanel;
 window.populateStudentSelect = function(){};  // placeholder, 실제 함수는 아래 스크립트에서 정의
+
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
 <script>
-// Firebase 로드 대기 후 초기화
 var db = null;
 var storage = null;
-
-function initFirebase() {
-  if(typeof firebase === 'undefined') {
-    setTimeout(initFirebase, 100);
-    return;
-  }
-  try {
+try {
     var firebaseConfig = {
       apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
       authDomain: "twossamplace-lms.firebaseapp.com",
@@ -7347,8 +7350,6 @@ function initFirebase() {
   } else {
     window.addEventListener('load', function(){ loadAllData(); });
   }
-}
-initFirebase();
 
 /* ── 저장 헬퍼 ── */
 window.fbSet = async function(path, data) {
@@ -7577,6 +7578,13 @@ async function loadAllData() {
   if(!window.memberRoster) window.memberRoster = {cookie:[], butter:[]};
   if(!window.absenceReasons) window.absenceReasons = {};
   if(!window.quizResults) window.quizResults = {};
+  if(!window.lecCompleted) window.lecCompleted = {};
+  if(!window.students) window.students = {};
+  if(!window.lectureGroups) window.lectureGroups = [];
+  if(!window.lectures) window.lectures = [];
+  if(!window.lectureStudents) window.lectureStudents = {};
+  if(!window.lectureGroupIdSeq) window.lectureGroupIdSeq = 100;
+  if(!window.lectureIdSeq) window.lectureIdSeq = 12;
 
   for (var _wi = 0; _wi < ['cookie','butter'].length; _wi++) {
     var who = ['cookie','butter'][_wi];
@@ -7900,6 +7908,8 @@ function showFbStatus(msg, autoHide) {
 window._fbDb = db;
 window._fbSet = fbSet;
 window._fbDel = fbDel;
+
 </script>
+
 </body>
 </html>
