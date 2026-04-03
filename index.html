@@ -5256,12 +5256,14 @@ function renderLectureDetail(lec, who, el) {
   if(lec.videos.length === 0) {
     html += '<div class="t-placeholder"><span class="ph-ico">🎬</span><div class="ph-desc">등록된 강의가 없어요.<br>아래에서 강의를 추가해보세요!</div></div>';
   } else {
-    html += '<div style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">' +
+    html += '<div id="lec-video-list" style="display:flex;flex-direction:column;gap:12px;margin-bottom:16px">' +
       lec.videos.map(function(v, i) {
         var qCount = v.quizzes ? v.quizzes.length : 0;
         var aCount = v.assigned ? v.assigned.length : 0;
         var pCount = v.pdfs ? v.pdfs.length : 0;
-        return '<div class="class-mgmt-card" style="border-color:'+lec.color+'33">' +
+        return '<div class="lec-video-item" data-video-idx="'+i+'" style="position:relative;'+(lecEditMode?'cursor:grab;':'')+'">' +
+          (lecEditMode?'<div style="position:absolute;top:50%;left:10px;transform:translateY(-50%);font-size:1rem;color:#ccc;pointer-events:none;z-index:1">⠿</div>':'') +
+          '<div class="class-mgmt-card" style="border-color:'+lec.color+'33;'+(lecEditMode?'padding-left:32px;':'')+'">' +
           '<div style="display:flex;align-items:center;gap:12px">' +
           '<div style="width:40px;height:40px;border-radius:10px;background:'+lec.colorBg+';display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0">🎬</div>' +
           '<div style="flex:1;min-width:0">' +
@@ -5275,7 +5277,7 @@ function renderLectureDetail(lec, who, el) {
           '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">' +
           '<button onclick="openLecPlayerTeacher('+lec.id+','+i+')" style="background:'+lec.colorBg+';border:none;border-radius:8px;padding:5px 10px;font-size:.72rem;font-weight:700;color:'+lec.color+';cursor:pointer;font-family:inherit;text-align:center">▶ 재생</button>' +
           '<button onclick="openVideoDetail('+lec.id+','+i+',\''+who+'\')" style="background:#f0ebff;border:none;border-radius:8px;padding:5px 10px;font-size:.72rem;font-weight:700;color:#7c4fd4;cursor:pointer;font-family:inherit">⚙️ 관리</button>' +
-          '</div></div></div>';
+          '</div></div></div></div>';
       }).join('') + '</div>';
   }
 
@@ -5312,6 +5314,22 @@ function renderLectureDetail(lec, who, el) {
   html += renderLecStudentAssign(lec, who);
 
   el.innerHTML = html;
+
+  // 편집 모드: 영상 목록 드래그 순서 변경
+  if(lecEditMode) {
+    var videoList = el.querySelector('#lec-video-list');
+    if(videoList) initDragSort(videoList, '.lec-video-item', function(newOrder) {
+      var lec2 = lectures.find(function(l){return l.id===lec.id;});
+      if(!lec2) return;
+      var reordered = newOrder.map(function(idx){
+        return lec2.videos[Number(idx)];
+      }).filter(Boolean);
+      lec2.videos = reordered;
+      if(window.fbSaveLectures) window.fbSaveLectures();
+      // 인덱스가 바뀌었으니 재렌더링
+      renderLectureDetail(lec2, who, el);
+    });
+  }
 }
 
 function renderLecStudentAssign(lec, who) {
