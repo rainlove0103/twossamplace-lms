@@ -875,6 +875,16 @@ var classStudents = {
   '비욘드B-월/수':[],'비욘드B-화/목':[]
 };
 window.classStudents = classStudents;
+
+// who 소속 학생만 필터링하는 헬퍼
+function getWhoStudents(who, clsKey) {
+  var all = classStudents[clsKey]||[];
+  if(!who) return all;
+  var roster = (window.memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  var rosterNames = roster.map(function(s){return s.name;});
+  return all.filter(function(n){return rosterNames.indexOf(n)>-1;});
+}
+window.getWhoStudents = getWhoStudents;
 currentClass = CLASSES[0];
 currentDay = DAY_GROUPS[0];
 
@@ -4264,7 +4274,7 @@ function renderDailyReport(who) {
     CLASSES.forEach(function(cls){
       DAY_GROUPS.forEach(function(day){
         var k = cls+'-'+day;
-        var stuList = classStudents[k]||[];
+        var stuList = getWhoStudents(who, k);
         var writtenCount = stuList.filter(function(n){
           var r = getDailyReport(who,dk,n);
           return r.lesson||r.review||r.homework||r.leddi||r.feedback;
@@ -4288,7 +4298,7 @@ function renderDailyReport(who) {
 
   } else if(!reportSelStu) {
     // 학생 목록
-    var stuList = classStudents[reportSelClass]||[];
+    var stuList = getWhoStudents(who, reportSelClass);
     var clsName = reportSelClass.split('-')[0], dayName = reportSelClass.split('-').slice(1).join('-');
 
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
@@ -4401,7 +4411,7 @@ function renderDailyReport(who) {
 }
 
 function applyClassReport(who, dk, clsKey) {
-  var stuList = classStudents[clsKey]||[];
+  var stuList = getWhoStudents(who, clsKey);
   var vals = {};
   ['lesson','review','homework','leddi','feedback'].forEach(function(key){
     var el2 = document.getElementById('cls-rpt-'+key);
@@ -4689,7 +4699,7 @@ function renderMonthlyReport(who) {
     var rowHtml = '';
     DAY_GROUPS.forEach(function(day){
       var k = cls+'-'+day;
-      var stuList = ((window.classStudents||{})[k]||[]).filter(function(n){
+      var stuList = getWhoStudents(who, k).filter(function(n){
         return active.some(function(s){return s.name===n;});
       });
 
@@ -5561,7 +5571,7 @@ function renderLecStudentAssign(lec, who) {
     var rowHtml = '';
     DAY_GROUPS.forEach(function(day){
       var k = cls+'-'+day;
-      var stuList = classStudents[k]||[];
+      var stuList = getWhoStudents(who, k);
       var allClsSel = stuList.length>0 && stuList.every(function(n){return sel.has(n);});
 
       rowHtml += '<div style="background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:12px;padding:10px 12px">';
@@ -5597,7 +5607,7 @@ function renderLecStudentAssign(lec, who) {
 }
 
 function toggleLecClass(mode, clsKey, lecId, gid, who) {
-  var stuList = classStudents[clsKey]||[];
+  var stuList = getWhoStudents(who, clsKey);
   var sel = mode==='grp' ? getGrpStudents(gid) : getLecStudents(lecId);
   var allSel = stuList.every(function(n){return sel.has(n);});
   if(allSel) stuList.forEach(function(n){sel.delete(n);});
@@ -5753,7 +5763,7 @@ function buildAssignHtml(lec, v, vIdx, who) {
   assignHtml += '<div class="form-label" style="margin-bottom:8px">클래스 선택 (클릭하면 펼쳐져요)</div>';
   assignHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
   cdKeys.forEach(function(k){
-    var stuList=classStudents[k]||[];
+    var stuList=getWhoStudents(who, k);
     var allSel=stuList.length>0&&stuList.every(function(n){return lecAssignSelected.has(n);});
     var isExp=lecExpandedClasses.has(k);
     var someSel=stuList.some(function(n){return lecAssignSelected.has(n);});
@@ -5762,7 +5772,7 @@ function buildAssignHtml(lec, v, vIdx, who) {
   assignHtml+='</div>';
   cdKeys.forEach(function(k){
     if(!lecExpandedClasses.has(k)) return;
-    var stuList=classStudents[k]||[];
+    var stuList=getWhoStudents(who, k);
     var allSel=stuList.every(function(n){return lecAssignSelected.has(n);});
     assignHtml+='<div style="background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:14px;padding:12px 14px;margin-bottom:8px">';
     assignHtml+='<div style="font-size:.78rem;font-weight:700;color:var(--brown);margin-bottom:8px">📚 '+k+'</div>';
@@ -5916,7 +5926,7 @@ function editQuiz(vIdx, qi, who) {
 
 /* 과제 부여 */
 function lecAssignAllClass(key, lecId, vIdx, who) {
-  var stuList = classStudents[key]||[];
+  var stuList = getWhoStudents(who, key);
   var allSel = stuList.every(function(n){return lecAssignSelected.has(n);});
   if(allSel) stuList.forEach(function(n){lecAssignSelected.delete(n);});
   else stuList.forEach(function(n){lecAssignSelected.add(n);});
@@ -5932,7 +5942,7 @@ function toggleLecExpand(key, lecId, vIdx, who) {
 }
 
 function toggleLecAssignClass(key, lecId, vIdx, who) {
-  var stuList = classStudents[key]||[];
+  var stuList = getWhoStudents(who, key);
   var allSel = stuList.every(function(n){return lecAssignSelected.has(n);});
   if(allSel) stuList.forEach(function(n){lecAssignSelected.delete(n);});
   else stuList.forEach(function(n){lecAssignSelected.add(n);});
@@ -6190,7 +6200,7 @@ function renderTodayClass(who, el) {
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
   cdKeys.forEach(function(k) {
-    var stuList = classStudents[k]||[];
+    var stuList = getWhoStudents(who, k);
     var clsName = k.split('-')[0], dayName = k.split('-').slice(1).join('-');
     var isToday2 = todayDayKey && k.endsWith(todayDayKey);
     var sylCount = syllabusData[k] ? Object.keys(syllabusData[k]).filter(function(dk){
@@ -6454,7 +6464,7 @@ function renderHwMgmt(who, el) {
   if(hwDetailKey){el.innerHTML=html+renderHwDetail(hwDetailKey,who);return;}
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
   cdKeys.forEach(function(k){
-    var stuList=classStudents[k]||[];
+    var stuList=getWhoStudents(who, k);
     var clsName=k.split('-')[0],dayName=k.split('-').slice(1).join('-');
     var totalItems=0,doneItems=0;
     stuList.forEach(function(name){
@@ -6554,7 +6564,7 @@ function renderHwCalDetail(who) {
   var html='<div class="t-att-cal-detail-title">'+label+'</div>';
 
   cdKeys.forEach(function(k){
-    var stuList=classStudents[k]||[];
+    var stuList=getWhoStudents(who, k);
     var clsName=k.split('-')[0],dayName=k.split('-').slice(1).join('-');
     var clsItems=[];
 
@@ -6680,7 +6690,7 @@ function toggleHwAssignFromCal(name, hwId, who) {
 function openHwDetail(k,who){hwDetailKey=k;if(!hwSelectMap[k])hwSelectMap[k]=new Set();renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function closeHwDetail(who){hwDetailKey=null;renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function renderHwDetail(k,who){
-  var stuList=classStudents[k]||[];
+  var stuList=getWhoStudents(who, k);
   var clsName=k.split('-')[0],dayName=k.split('-').slice(1).join('-');
   if(!hwSelectMap[k])hwSelectMap[k]=new Set();
   var sel=hwSelectMap[k],allSel=stuList.length>0&&stuList.every(function(n){return sel.has(n);});
@@ -6713,7 +6723,7 @@ function renderHwDetail(k,who){
   return html;
 }
 function setHwMgmtTab(tab,who){hwMgmtTab=tab;hwDetailKey=null;renderHwMgmt(who,document.getElementById(who+'-main-content'));}
-function hwToggleAll(k,who){if(!hwSelectMap[k])hwSelectMap[k]=new Set();var sel=hwSelectMap[k],stuList=classStudents[k]||[];var allSel=stuList.every(function(n){return sel.has(n);});if(allSel)sel.clear();else stuList.forEach(function(n){sel.add(n);});renderHwMgmt(who,document.getElementById(who+'-main-content'));}
+function hwToggleAll(k,who){if(!hwSelectMap[k])hwSelectMap[k]=new Set();var sel=hwSelectMap[k],stuList=getWhoStudents(who,k);var allSel=stuList.every(function(n){return sel.has(n);});if(allSel)sel.clear();else stuList.forEach(function(n){sel.add(n);});renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function hwToggleStu(k,name,who){if(!hwSelectMap[k])hwSelectMap[k]=new Set();var sel=hwSelectMap[k];if(sel.has(name))sel.delete(name);else sel.add(name);renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function addHwAssign(formId,clsKey,who){var nameEl=document.getElementById(formId+'-name');var dateEl=document.getElementById(formId+'-date');if(!nameEl||!nameEl.value.trim()){if(nameEl)nameEl.focus();return;}var hwName=nameEl.value.trim();var dateVal=dateEl?dateEl.value:'';var deadline=dateVal?new Date(dateVal+'T00:00:00'):new Date(todayMidnight);deadline.setHours(0,0,0,0);var sel=hwSelectMap[clsKey]||new Set();var targets=Array.from(sel);if(targets.length===0)targets=classStudents[clsKey]||[];targets.forEach(function(name){getHwAssigned(name).push({id:hwIdSeq++,name:hwName,ico:'📝',deadline:deadline,done:false,type:hwMgmtTab});if(window.fbSaveHwAssigned)window.fbSaveHwAssigned(name);});nameEl.value='';hwSelectMap[clsKey]=new Set();renderHwMgmt(who,document.getElementById(who+'-main-content'));}
 function renderHwByClass(who){return '';} function renderHwByStudent(who){return '';} function setHwMgmtView(v,w){}
@@ -6852,7 +6862,7 @@ function renderAttSub(who){
   }
 }
 function renderTodayAtt(who,el){
-  var clsKey=currentClass+'-'+currentDay, stuList=(window.classStudents||{})[clsKey]||[];
+  var clsKey=currentClass+'-'+currentDay, stuList=getWhoStudents(who, clsKey);
   el.innerHTML='<div class="day-tabs-row">'+DAY_GROUPS.map(function(d){return '<div class="day-tab'+(d===currentDay?' active':'')+'" onclick="setAttDay(\''+who+'\',\''+d+'\')">'+d+'</div>';}).join('')+'</div><div class="class-tabs-row">'+CLASSES.map(function(c){return '<div class="class-tab'+(c===currentClass?' active':'')+'" onclick="setAttClass(\''+who+'\',\''+c+'\')">'+c+'</div>';}).join('')+'</div><div id="att-list-'+who+'">'+renderAttList(who,clsKey,stuList)+'</div>';
 }
 function renderAttList(who,clsKey,stuList){
@@ -7591,7 +7601,7 @@ function renderClassMgmt(who, el) {
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
   cdKeys.forEach(function(k) {
     var cls = k.split('-')[0], day = k.split('-').slice(1).join('-');
-    var stuNames = classStudents[k]||[];
+    var stuNames = getWhoStudents(who, k);
     var filled = 0;
     if(curriculum[who]&&curriculum[who][cls]){
       QUARTERS.forEach(function(q){
@@ -8079,7 +8089,7 @@ function renderClassBlocks(who){
     CLASSES.forEach(function(cls){
       var k = cls+'-'+day;
       var sk = k.replace(/\//g,'_');
-      var stuList = classStudents[k]||[];
+      var stuList = getWhoStudents(who, k);
       var isSelCls = noticeRecipients.has(k);
       var allStu = stuList.length>0 && stuList.every(function(n){return noticeRecipients.has(n);});
       var isEmpty = stuList.length===0;
@@ -8135,13 +8145,13 @@ function renderClassBlocks(who){
 function toggleExpand(k,who){if(expandedClasses.has(k))expandedClasses.delete(k);else expandedClasses.add(k);document.getElementById('recip-class-blocks-'+who).innerHTML=renderClassBlocks(who);updateRecipPreview(who);syncAllChip();}
 function toggleRecip(key,who){
   if(key==='전체'){if(noticeRecipients.has('전체'))noticeRecipients.clear();else{noticeRecipients.clear();noticeRecipients.add('전체');}}
-  else{noticeRecipients.delete('전체');var stuList=classStudents[key]||[];if(noticeRecipients.has(key)){noticeRecipients.delete(key);stuList.forEach(function(n){noticeRecipients.delete(n);});}else{noticeRecipients.add(key);stuList.forEach(function(n){noticeRecipients.add(n);});}}
+  else{noticeRecipients.delete('전체');var stuList=getWhoStudents(who,key);if(noticeRecipients.has(key)){noticeRecipients.delete(key);stuList.forEach(function(n){noticeRecipients.delete(n);});}else{noticeRecipients.add(key);stuList.forEach(function(n){noticeRecipients.add(n);});}}
   document.getElementById('recip-class-blocks-'+who).innerHTML=renderClassBlocks(who);syncAllChip();updateRecipPreview(who);
 }
 function toggleStudentRecip(name,who){
   noticeRecipients.delete('전체');
-  if(noticeRecipients.has(name)){noticeRecipients.delete(name);Object.keys(classStudents).forEach(function(k){if(classStudents[k].indexOf(name)>-1)noticeRecipients.delete(k);});}
-  else{noticeRecipients.add(name);Object.keys(classStudents).forEach(function(k){if(classStudents[k].indexOf(name)>-1&&classStudents[k].every(function(n){return noticeRecipients.has(n);}))noticeRecipients.add(k);});}
+  if(noticeRecipients.has(name)){noticeRecipients.delete(name);Object.keys(classStudents).forEach(function(k){if(getWhoStudents(who,k).indexOf(name)>-1)noticeRecipients.delete(k);});}
+  else{noticeRecipients.add(name);Object.keys(classStudents).forEach(function(k){if(getWhoStudents(who,k).indexOf(name)>-1&&getWhoStudents(who,k).every(function(n){return noticeRecipients.has(n);}))noticeRecipients.add(k);});}
   document.getElementById('recip-class-blocks-'+who).innerHTML=renderClassBlocks(who);syncAllChip();updateRecipPreview(who);
 }
 function syncAllChip(){var el=document.getElementById('recip-전체');if(el)el.classList.toggle('selected',noticeRecipients.has('전체'));}
