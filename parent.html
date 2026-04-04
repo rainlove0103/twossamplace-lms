@@ -25,7 +25,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 #landing{align-items:center;justify-content:center;background:linear-gradient(160deg,#f3f0ff 0%,#fff8ee 50%,#f0fff8 100%);height:100vh;max-height:100vh;padding:20px 20px 120px;overflow:hidden;}
 .landing-inner{text-align:center;max-width:480px;width:100%;}
 .logo-emoji{font-size:4rem;display:block;animation:bounce 2.2s ease-in-out infinite;margin-bottom:16px;}
-.brand-name{font-family:'Gaegu',cursive;font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;color:var(--brown);line-height:1;margin-bottom:20px;}
+.brand-name{font-family:'Gaegu',cursive;font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;color:var(--brown);line-height:1;margin-bottom:100px;}
 .brand-sub{font-family:'Gaegu',cursive;font-size:1.1rem;color:var(--text-soft);margin-bottom:20px;}
 .login-card{background:white;border-radius:32px;padding:28px 32px;box-shadow:0 8px 48px rgba(124,111,205,.15);border:2px solid var(--parent-lt);}
 .login-face{font-size:2.4rem;text-align:center;display:block;margin-bottom:16px;}
@@ -44,8 +44,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .p-header{background:white;border-bottom:2px solid #ebe7ff;padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(124,111,205,.1);}
 .p-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.3rem;font-weight:700;color:var(--brown);}
 .p-header-brand span{font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3;}
-.p-avatar-chip{display:flex;align-items:center;gap:6px;background:var(--parent-bg);border:2px solid var(--parent-lt);border-radius:100px;padding:3px 10px 3px 4px;}
-.p-avatar-circle{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--parent-lt),var(--parent));display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:900;color:white;}
+.p-avatar-chip{display:flex;align-items:center;background:var(--parent-bg);border:2px solid var(--parent-lt);border-radius:100px;padding:5px 14px;}
+.p-avatar-circle{display:none;}
 .p-avatar-name{font-size:.75rem;font-weight:700;color:var(--brown);}
 .btn-out{background:#ffeee8;border:2px solid #ffcbb8;color:#c45a30;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
 .btn-out:hover{background:#c45a30;color:white;}
@@ -375,6 +375,44 @@ var reportDate = new Date(); // 데일리 탭용 선택 날짜
   });
   db = firebase.firestore();
   storage = firebase.storage();
+
+  // hwAssigned 실시간 동기화
+  db.collection('hwAssigned').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var name = change.doc.id;
+      if(change.type === 'removed') {
+        delete hwAssigned[name];
+      } else {
+        try {
+          var hw = JSON.parse(change.doc.data().hw||'[]');
+          hw.forEach(function(h){ if(h.deadline) h.deadline = new Date(h.deadline); });
+          hwAssigned[name] = hw;
+        } catch(e) {}
+      }
+      // 현재 로그인한 학부모의 자녀 데이터가 변경됐으면 스탯 갱신
+      if(currentParent && currentParent.name === name) {
+        var el = document.getElementById('p-stat-overdue');
+        if(el) renderAttStats();
+      }
+    });
+  });
+
+  // 공지사항 실시간 동기화
+  db.collection('notices').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var who = change.doc.id; // 'cookie' or 'butter'
+      if(change.type === 'removed') {
+        notices[who] = [];
+      } else {
+        try { notices[who] = JSON.parse(change.doc.data().notices||'[]'); } catch(e) {}
+      }
+      // 현재 로그인한 학부모의 선생님 공지면 즉시 갱신
+      if(currentParent && currentParent.who === who) {
+        renderParentNotices();
+      }
+    });
+  });
+
   loadAllData();
 })();
 
@@ -576,6 +614,9 @@ function renderDashboard() {
 
 /* ====== 스탯 ====== */
 function renderAttStats() {
+  if(!currentParent) return;
+  var el = document.getElementById('p-stat-overdue');
+  if(!el) return;
   var name = currentParent.name;
   var who  = currentParent.who;
   var now  = new Date();
@@ -607,7 +648,7 @@ function countDailyReports(name, y, m) {
   for(var d=1;d<=daysInMonth;d++){
     var dk = fmtDate(y,m,d);
     var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-    if(r&&(r.lesson||r.review||r.homework||r.feedback)) cnt++;
+    if(r && r.released && (r.lesson||r.review||r.homework||r.feedback)) cnt++;
   }
   return cnt;
 }
@@ -837,6 +878,7 @@ function openReportDatePicker() {
       var who = currentParent ? currentParent.who : '';
       var name = currentParent ? currentParent.name : '';
       var hasReport = !!(dailyReports[who]&&dailyReports[who][dk2]&&dailyReports[who][dk2][name]&&
+        dailyReports[who][dk2][name].released &&
         (dailyReports[who][dk2][name].lesson||dailyReports[who][dk2][name].review||
          dailyReports[who][dk2][name].homework||dailyReports[who][dk2][name].feedback));
       var hasFile = (parentReports[name]||[]).some(function(p){ return (p.type==='daily'||p.type==='daily-text')&&p.date===dk2; });
@@ -932,9 +974,9 @@ function renderDailyReports() {
   var lbl  = (dt.getMonth()+1)+'월 '+dt.getDate()+'일 ('+DOW_KO[dt.getDay()]+')';
   var el   = document.getElementById('p-report-list');
 
-  // 텍스트 리포트 (reports 컬렉션 — 선생님이 LMS에서 작성)
+  // 텍스트 리포트 (reports 컬렉션 — released: true인 것만 표시)
   var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-  var hasText = r&&(r.lesson||r.review||r.homework||r.feedback);
+  var hasText = r && r.released && (r.lesson||r.review||r.homework||r.feedback);
 
   // 학부모 공유 리포트 (parentReports 컬렉션)
   var sharedText = (parentReports[name]||[]).find(function(p){

@@ -71,7 +71,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .s-header{background:white;border-bottom:2px solid #e8f5ef;padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(98,210,162,.1);}
 .s-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.4rem;color:var(--brown);}
 .s-header-user{display:flex;align-items:center;gap:10px;}
-.s-avatar-chip{display:flex;align-items:center;gap:0;background:var(--cookie-bg);border:2px solid #ffd0a0;border-radius:100px;padding:3px 12px;}
+.s-avatar-chip{display:flex;align-items:center;gap:0;background:var(--cookie-bg);border:2px solid #ffd0a0;border-radius:100px;padding:5px 14px;}
 .s-avatar-circle{display:none;}
 .s-avatar-name{font-size:.75rem;font-weight:700;color:var(--brown);}
 .btn-back{display:none;align-items:center;gap:5px;background:#f0ebff;border:2px solid #c4b5fd;color:#7c4fd4;border-radius:100px;padding:5px 13px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-right:6px;}
@@ -979,7 +979,6 @@ function renderGuideModal() {
 /* 선생님 편집 기능 */
 function renderGuideEditor(who, el) {
   var html = '<div class="t-section-title">📖 사용 설명서 편집</div>';
-  html += '<div style="font-size:.78rem;color:var(--text-soft);margin-bottom:14px">학생 페이지 상단 ? 버튼을 눌렀을 때 보이는 내용을 편집해요.</div>';
 
   guideItems.forEach(function(item, i){
     html += '<div class="register-form-box" style="margin-bottom:10px">' +
@@ -2456,8 +2455,12 @@ function renderTuitionMgmt(who, el) {
         html += '<button onclick="openTuitionModal(\''+who+'\',\''+s.name+'\',\''+ym+'\','+fee+')" ' +
           'style="background:#e8f5e9;border:1.5px solid #a5d6a7;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#2e7d32;cursor:pointer;font-family:inherit;flex-shrink:0">납부 처리</button>';
       } else {
-        html += '<button onclick="cancelTuition(\''+who+'\',\''+s.name+'\',\''+ym+'\')" ' +
-          'style="background:#fce4ec;border:1.5px solid #f48fb1;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">취소</button>';
+        html += '<div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0">' +
+          '<button onclick="openTuitionModal(\''+who+'\',\''+s.name+'\',\''+ym+'\','+fee+')" ' +
+            'style="background:#fff8e1;border:1.5px solid #ffd54f;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#e65100;cursor:pointer;font-family:inherit">✏️ 수정</button>' +
+          '<button onclick="cancelTuition(\''+who+'\',\''+s.name+'\',\''+ym+'\')" ' +
+            'style="background:#fce4ec;border:1.5px solid #f48fb1;border-radius:8px;padding:5px 12px;font-size:.72rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit">취소</button>' +
+        '</div>';
       }
       html += '</div>';
     });
@@ -2476,24 +2479,29 @@ function moveTuitionMonth(dir, who, el) {
 }
 
 function openTuitionModal(who, name, ym, fee) {
+  var existing = (tuitionData[who]&&tuitionData[who][ym]&&tuitionData[who][ym][name])||{};
+  var isEdit = !!existing.paid;
+  selectedPayMethod = existing.method||'';
+
   var overlay = document.createElement('div');
   overlay.id = 'tuition-modal-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
     '<div style="background:white;border-radius:20px;padding:28px 28px 24px;width:320px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2)">' +
-      '<div style="font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:4px;">납부 처리</div>' +
+      '<div style="font-size:1rem;font-weight:700;color:var(--brown);margin-bottom:4px;">'+(isEdit?'납부 정보 수정':'납부 처리')+'</div>' +
       '<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:16px">'+name+' · '+fee.toLocaleString()+'원</div>' +
       '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:8px">결제 수단</div>' +
       '<div style="display:flex;gap:8px;margin-bottom:16px">' +
         ['계좌이체','카드결제','제로페이'].map(function(m2){
-          return '<button onclick="selectPayMethod(this,\''+m2+'\')" class="pay-method-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.72rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">'+m2+'</button>';
+          var isSel = m2===selectedPayMethod;
+          return '<button onclick="selectPayMethod(this,\''+m2+'\')" class="pay-method-btn" style="flex:1;padding:8px 4px;border-radius:8px;border:1.5px solid '+(isSel?'var(--cookie)':'#e0d0c0')+';background:'+(isSel?'var(--cookie-bg)':'#fafafa')+';font-size:.72rem;font-weight:700;color:'+(isSel?'var(--brown)':'#aaa')+';cursor:pointer;font-family:inherit">'+m2+'</button>';
         }).join('') +
       '</div>' +
       '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:8px">납부일</div>' +
-      '<input type="date" id="tuition-paid-date" value="'+new Date().toISOString().slice(0,10)+'" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid #e0d0c0;font-size:.82rem;font-family:inherit;margin-bottom:20px;box-sizing:border-box">' +
+      '<input type="date" id="tuition-paid-date" value="'+(existing.paidAt||new Date().toISOString().slice(0,10))+'" style="width:100%;padding:8px 12px;border-radius:8px;border:1.5px solid #e0d0c0;font-size:.82rem;font-family:inherit;margin-bottom:20px;box-sizing:border-box">' +
       '<div style="display:flex;gap:8px">' +
         '<button onclick="closeTuitionModal()" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.8rem;font-weight:700;color:#aaa;cursor:pointer;font-family:inherit">취소</button>' +
-        '<button onclick="confirmTuition(\''+who+'\',\''+name+'\',\''+ym+'\','+fee+')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--cookie);font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">납부 완료</button>' +
+        '<button onclick="confirmTuition(\''+who+'\',\''+name+'\',\''+ym+'\','+fee+')" style="flex:1;padding:10px;border-radius:10px;border:none;background:var(--cookie);font-size:.8rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">'+(isEdit?'수정 완료':'납부 완료')+'</button>' +
       '</div>' +
     '</div>';
   document.body.appendChild(overlay);
@@ -4175,6 +4183,8 @@ var mrMonth = new Date().getMonth(); // 0-indexed
 
 // dailyReports[who][dateKey][studentName] = {lesson, review, homework, feedback, leddi, reviewScore, leddiDone, savedAt}
 var dailyReports = {};
+var reportSendLog = {};
+window.reportSendLog = reportSendLog;
 window.dailyReports = dailyReports;
 // 현재 선택 상태
 var reportDate = new Date();
@@ -4222,13 +4232,30 @@ function renderDailyReport(who) {
     '<button onclick="moveReportDate(1,\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;width:32px;height:32px;font-size:.9rem;cursor:pointer;color:var(--cookie)">▶</button>' +
     '</div>';
 
-  // 카카오 알림톡 배너 - 날짜 바로 아래
+  // 학부모 리포트 전송 배너 - 날짜 바로 아래
+  var writtenStudents = [];
+  Object.keys(window.classStudents||{}).forEach(function(k){
+    (window.classStudents[k]||[]).forEach(function(n){
+      var roster = window.memberRoster[who]||[];
+      if(!roster.some(function(s){return s.name===n&&s.status==='active';})) return;
+      var r = getDailyReport(who, dk, n);
+      if(r.lesson||r.review||r.homework||r.leddi||r.feedback) writtenStudents.push(n);
+    });
+  });
+  var releasedStudents = writtenStudents.filter(function(n){
+    var r = window.dailyReports[who]&&window.dailyReports[who][dk]&&window.dailyReports[who][dk][n];
+    return r && r.released;
+  });
+  var allReleased = writtenStudents.length>0 && releasedStudents.length===writtenStudents.length;
   html += '<div style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:10px;padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:10px">' +
     '<div style="flex:1">' +
-      '<div style="font-size:.78rem;font-weight:700;color:#a07040;margin-bottom:1px;">📨 카카오 알림톡 일괄 발송</div>' +
-      '<div style="font-size:.68rem;color:var(--text-soft)">카카오 알림톡 연동 후 데일리 리포트를 학부모에게 일괄 발송할 수 있어요.</div>' +
+      '<div style="font-size:.78rem;font-weight:700;color:#a07040;margin-bottom:2px;">📤 학부모에게 리포트 일괄 전송</div>' +
+      '<div style="font-size:.68rem;color:var(--text-soft)">전송 버튼을 누르면 학부모 페이지에 리포트가 공개돼요. · 작성됨 <b>'+writtenStudents.length+'명</b>' + (releasedStudents.length>0?' · 전송됨 <b>'+releasedStudents.length+'명</b>':'') + '</div>' +
     '</div>' +
-    '<button style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:700;color:#bbb;cursor:default;font-family:inherit;flex-shrink:0">준비 중</button>' +
+    '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<button onclick="showReportSendLog(\''+who+'\',\'daily\')" style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit">📋 발송 이력</button>' +
+      '<button onclick="releaseDailyReports(\''+who+'\',\''+dk+'\')" style="background:'+(allReleased?'#e8f5e9':'var(--cookie)')+';border:none;border-radius:8px;padding:5px 12px;font-size:.68rem;font-weight:700;color:'+(allReleased?'#2e7d32':'white')+';cursor:pointer;font-family:inherit">'+(allReleased?'✅ 전송 완료':'전송')+'</button>' +
+    '</div>' +
   '</div>';
 
   if(!reportSelClass) {
@@ -4426,9 +4453,99 @@ function saveDailyReport(who, dk, name) {
   if(scoreEl) r.reviewScore = scoreEl.value.trim();
   var now = new Date();
   r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+  // released 는 건드리지 않음 (전송 버튼으로만 공개)
   if(window.fbSaveReport) window.fbSaveReport(who, dk, name);
   var btn = document.querySelector('[onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
   if(btn){btn.textContent='✅ 저장됨!';setTimeout(function(){btn.textContent='💾 저장';},1500);}
+}
+
+/* ====== 리포트 전송 (공개) 함수들 ====== */
+function releaseDailyReports(who, dk) {
+  var roster = window.memberRoster[who]||[];
+  var targets = [];
+  Object.keys(window.classStudents||{}).forEach(function(k){
+    (window.classStudents[k]||[]).forEach(function(n){
+      if(!roster.some(function(s){return s.name===n&&s.status==='active';})) return;
+      var r = getDailyReport(who, dk, n);
+      if(r.lesson||r.review||r.homework||r.leddi||r.feedback) targets.push(n);
+    });
+  });
+  if(targets.length===0){alert('전송할 리포트가 없어요. 먼저 리포트를 작성해주세요!');return;}
+  if(!confirm(dk+' 데일리 리포트를 '+targets.length+'명에게 전송할까요?')) return;
+
+  var sentAt = new Date().toISOString();
+  targets.forEach(function(n){
+    var r = getDailyReport(who, dk, n);
+    r.released = true;
+    r.releasedAt = sentAt;
+    if(window.fbSaveReport) window.fbSaveReport(who, dk, n);
+  });
+
+  // 발송 이력 저장
+  if(!window.reportSendLog) window.reportSendLog={};
+  if(!window.reportSendLog[who]) window.reportSendLog[who]=[];
+  window.reportSendLog[who].unshift({type:'daily', dk:dk, students:targets, sentAt:sentAt});
+  if(window.fbSaveReportSendLog) window.fbSaveReportSendLog(who);
+
+  renderReportPanel(who, document.getElementById(who+'-main-content'));
+}
+
+function releaseMonthlyReports(who, ym) {
+  var active = (window.memberRoster[who]||[]).filter(function(s){return s.status==='active';});
+  if(active.length===0){alert('재원생이 없어요.');return;}
+  if(!confirm(ym+' 먼슬리 리포트를 '+active.length+'명에게 전송할까요?')) return;
+
+  var sentAt = new Date().toISOString();
+  var mkKey = ym+'_monthly';
+  if(!window.dailyReports[who]) window.dailyReports[who]={};
+  if(!window.dailyReports[who][mkKey]) window.dailyReports[who][mkKey]={};
+  active.forEach(function(s){
+    if(!window.dailyReports[who][mkKey][s.name]) window.dailyReports[who][mkKey][s.name]={};
+    window.dailyReports[who][mkKey][s.name].released = true;
+    window.dailyReports[who][mkKey][s.name].releasedAt = sentAt;
+    if(window.fbSaveReport) window.fbSaveReport(who, mkKey, s.name);
+  });
+
+  if(!window.reportSendLog) window.reportSendLog={};
+  if(!window.reportSendLog[who]) window.reportSendLog[who]=[];
+  window.reportSendLog[who].unshift({type:'monthly', ym:ym, students:active.map(function(s){return s.name;}), sentAt:sentAt});
+  if(window.fbSaveReportSendLog) window.fbSaveReportSendLog(who);
+
+  renderReportPanel(who, document.getElementById(who+'-main-content'));
+}
+
+function showReportSendLog(who, filterType) {
+  var existing = document.getElementById('send-log-overlay');
+  if(existing) existing.remove();
+
+  var logs = ((window.reportSendLog||{})[who]||[]).filter(function(l){return l.type===filterType;});
+  var overlay = document.createElement('div');
+  overlay.id = 'send-log-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  overlay.onclick = function(e){if(e.target===overlay)overlay.remove();};
+
+  var listHtml = logs.length===0
+    ? '<div style="text-align:center;padding:24px;font-size:.82rem;color:#aaa">발송 이력이 없어요.</div>'
+    : logs.map(function(l){
+        var dt = new Date(l.sentAt);
+        var dtStr = dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일 '+dt.getHours()+':'+String(dt.getMinutes()).padStart(2,'0');
+        var label = l.type==='daily' ? '📋 데일리 '+l.dk : '📅 먼슬리 '+l.ym;
+        return '<div style="padding:12px 14px;border-bottom:1px solid #f0e8dc">' +
+          '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:3px">'+label+'</div>' +
+          '<div style="font-size:.7rem;color:var(--text-soft);margin-bottom:4px">'+dtStr+' 전송</div>' +
+          '<div style="font-size:.7rem;color:#6a1b9a">👥 '+l.students.join(', ')+'</div>' +
+        '</div>';
+      }).join('');
+
+  overlay.innerHTML =
+    '<div style="background:white;border-radius:20px;width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;overflow:hidden;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2)">' +
+      '<div style="padding:16px 20px;border-bottom:1px solid #f0e8dc;display:flex;align-items:center;justify-content:space-between">' +
+        '<div style="font-size:1rem;font-weight:700;color:var(--brown)">📋 '+(filterType==='daily'?'데일리':'먼슬리')+' 발송 이력</div>' +
+        '<button onclick="document.getElementById(\'send-log-overlay\').remove()" style="background:none;border:none;font-size:1.2rem;cursor:pointer;color:#aaa">✕</button>' +
+      '</div>' +
+      '<div style="overflow-y:auto;flex:1">'+listHtml+'</div>' +
+    '</div>';
+  document.body.appendChild(overlay);
 }
 
 function moveReportDate(dir, who) {
@@ -4541,13 +4658,22 @@ function renderMonthlyReport(who) {
     '<button onclick="moveMrMonth(1,\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;width:32px;height:32px;font-size:.9rem;cursor:pointer;color:var(--cookie)">▶</button>' +
   '</div>';
 
-  // 카카오 알림톡 배너 - 클래스 박스 위
+  // 학부모 리포트 전송 배너 - 클래스 박스 위
+  var ymStr = y+'-'+String(m+1).padStart(2,'0');
+  var mReleasedCount = active.filter(function(s){
+    var r = window.dailyReports[who]&&window.dailyReports[who][ymStr+'_monthly']&&window.dailyReports[who][ymStr+'_monthly'][s.name];
+    return r && r.released;
+  }).length;
+  var allMonthlyReleased = active.length>0 && mReleasedCount===active.length;
   html += '<div style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:10px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;gap:10px">' +
     '<div style="flex:1">' +
-      '<div style="font-size:.78rem;font-weight:700;color:#a07040;margin-bottom:1px;">📨 카카오 알림톡 일괄 발송</div>' +
-      '<div style="font-size:.68rem;color:var(--text-soft)">카카오 알림톡 연동 후 먼슬리 리포트 PDF 다운로드 링크를 학부모에게 일괄 발송할 수 있어요.</div>' +
+      '<div style="font-size:.78rem;font-weight:700;color:#a07040;margin-bottom:2px;">📤 학부모에게 리포트 일괄 전송</div>' +
+      '<div style="font-size:.68rem;color:var(--text-soft)">전송 버튼을 누르면 학부모 페이지에 먼슬리 리포트가 공개돼요.' + (mReleasedCount>0?' · 전송됨 <b>'+mReleasedCount+'명</b>':'') + '</div>' +
     '</div>' +
-    '<button style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:700;color:#bbb;cursor:default;font-family:inherit;flex-shrink:0">준비 중</button>' +
+    '<div style="display:flex;gap:6px;flex-shrink:0">' +
+      '<button onclick="showReportSendLog(\''+who+'\',\'monthly\')" style="background:#f5ede0;border:1px solid #e0d0c0;border-radius:8px;padding:5px 10px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit">📋 발송 이력</button>' +
+      '<button onclick="releaseMonthlyReports(\''+who+'\',\''+ymStr+'\')" style="background:'+(allMonthlyReleased?'#e8f5e9':'var(--cookie)')+';border:none;border-radius:8px;padding:5px 12px;font-size:.68rem;font-weight:700;color:'+(allMonthlyReleased?'#2e7d32':'white')+';cursor:pointer;font-family:inherit">'+(allMonthlyReleased?'✅ 전송 완료':'전송')+'</button>' +
+    '</div>' +
   '</div>';
 
   html += '<div class="class-mgmt-card" style="margin-bottom:14px;background:linear-gradient(135deg,#fffbf5,#fff8ee)">' +
@@ -8230,6 +8356,11 @@ window.fbSaveReport = async function(who, dateKey, name) {
   await fbSet('reports/' + who + '_' + dateKey + '_' + name, safe);
 };
 
+window.fbSaveReportSendLog = async function(who) {
+  var logs = (window.reportSendLog||{})[who]||[];
+  await fbSet('reportSendLog/' + who, { logs: JSON.stringify(logs) });
+};
+
 window.fbSaveNotices = async function(who) {
   var list = window.notices.filter(function(n){ return n.who === who; });
   await fbSet('notices/' + who, { notices: JSON.stringify(list) });
@@ -8626,6 +8757,16 @@ async function loadAllData() {
     if(!d.id||!d.tbId) return;
     textbookLogs.push(d);
   });
+
+  // 발송 이력 불러오기
+  try {
+    ['cookie','butter'].forEach(async function(who){
+      var logDoc = await window.fbGet('reportSendLog/'+who);
+      if(logDoc && logDoc.logs) {
+        try { window.reportSendLog[who] = JSON.parse(logDoc.logs); } catch(e){}
+      }
+    });
+  } catch(e){}
 
   showFbStatus('✅ Firebase 연결됨', true);
   console.log('✅ Firebase 데이터 로드 완료');
