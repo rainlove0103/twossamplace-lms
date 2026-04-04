@@ -32,16 +32,16 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .l-card:hover{transform:translateY(-6px);}
 .l-card-teacher{background:linear-gradient(145deg,#fff8ee,#fff0d6);border-color:var(--cookie-lt);box-shadow:0 8px 32px rgba(196,122,58,.18);}
 .l-card-teacher:hover{box-shadow:0 18px 48px rgba(196,122,58,.28);}
-.l-card-student{background:linear-gradient(145deg,#f3effe,#e8dcfd);border-color:#c9b3f7;box-shadow:0 8px 32px rgba(160,120,240,.18);}
-.l-card-student:hover{box-shadow:0 18px 48px rgba(160,120,240,.28);}
+.l-card-student{background:linear-gradient(145deg,#f0fff9,#d6f7ec);border-color:#c8f0e0;box-shadow:0 8px 32px rgba(98,210,162,.18);}
+.l-card-student:hover{box-shadow:0 18px 48px rgba(98,210,162,.28);}
 .l-card-lbl{font-size:.65rem;font-weight:700;letter-spacing:.15em;text-transform:uppercase;margin-bottom:14px;}
-.l-card-teacher .l-card-lbl{color:var(--cookie);} .l-card-student .l-card-lbl{color:#7c4fd4;}
+.l-card-teacher .l-card-lbl{color:var(--cookie);} .l-card-student .l-card-lbl{color:#1a7a50;}
 .l-card-title{font-family:'Noto Sans KR',sans-serif;font-size:1.5rem;font-weight:700;color:var(--brown);margin-bottom:6px;}
 .l-card-desc{font-size:.78rem;color:var(--text-soft);line-height:1.5;margin-bottom:18px;}
 .l-card-btn{display:inline-block;padding:10px 28px;border-radius:100px;font-family:'Noto Sans KR',sans-serif;font-size:1.05rem;font-weight:700;transition:transform .15s;}
 .l-card:hover .l-card-btn{transform:scale(1.05);}
 .l-card-teacher .l-card-btn{background:linear-gradient(135deg,var(--cookie-lt),var(--cookie));color:white;box-shadow:0 4px 14px rgba(196,122,58,.35);}
-.l-card-student .l-card-btn{background:linear-gradient(135deg,#b48ef5,#9b6ee8);color:white;box-shadow:0 4px 14px rgba(155,110,232,.35);}
+.l-card-student .l-card-btn{background:linear-gradient(135deg,#80ddb8,var(--mint));color:#0e3d28;box-shadow:0 4px 14px rgba(98,210,162,.35);}
 /* LOGIN */
 .login-page-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:60px 20px 40px;}
 #student-login{background:linear-gradient(160deg,#e8f8f2 0%,#fffbf0 60%,#fff3ff 100%);}
@@ -7833,8 +7833,18 @@ function permanentDelete(who, id) {
 }
 
 function changeStatus(who,id,newStatus){
-  var s=(memberRoster[who]||[]).find(function(s){return s.id===id;}); if(s) s.status=newStatus;
+  var s=(memberRoster[who]||[]).find(function(s){return s.id===id;}); if(!s) return;
+  var clsKey = s.class+'-'+s.day;
+  s.status=newStatus;
+  // 재원이 아니면 classStudents에서 제거, 재원이면 추가
+  if(!classStudents[clsKey]) classStudents[clsKey]=[];
+  if(newStatus==='active') {
+    if(classStudents[clsKey].indexOf(s.name)<0) classStudents[clsKey].push(s.name);
+  } else {
+    classStudents[clsKey] = classStudents[clsKey].filter(function(n){return n!==s.name;});
+  }
   if(window.fbSaveMemberRoster) window.fbSaveMemberRoster(who);
+  if(window.fbSaveClassStudents) window.fbSaveClassStudents(clsKey);
   var el=document.getElementById(who+'-main-content'); renderStudentMgmt(who,el);
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
 }
@@ -7912,6 +7922,7 @@ function submitRegister(who){
   closeRegisterForm(who); mgmtTab='active'; renderStudentMgmt(who,document.getElementById(who+'-main-content'));
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
   if(window.fbSaveMemberRoster) window.fbSaveMemberRoster(who);
+  if(window.fbSaveClassStudents) window.fbSaveClassStudents(key);
   if(window.populateStudentSelect) window.populateStudentSelect();
 }
 function openEditForm(who,id){
@@ -7941,6 +7952,7 @@ function saveEdit(who,id){
     students[s.name].teacher = who;
   }
   if(window.fbSaveMemberRoster) window.fbSaveMemberRoster(who);
+  if(window.fbSaveClassStudents) { window.fbSaveClassStudents(oldKey); window.fbSaveClassStudents(newKey); }
   if(window.populateStudentSelect) window.populateStudentSelect();
   renderStudentMgmt(who,document.getElementById(who+'-main-content'));
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
@@ -8348,6 +8360,11 @@ window.fbSaveAttendance = async function(who, clsKey, name, dateKey, statusOrObj
 window.fbSaveMemberRoster = async function(who) {
   var roster = window.memberRoster[who] || [];
   await fbSet('memberRoster/' + who, { roster: JSON.stringify(roster) });
+};
+
+window.fbSaveClassStudents = async function(clsKey) {
+  var students = window.classStudents[clsKey] || [];
+  await fbSet('classStudents/' + clsKey.replace(/\//g,'_'), { students: JSON.stringify(students), clsKey: clsKey });
 };
 
 window.fbSaveHwAssigned = async function(name) {

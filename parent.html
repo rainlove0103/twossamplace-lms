@@ -397,6 +397,49 @@ var reportDate = new Date(); // 데일리 탭용 선택 날짜
     });
   });
 
+  // memberRoster 실시간 동기화 (신규 학생 등록 즉시 반영)
+  db.collection('memberRoster').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var who = change.doc.id;
+      if(change.type === 'removed') {
+        memberRoster[who] = [];
+      } else {
+        try { memberRoster[who] = JSON.parse(change.doc.data().roster||'[]'); } catch(e) {}
+      }
+      // classStudents 재구성
+      (memberRoster[who]||[]).forEach(function(s) {
+        if(s.status === 'active') {
+          var k = s.class+'-'+s.day;
+          if(!classStudents[k]) classStudents[k] = [];
+          if(classStudents[k].indexOf(s.name) < 0) classStudents[k].push(s.name);
+        }
+      });
+      // 현재 로그인한 학부모가 이 who 소속이면 대시보드 갱신
+      if(currentParent && currentParent.who === who) {
+        // clsKey 재계산
+        var found = (memberRoster[who]||[]).find(function(s){ return s.name === currentParent.name; });
+        if(found) {
+          currentParent.clsKey = found.class+'-'+found.day;
+          localStorage.setItem('parentLogin', JSON.stringify(currentParent));
+        }
+        renderDashboard();
+      }
+    });
+  });
+
+  // classStudents 실시간 동기화
+  db.collection('classStudents').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var d = change.doc.data();
+      if(!d.clsKey) return;
+      if(change.type === 'removed') {
+        classStudents[d.clsKey] = [];
+      } else {
+        try { classStudents[d.clsKey] = JSON.parse(d.students||'[]'); } catch(e) {}
+      }
+    });
+  });
+
   // 공지사항 실시간 동기화
   db.collection('notices').onSnapshot(function(snapshot) {
     snapshot.docChanges().forEach(function(change) {
