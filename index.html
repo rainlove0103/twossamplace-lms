@@ -6897,24 +6897,26 @@ function renderMonthlyAtt(who,el){
       detail += '<button onclick="toggleAttAddPanel(\''+who+'\',\''+tAttCalSel+'\')" id="att-add-toggle-btn" style="margin-top:10px;width:100%;padding:8px;border-radius:10px;border:1.5px dashed #f0d8b0;background:#fffbf5;font-size:.78rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit">+ 출결 추가 (미기록 '+unrecorded.length+'명)</button>';
       detail += '<div id="att-add-panel" style="display:none;margin-top:8px;background:#fffbf5;border:1px solid #f0e8dc;border-radius:12px;padding:10px">';
       detail += '<div style="font-size:.72rem;color:var(--text-soft);margin-bottom:8px">추가할 학생을 선택하고 출결 상태를 지정해요</div>';
+      var allOpts = [
+        {label:'등원', bg:'#e8f5e9', color:'#2e7d32'},
+        {label:'하원', bg:'#e3f2fd', color:'#1565c0'},
+        {label:'지각', bg:'#fff8e1', color:'#e65100'},
+        {label:'결석', bg:'#fce4ec', color:'#c2185b'},
+        {label:'보강', bg:'#f3e5f5', color:'#6a1b9a'},
+        {label:'등원+하원', bg:'#e3f2fd', color:'#1565c0'},
+        {label:'지각+하원', bg:'#fff8e1', color:'#e65100'},
+        {label:'보강+하원', bg:'#f3e5f5', color:'#6a1b9a'}
+      ];
       unrecorded.forEach(function(name){
         var clsKey=null;
         CLASSES.forEach(function(cls){DAY_GROUPS.forEach(function(day){var k=cls+'-'+day;if((classStudents[k]||[]).indexOf(name)>-1)clsKey=k;});});
-        detail += '<div style="display:flex;align-items:center;gap:6px;padding:7px 0;border-bottom:1px solid #f5ede0;flex-wrap:wrap">';
-        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);min-width:60px">'+name+'</div>';
-        var allOpts = [
-          {label:'등원', bg:'#e8f5e9', color:'#2e7d32'},
-          {label:'하원', bg:'#e3f2fd', color:'#1565c0'},
-          {label:'지각', bg:'#fff8e1', color:'#e65100'},
-          {label:'결석', bg:'#fce4ec', color:'#c2185b'},
-          {label:'보강', bg:'#f3e5f5', color:'#6a1b9a'},
-          {label:'등원+하원', bg:'#e3f2fd', color:'#1565c0'},
-          {label:'지각+하원', bg:'#fff8e1', color:'#e65100'},
-          {label:'보강+하원', bg:'#f3e5f5', color:'#6a1b9a'}
-        ];
+        detail += '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:7px 0;border-bottom:1px solid #f5ede0">';
+        detail += '<div style="font-size:.82rem;font-weight:700;color:var(--brown);flex-shrink:0">'+name+'</div>';
+        detail += '<div style="display:flex;flex-wrap:wrap;gap:4px;justify-content:flex-end">';
         detail += allOpts.map(function(o){
           return '<button onclick="addNewAtt(\''+who+'\',\''+(clsKey||'')+'\',\''+name+'\',\''+tAttCalSel+'\',\''+o.label+'\')" style="background:'+o.bg+';border:none;border-radius:6px;padding:3px 7px;font-size:.65rem;font-weight:700;color:'+o.color+';cursor:pointer;font-family:inherit;white-space:nowrap">'+o.label+'</button>';
         }).join('');
+        detail += '</div>';
         detail += '</div>';
       });
       detail += '</div>';
