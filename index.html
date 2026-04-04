@@ -64,7 +64,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .btn-submit:hover{opacity:.9;transform:translateY(-1px);}
 .btn-cookie-submit{background:linear-gradient(135deg,var(--cookie-lt),var(--cookie));color:white;box-shadow:0 4px 16px rgba(196,122,58,.35);}
 .btn-student-submit{background:linear-gradient(135deg,#80ddb8,var(--mint));color:#0e3d28;box-shadow:0 4px 16px rgba(98,210,162,.35);}
-.login-hint{margin-top:18px;background:var(--warm);border-radius:12px;padding:12px 14px;font-size:.74rem;color:var(--text-soft);text-align:center;line-height:1.8;}
+.login-hint{margin-top:18px;background:#f0fff9;border-radius:12px;padding:12px 14px;font-size:.74rem;color:var(--text-soft);text-align:center;line-height:1.8;}
 .login-hint b{color:var(--cookie);}
 /* STUDENT DASHBOARD */
 #student-dashboard{background:linear-gradient(180deg,#f0fdf8 0%,#fffbf0 100%);}
@@ -681,11 +681,10 @@ setTimeout(function(){
       <div class="login-title">학생 로그인</div>
       <div class="login-sub">투쌤플레이스에 오신 걸 환영해요!</div>
       <div class="form-group">
-        <label class="form-label-sm">출결번호</label>
         <input type="password" id="s-attcode" placeholder="출결번호를 입력해요 🔒" class="form-input form-input-student" onkeydown="if(event.key==='Enter')studentLogin()">
       </div>
       <button class="btn-submit btn-student-submit" onclick="studentLogin()">로그인</button>
-      <div class="login-hint">선생님께 받은 <b>출결번호</b>를 입력하세요!</div>
+      <div class="login-hint"><b style="color:#1a5a3a">출결번호</b>를 입력하면 바로 로그인돼요.<br>출결번호는 엄마 휴대폰번호 뒤 <b style="color:#1a5a3a">4자리</b>예요.</div>
     </div>
   </div>
 </div>
