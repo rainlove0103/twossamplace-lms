@@ -24,14 +24,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 /* ── LANDING ── */
 #landing{align-items:center;justify-content:center;background:linear-gradient(160deg,#f3f0ff 0%,#fff8ee 50%,#f0fff8 100%);height:100vh;max-height:100vh;padding:20px 20px 120px;overflow:hidden;}
 .landing-inner{text-align:center;max-width:480px;width:100%;}
-.logo-emoji{font-size:4rem;display:block;animation:bounce 2.2s ease-in-out infinite;margin-bottom:4px;}
-.brand-name{font-family:'Gaegu',cursive;font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;color:var(--brown);line-height:1;margin-bottom:4px;}
+.logo-emoji{font-size:4rem;display:block;animation:bounce 2.2s ease-in-out infinite;margin-bottom:16px;}
+.brand-name{font-family:'Gaegu',cursive;font-size:clamp(2.4rem,7vw,3.6rem);font-weight:700;color:var(--brown);line-height:1;margin-bottom:20px;}
 .brand-sub{font-family:'Gaegu',cursive;font-size:1.1rem;color:var(--text-soft);margin-bottom:20px;}
 .login-card{background:white;border-radius:32px;padding:28px 32px;box-shadow:0 8px 48px rgba(124,111,205,.15);border:2px solid var(--parent-lt);}
-.login-face{font-size:2.4rem;text-align:center;display:block;margin-bottom:8px;}
-.login-title{font-family:'Noto Sans KR',sans-serif;font-size:1.6rem;font-weight:700;text-align:center;color:var(--brown);margin-bottom:4px;}
-.login-sub{text-align:center;font-size:.8rem;color:var(--text-soft);margin-bottom:32px;}
-.form-group{margin-bottom:14px;}
+.login-face{font-size:2.4rem;text-align:center;display:block;margin-bottom:16px;}
+.login-title{font-family:'Noto Sans KR',sans-serif;font-size:1.6rem;font-weight:700;text-align:center;color:var(--brown);margin-bottom:16px;}
+.login-sub{text-align:center;font-size:.8rem;color:var(--text-soft);margin-bottom:16px;}
+.form-group{margin-bottom:16px;}
 .form-label-sm{display:block;font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:6px;}
 .form-select,.form-input{width:100%;border-radius:12px;padding:12px 16px;font-size:.92rem;font-family:inherit;outline:none;border:2px solid var(--parent-lt);background:#faf8ff;color:var(--brown);transition:border-color .2s;-webkit-appearance:none;appearance:none;}
 .form-select:focus,.form-input:focus{border-color:var(--parent);}
@@ -44,9 +44,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .p-header{background:white;border-bottom:2px solid #ebe7ff;padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(124,111,205,.1);}
 .p-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.3rem;font-weight:700;color:var(--brown);}
 .p-header-brand span{font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3;}
-.p-avatar-chip{display:flex;align-items:center;gap:8px;background:var(--parent-bg);border:2px solid var(--parent-lt);border-radius:100px;padding:4px 14px 4px 6px;}
-.p-avatar-circle{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--parent-lt),var(--parent));display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;color:white;}
-.p-avatar-name{font-size:.82rem;font-weight:700;color:var(--brown);}
+.p-avatar-chip{display:flex;align-items:center;gap:6px;background:var(--parent-bg);border:2px solid var(--parent-lt);border-radius:100px;padding:3px 10px 3px 4px;}
+.p-avatar-circle{width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--parent-lt),var(--parent));display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:900;color:white;}
+.p-avatar-name{font-size:.75rem;font-weight:700;color:var(--brown);}
 .btn-out{background:#ffeee8;border:2px solid #ffcbb8;color:#c45a30;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
 .btn-out:hover{background:#c45a30;color:white;}
 
@@ -107,8 +107,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .att-chip{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:100px;display:inline-block;margin:1px;}
 .chip-등원{background:#e8f5e9;color:#2e7d32;}.chip-하원{background:#e3f2fd;color:#1565c0;}
 .chip-지각{background:#fff8e1;color:#e65100;}.chip-결석{background:#fce4ec;color:#b71c1c;}
-.chip-보강{background:#f3e5f5;color:#6a1b9a;}.chip-등원\+하원,.chip-등하원{background:#e8f5e9;color:#2e7d32;}
-.chip-보강\+하원{background:#f3e5f5;color:#6a1b9a;}
+.chip-보강{background:#f3e5f5;color:#6a1b9a;}.chip-등원\+하원,.chip-등하원{background:#e3f2fd;color:#1565c0;}
+.chip-지각\+하원{background:#fff8e1;color:#e65100;}.chip-보강\+하원{background:#f3e5f5;color:#6a1b9a;}
 
 /* ── SCHEDULE ── */
 .p-sched{background:white;border-radius:14px;padding:12px 15px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 8px rgba(0,0,0,.04);border:1.5px solid #f0e8dc;}
@@ -225,16 +225,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
   <div class="landing-inner">
     <span class="logo-emoji">💌</span>
     <div class="brand-name">투쌤플레이스</div>
-    <div class="brand-sub">학부모 페이지</div>
     <div class="login-card">
       <span class="login-face">👨‍👩‍👧</span>
       <div class="login-title">학부모 로그인</div>
       <div class="login-sub">자녀의 학습 현황을 확인해보세요!</div>
       <div class="form-group">
-        <label class="form-label-sm">출결번호</label>
         <input type="password" id="p-pw" class="form-input" placeholder="출결번호를 입력하세요 🔒" onkeydown="if(event.key==='Enter')parentLogin()">
       </div>
-      <button class="btn-login" onclick="parentLogin()" style="margin-top:6px">로그인</button>
+      <button class="btn-login" onclick="parentLogin()">로그인</button>
       <div class="login-hint">자녀의 <b>출결번호</b>를 입력하면 바로 로그인돼요.<br>출결번호는 학부모님 휴대폰번호 뒤 <b>4자리</b>예요.</div>
     </div>
   </div>
@@ -408,9 +406,10 @@ async function loadAllData() {
     var s3 = await db.collection('attendance').get();
     s3.forEach(function(doc){
       var a = doc.data();
-      if(!a.clsKey||!a.name||!a.dateKey||!a.status) return;
-      if(!classAttendance[a.clsKey]) classAttendance[a.clsKey]={};
-      if(!classAttendance[a.clsKey][a.name]) classAttendance[a.clsKey][a.name]={};
+      if(!a.clsKey||!a.name||!a.dateKey||!a.status||!a.who) return;
+      if(!classAttendance[a.who]) classAttendance[a.who]={};
+      if(!classAttendance[a.who][a.clsKey]) classAttendance[a.who][a.clsKey]={};
+      if(!classAttendance[a.who][a.clsKey][a.name]) classAttendance[a.who][a.clsKey][a.name]={};
       var hasTime = a.등원Time||a.하원Time||a.지각Time||a.보강Time;
       if(hasTime){
         var obj={status:a.status};
@@ -418,9 +417,9 @@ async function loadAllData() {
         if(a.하원Time) obj.하원Time=a.하원Time;
         if(a.지각Time) obj.지각Time=a.지각Time;
         if(a.보강Time) obj.보강Time=a.보강Time;
-        classAttendance[a.clsKey][a.name][a.dateKey]=obj;
+        classAttendance[a.who][a.clsKey][a.name][a.dateKey]=obj;
       } else {
-        classAttendance[a.clsKey][a.name][a.dateKey]=a.status;
+        classAttendance[a.who][a.clsKey][a.name][a.dateKey]=a.status;
       }
     });
 
@@ -503,7 +502,7 @@ function populateStudentSelect() {
 }
 
 function autoLogin() {
-  var saved = sessionStorage.getItem('parentLogin');
+  var saved = localStorage.getItem('parentLogin');
   if(!saved) return;
   try {
     var info = JSON.parse(saved);
@@ -536,13 +535,13 @@ function parentLogin() {
   found.clsKey = clsKey;
 
   currentParent = found;
-  sessionStorage.setItem('parentLogin', JSON.stringify(found));
+  localStorage.setItem('parentLogin', JSON.stringify(found));
   renderDashboard();
   showPage('dashboard');
 }
 
 function parentLogout() {
-  sessionStorage.removeItem('parentLogin');
+  localStorage.removeItem('parentLogin');
   currentParent = null;
   showPage('landing');
 }
@@ -625,8 +624,9 @@ function renderParentCal() {
   var y = parentCalYear, m = parentCalMonth;
   document.getElementById('p-cal-label').textContent = y+'년 '+(m+1)+'월';
   var name   = currentParent.name;
+  var who    = currentParent.who;
   var clsKey = currentParent.clsKey;
-  var rec    = (classAttendance[clsKey]||{})[name]||{};
+  var rec    = (classAttendance[who]&&classAttendance[who][clsKey]&&classAttendance[who][clsKey][name])||{};
   var DOW    = ['일','월','화','수','목','금','토'];
   var today  = new Date(); var todayKey = fmtDate(today.getFullYear(),today.getMonth(),today.getDate());
   var firstDay = new Date(y,m,1).getDay();

@@ -71,9 +71,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .s-header{background:white;border-bottom:2px solid #e8f5ef;padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(98,210,162,.1);}
 .s-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.4rem;color:var(--brown);}
 .s-header-user{display:flex;align-items:center;gap:10px;}
-.s-avatar-chip{display:flex;align-items:center;gap:8px;background:var(--cookie-bg);border:2px solid #ffd0a0;border-radius:100px;padding:4px 12px 4px 6px;}
-.s-avatar-circle{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--mint),#2aaf7a);display:flex;align-items:center;justify-content:center;font-size:.8rem;font-weight:900;color:white;}
-.s-avatar-name{font-size:.82rem;font-weight:700;color:var(--brown);}
+.s-avatar-chip{display:flex;align-items:center;gap:0;background:var(--cookie-bg);border:2px solid #ffd0a0;border-radius:100px;padding:3px 12px;}
+.s-avatar-circle{display:none;}
+.s-avatar-name{font-size:.75rem;font-weight:700;color:var(--brown);}
 .btn-back{display:none;align-items:center;gap:5px;background:#f0ebff;border:2px solid #c4b5fd;color:#7c4fd4;border-radius:100px;padding:5px 13px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;margin-right:6px;}
 .btn-back:hover{background:#e0d0ff;}
 .btn-out{background:#ffeee8;border:2px solid #ffcbb8;color:#c45a30;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;}
@@ -182,9 +182,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .t-header{background:white;padding:0 28px;height:66px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(180,120,40,.1);}
 .t-header-brand{font-family:'Noto Sans KR',sans-serif;font-size:1.4rem;color:var(--brown);line-height:1.2;}
 .t-header-user{display:flex;align-items:center;gap:10px;}
-.t-chip{display:flex;align-items:center;gap:8px;border-radius:100px;padding:4px 14px 4px 6px;border:2px solid;}
+.t-chip{display:flex;align-items:center;gap:6px;border-radius:100px;padding:3px 10px 3px 6px;border:2px solid;}
 .chip-cookie{background:var(--cookie-bg);border-color:var(--cookie-lt);} .chip-butter{background:var(--butter-bg);border-color:var(--butter);}
-.t-chip-face{font-size:1.4rem;} .t-chip-name{font-size:.85rem;font-weight:700;color:var(--brown);}
+.t-chip-face{font-size:.9rem;} .t-chip-name{font-size:.75rem;font-weight:700;color:var(--brown);}
 .t-body{padding:28px 28px 48px;max-width:1060px;margin:0 auto;width:100%;}
 @media(max-width:700px){.t-body{padding:12px;}.t-header{padding:0 12px;height:56px;}}
 @media(max-width:480px){
@@ -680,14 +680,12 @@ setTimeout(function(){
       <span class="login-face">🎒</span>
       <div class="login-title">학생 로그인</div>
       <div class="login-sub">투쌤플레이스에 오신 걸 환영해요!</div>
-      <div class="form-group"><label class="form-label-sm">학생 선택</label>
-        <select id="s-name" class="form-input form-select form-select-student">
-          <option value="">내 이름을 골라요 😊</option>
-        </select>
+      <div class="form-group">
+        <label class="form-label-sm">출결번호</label>
+        <input type="password" id="s-attcode" placeholder="출결번호를 입력해요 🔒" class="form-input form-input-student" onkeydown="if(event.key==='Enter')studentLogin()">
       </div>
-      <div class="form-group"><label class="form-label-sm">비밀번호</label><input type="password" id="s-pw" placeholder="비밀번호를 입력해요 🔒" class="form-input form-input-student"></div>
       <button class="btn-submit btn-student-submit" onclick="studentLogin()">로그인</button>
-      <div class="login-hint">이름 선택 후 <b>아무 비밀번호</b>나 입력하세요!</div>
+      <div class="login-hint">선생님께 받은 <b>출결번호</b>를 입력하세요!</div>
     </div>
   </div>
 </div>
@@ -698,7 +696,7 @@ setTimeout(function(){
     <div class="s-header-user">
       <button class="btn-back" id="s-back-btn" onclick="backToTeacher()">← 선생님 페이지로</button>
       <div class="s-avatar-chip"><div class="s-avatar-circle" id="s-av-letter">조</div><span class="s-avatar-name" id="s-av-name">조진혁</span></div>
-      <button onclick="openModal('modal-guide')" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;flex-shrink:0;white-space:nowrap;font-family:inherit">투쌤 사용설명서</button>
+      <button onclick="openModal('modal-guide')" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;flex-shrink:0;white-space:nowrap;font-family:inherit">투쌤설명서</button>
       <button class="btn-out" onclick="showPage('landing')">로그아웃</button>
     </div>
   </header>
@@ -753,7 +751,7 @@ setTimeout(function(){
 <div id="cookie-dash" class="page t-dash">
   <header class="t-header">
     <div class="t-header-brand"><span style="font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3">아이들과 꿈을 만드는 공간</span>투쌤플레이스</div>
-    <div class="t-header-user"><div class="t-chip chip-cookie"><span class="t-chip-face">🍪</span><span class="t-chip-name">쿠키쌤</span></div><button onclick="renderGuideEditor('cookie',document.getElementById('cookie-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">📖 설명서 편집</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
+    <div class="t-header-user"><div class="t-chip chip-cookie"><span class="t-chip-face">🍪</span><span class="t-chip-name">쿠키쌤</span></div><button onclick="renderGuideEditor('cookie',document.getElementById('cookie-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">설명서</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
   </header>
   <div class="t-body">
     <div class="t-banner banner-cookie"><div class="t-banner-text"><h2>안녕하세요, 쿠키쌤! 👋</h2><p>오늘도 파이팅!</p></div><div class="t-banner-face">🍪</div></div>
@@ -766,7 +764,7 @@ setTimeout(function(){
 <div id="butter-dash" class="page t-dash">
   <header class="t-header">
     <div class="t-header-brand"><span style="font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3">아이들과 꿈을 만드는 공간</span>투쌤플레이스</div>
-    <div class="t-header-user"><div class="t-chip chip-butter"><span class="t-chip-face">🧈</span><span class="t-chip-name">버터쌤</span></div><button onclick="renderGuideEditor('butter',document.getElementById('butter-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">📖 설명서 편집</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
+    <div class="t-header-user"><div class="t-chip chip-butter"><span class="t-chip-face">🧈</span><span class="t-chip-name">버터쌤</span></div><button onclick="renderGuideEditor('butter',document.getElementById('butter-main-content'));document.querySelectorAll('.t-menu-btn').forEach(function(b){b.classList.remove('active');});" style="background:#f3e5f5;border:2px solid #ce93d8;border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#6a1b9a;cursor:pointer;font-family:inherit;white-space:nowrap">설명서</button><button class="btn-out" onclick="showPage('landing')">로그아웃</button></div>
   </header>
   <div class="t-body">
     <div class="t-banner banner-butter"><div class="t-banner-text"><h2>안녕하세요, 버터쌤! 👋</h2><p>오늘도 파이팅!</p></div><div class="t-banner-face">🧈</div></div>
@@ -857,7 +855,7 @@ var students = {};
 window.students = students;
 
 var bookRecords = {};
-// tuitionData[ym][name] = {paid:true/false, paidAt:'', method:'', amount:0}
+// tuitionData[who][ym][name] = {paid:true/false, paidAt:'', method:'', amount:0}
 var tuitionData = {};
 // expenseData[who][ym] = [{id, date, category, title, amount, memo}]
 var expenseData = {cookie:{}, butter:{}};
@@ -1553,11 +1551,14 @@ function renderLecPlayerQuiz(name, lecId, vi, qs) {
         if(!isCorrect) html+='<div style="font-size:.82rem;color:#2e7d32;margin-bottom:8px">정답: '+q.answer+'</div>';
         html += _quizResultBtn(isCorrect, name, lecId, vi, qi);
       } else {
-        var shuffledWords = (q.words||shuffleArr((q.answer||'').split(/\s+/).filter(Boolean)));
+        // words는 저장된 순서 그대로 사용 (매번 같은 배열)
+        var arrangeWords = q.words || q.answer.split(/\s+/).filter(Boolean);
+        // 한글 해석 표시
+        if(q.korean) html+='<div style="font-size:.82rem;font-weight:700;color:#1565c0;background:#e3f2fd;border-radius:8px;padding:7px 12px;margin-bottom:10px">🇰🇷 '+q.korean+'</div>';
         html+='<div id="lp-arrange-area-'+qi+'" style="margin-bottom:8px">';
         html+='<div style="font-size:.75rem;color:var(--text-soft);margin-bottom:6px">단어를 클릭해서 문장을 만들어요</div>';
         html+='<div id="lp-arrange-bank-'+qi+'" style="display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px;min-height:36px;padding:6px;background:#f9f9f9;border-radius:8px;border:1px solid #e0e0e0">';
-        shuffledWords.forEach(function(w,wi){
+        arrangeWords.forEach(function(w,wi){
           html+='<span id="lp-word-'+qi+'-'+wi+'" data-qi="'+qi+'" data-wi="'+wi+'" data-word="'+encodeURIComponent(w)+'" class="lp-word-chip" style="background:#f3e5f5;border:1.5px solid #ce93d8;border-radius:8px;padding:4px 12px;font-size:.82rem;color:#6a1b9a;font-weight:600;cursor:pointer;display:inline-block">'+w+'</span>';
         });
         html+='</div>';
@@ -1851,10 +1852,19 @@ document.addEventListener('click', function(e){
 
 /* ====== STUDENT LOGIN ====== */
 function studentLogin(){
-  var name=document.getElementById('s-name').value;
-  var pw=document.getElementById('s-pw').value;
-  if(!name){alert('이름을 골라줘요! 😊');return;}
-  if(!pw){alert('비밀번호를 입력해요! 🔒');return;}
+  var code = (document.getElementById('s-attcode')||{value:''}).value.trim();
+  if(!code){alert('출결번호를 입력해요! 🔒');return;}
+
+  // memberRoster에서 출결번호로 학생 찾기
+  var found = null;
+  ['cookie','butter'].forEach(function(who){
+    (window.memberRoster[who]||[]).forEach(function(s){
+      if(s.status==='active' && String(s.attCode||s.attNo||'')===code) found=s;
+    });
+  });
+  if(!found){alert('출결번호를 찾을 수 없어요. 다시 확인해주세요! 🔒');return;}
+
+  var name = found.name;
   currentStudent=name;
   teacherReturnPage=null;
   sessionStorage.setItem('loginType','student');
@@ -1881,7 +1891,7 @@ function renderStudentDash(name){
   var d=students[name];
   if(!d){alert(name+' 학생 데이터를 찾을 수 없어요. 관리자에게 문의해주세요.');return;}
   document.getElementById('s-av-letter').textContent=name[0];
-  document.getElementById('s-av-name').textContent=name+' ('+d.cls+')';
+  document.getElementById('s-av-name').textContent=name;
   document.getElementById('s-greet').textContent='안녕, '+name.slice(1)+'! 👋';
   document.getElementById('s-achieve').textContent=d.achieve+'%';
   document.getElementById('s-banner-emoji').textContent=d.emoji;
@@ -2058,15 +2068,15 @@ function renderOverdueModal(name){
 
 function toggleHwAssignOverdue(name, idx) {
   var assigned = getHwAssigned(name)||[];
-  var overdueA = assigned.filter(function(h){return !h.done && isOverdue(h.deadline);});
-  // 완료 처리는 원본 배열에서
+  var overdueA = assigned.filter(function(h){return isOverdue(h.deadline);});
   var h = overdueA[idx];
   if(h) {
     var origIdx = assigned.indexOf(h);
     if(origIdx>-1) assigned[origIdx].done = !assigned[origIdx].done;
   }
+  // Firebase 저장
+  if(window.fbSaveHwAssigned) window.fbSaveHwAssigned(name);
   renderOverdueModal(name);
-  // 스탯 업데이트
   var d = students[name];
   document.getElementById('s-stat-overdue').textContent =
     d.hw.filter(function(h){return !h.done&&isOverdue(h.deadline);}).length +
@@ -2376,13 +2386,14 @@ function renderTuitionMgmt(who, el) {
 
   // 해당 월 재원생 목록 수집
   var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
-  if(!tuitionData[ym]) tuitionData[ym]={};
+  if(!tuitionData[who]) tuitionData[who]={};
+  if(!tuitionData[who][ym]) tuitionData[who][ym]={};
 
   // 집계
   var totalRevenue=0, paidCount=0, unpaidCount=0;
   roster.forEach(function(s){
     var fee = CLASS_FEE[s.class]||0;
-    var t = tuitionData[ym][s.name]||{};
+    var t = (tuitionData[who]&&tuitionData[who][ym]&&tuitionData[who][ym][s.name])||{};
     if(t.paid){totalRevenue+=fee;paidCount++;}
     else unpaidCount++;
   });
@@ -2429,7 +2440,7 @@ function renderTuitionMgmt(who, el) {
     html += '<div style="display:flex;flex-direction:column;gap:8px">';
     roster.forEach(function(s, i){
       var fee = CLASS_FEE[s.class]||0;
-      var t = tuitionData[ym][s.name]||{};
+      var t = (tuitionData[who]&&tuitionData[who][ym]&&tuitionData[who][ym][s.name])||{};
       var isPaid = t.paid||false;
       var col = avatarPalette[i%7];
 
@@ -2506,24 +2517,25 @@ function confirmTuition(who, name, ym, fee) {
   if(!selectedPayMethod){alert('결제 수단을 선택해주세요.');return;}
   var dateEl=document.getElementById('tuition-paid-date');
   var paidAt=dateEl?dateEl.value:'';
-  if(!tuitionData[ym]) tuitionData[ym]={};
-  tuitionData[ym][name]={paid:true, paidAt:paidAt, method:selectedPayMethod, amount:fee};
-  if(window.fbSaveTuition) window.fbSaveTuition(ym, name, tuitionData[ym][name]);
+  if(!tuitionData[who]) tuitionData[who]={};
+  if(!tuitionData[who][ym]) tuitionData[who][ym]={};
+  tuitionData[who][ym][name]={paid:true, paidAt:paidAt, method:selectedPayMethod, amount:fee};
+  if(window.fbSaveTuition) window.fbSaveTuition(who, ym, name, tuitionData[who][ym][name]);
   closeTuitionModal();
   renderTuitionMgmt(who, document.getElementById(who+'-main-content'));
 }
 
 function cancelTuition(who, name, ym) {
   if(!confirm(name+'님의 납부 기록을 취소할까요?')) return;
-  if(tuitionData[ym]) delete tuitionData[ym][name];
-  if(window.fbSaveTuition) window.fbSaveTuition(ym, name, null);
+  if(tuitionData[who]&&tuitionData[who][ym]) delete tuitionData[who][ym][name];
+  if(window.fbSaveTuition) window.fbSaveTuition(who, ym, name, null);
   renderTuitionMgmt(who, document.getElementById(who+'-main-content'));
 }
 
 function downloadReceiptsPDF(who, ym) {
   var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
   var paidList = roster.filter(function(s){
-    return tuitionData[ym] && tuitionData[ym][s.name] && tuitionData[ym][s.name].paid;
+    return tuitionData[who]&&tuitionData[who][ym]&&tuitionData[who][ym][s.name]&&tuitionData[who][ym][s.name].paid;
   });
   if(paidList.length===0){alert('납부 완료된 학생이 없어요.');return;}
 
@@ -2537,7 +2549,7 @@ function downloadReceiptsPDF(who, ym) {
   // 영수증 HTML 빌드 (한 장에 2명씩)
   var receiptsHtml = '';
   paidList.forEach(function(s, idx){
-    var t = tuitionData[ym][s.name];
+    var t = (tuitionData[who]&&tuitionData[who][ym])?tuitionData[who][ym][s.name]:null;
     var fee = CLASS_FEE[s.class]||t.amount||0;
     var receiptNo = ym.replace('-','')+'-'+String(idx+1).padStart(3,'0');
 
@@ -2662,7 +2674,7 @@ function getRevenue(who, ym) {
   var roster = (memberRoster[who]||[]).filter(function(s){return s.status==='active';});
   var total = 0;
   roster.forEach(function(s){
-    if(tuitionData[ym]&&tuitionData[ym][s.name]&&tuitionData[ym][s.name].paid)
+    if(tuitionData[who]&&tuitionData[who][ym]&&tuitionData[who][ym][s.name]&&tuitionData[who][ym][s.name].paid)
       total += CLASS_FEE[s.class]||0;
   });
   return total;
@@ -3613,6 +3625,33 @@ function calToggleEvent(dk, id) {
   var ev=calGetEvents(dk).find(function(e){return e.id===id;});
   if(ev) { ev.done=!ev.done; if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk); }
 }
+
+var calEditEventId = null; // 편집 중인 이벤트 id
+var calEditEventDk = null; // 편집 중인 날짜
+
+function openCalEditForm(dk, id, who) {
+  if(calEditEventId===id && calEditEventDk===dk) {
+    calEditEventId=null; calEditEventDk=null;
+  } else {
+    calEditEventId=id; calEditEventDk=dk;
+  }
+  renderCalendar(who, getCalEl(who));
+}
+
+function saveCalEdit(dk, id, who) {
+  var ev = calGetEvents(dk).find(function(e){return e.id===id;});
+  if(!ev) return;
+  var title=(document.getElementById('cal-edit-title')||{value:''}).value.trim();
+  if(!title){alert('제목을 입력해주세요.');return;}
+  ev.title=title;
+  ev.time=(document.getElementById('cal-edit-time')||{value:''}).value||'';
+  ev.catId=(document.getElementById('cal-edit-cat')||{value:ev.catId}).value;
+  ev.note=(document.getElementById('cal-edit-note')||{value:''}).value.trim();
+  calEvents[dk].sort(function(a,b){return a.time.localeCompare(b.time);});
+  if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk);
+  calEditEventId=null; calEditEventDk=null;
+  renderCalendar(who, getCalEl(who));
+}
 function getCat(catId) {
   return calCategories.find(function(c){return c.id===catId;})||{name:'기타',color:'#aaa',bg:'#f5f5f5'};
 }
@@ -3677,17 +3716,39 @@ function renderCalDaily(who) {
   } else {
     events.forEach(function(ev){
       var cat=getCat(ev.catId);
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:'+(ev.done?'#f0fff8':'white')+';border:1.5px solid '+(ev.done?'#66bb6a33':cat.color+'33')+'">' +
+      var isEditing = calEditEventId===ev.id && calEditEventDk===dk;
+      html += '<div style="border-radius:12px;border:1.5px solid '+(isEditing?'var(--cookie)':ev.done?'#66bb6a33':cat.color+'33')+';overflow:hidden;margin-bottom:2px">';
+      // 일정 행
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:'+(isEditing?'var(--cookie-bg)':ev.done?'#f0fff8':'white')+'">' +
         '<div style="width:9px;height:9px;border-radius:50%;background:'+cat.color+';flex-shrink:0"></div>' +
         (ev.time?'<span style="font-size:.72rem;font-weight:700;color:var(--text-soft);min-width:36px">'+ev.time+'</span>':'') +
         '<div style="flex:1">' +
-        '<div style="font-size:.86rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+'</div>' +
-        (ev.note?'<div style="font-size:.72rem;color:var(--text-soft);margin-top:2px">'+ev.note+'</div>':'') +
+          '<div style="font-size:.86rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+'</div>' +
+          (ev.note?'<div style="font-size:.72rem;color:var(--text-soft);margin-top:2px">'+ev.note+'</div>':'') +
         '</div>' +
         '<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:18px;height:18px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.65rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
-        '<button onclick="calDeleteEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem;padding:2px 4px">🗑️</button>' +
+        '<button onclick="openCalEditForm(\''+dk+'\','+ev.id+',\''+who+'\')" style="background:'+(isEditing?'var(--cookie)':'#f5ede0')+';border:none;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:'+(isEditing?'white':'var(--text-mid)')+';cursor:pointer;font-family:inherit;flex-shrink:0">'+(isEditing?'✕ 닫기':'✏️ 편집')+'</button>' +
+      '</div>';
+      // 인라인 편집 폼
+      if(isEditing) {
+        var catOpts2 = calCategories.map(function(c){return '<option value="'+c.id+'"'+(c.id===ev.catId?' selected':'')+'>'+c.name+'</option>';}).join('');
+        html += '<div style="padding:12px 14px;background:#fffbf5;border-top:1px solid var(--cookie-lt);display:flex;flex-direction:column;gap:8px">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+            '<div><div class="form-label">제목 *</div><input class="register-input" id="cal-edit-title" value="'+ev.title.replace(/"/g,'&quot;')+'" style="margin-bottom:0"></div>' +
+            '<div><div class="form-label">시간</div><input class="register-input" id="cal-edit-time" type="time" value="'+ev.time+'" style="margin-bottom:0"></div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
+            '<div><div class="form-label">카테고리</div><select class="register-input" id="cal-edit-cat" style="margin-bottom:0">'+catOpts2+'</select></div>' +
+            '<div><div class="form-label">메모</div><input class="register-input" id="cal-edit-note" value="'+(ev.note||'').replace(/"/g,'&quot;')+'" placeholder="메모 (선택)" style="margin-bottom:0"></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:8px">' +
+            '<button onclick="saveCalEdit(\''+dk+'\','+ev.id+',\''+who+'\')" style="flex:1;padding:7px;border-radius:9px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">💾 저장</button>' +
+            '<button onclick="if(confirm(\'일정을 삭제할까요?\')){{calDeleteEvent(\''+dk+'\','+ev.id+');calEditEventId=null;calEditEventDk=null;renderCalendar(\''+who+'\',getCalEl(\''+who+'\'));}}" style="padding:7px 14px;border-radius:9px;border:none;background:#fce4ec;color:#b71c1c;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 삭제</button>' +
+          '</div>' +
         '</div>';
+      }
+      html += '</div>';
     });
   }
   html += '</div>';
@@ -3967,17 +4028,39 @@ function renderCalDateDetail(who) {
   if(evs.length===0) {
     html+='<div style="font-size:.78rem;color:var(--text-soft);padding:8px 0;text-align:center">등록된 일정이 없어요</div>';
   } else {
-    html+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">';
+    html+='<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:12px">';
     evs.forEach(function(ev){
       var cat=getCat(ev.catId);
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:'+(ev.done?'#f9fffe':'#fafafa')+';border:1.5px solid '+cat.color+'22">' +
+      var isEditing = calEditEventId===ev.id && calEditEventDk===calSelDate;
+      html+='<div style="border-radius:10px;border:1.5px solid '+(isEditing?'var(--cookie)':cat.color+'22')+';overflow:hidden">';
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:'+(isEditing?'var(--cookie-bg)':ev.done?'#f9fffe':'#fafafa')+'">' +
         '<div style="width:9px;height:9px;border-radius:50%;background:'+cat.color+';flex-shrink:0"></div>' +
         (ev.time?'<span style="font-size:.7rem;font-weight:700;color:var(--text-soft);min-width:34px">'+ev.time+'</span>':'') +
-        '<div style="flex:1;font-size:.82rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+'</div>' +
+        '<div style="flex:1;font-size:.82rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+
+          (ev.note?'<div style="font-size:.68rem;color:var(--text-soft);font-weight:400;margin-top:1px">'+ev.note+'</div>':'')+
+        '</div>' +
         '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:17px;height:17px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.6rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
-        '<button onclick="calDeleteEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
+        '<button onclick="openCalEditForm(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="background:'+(isEditing?'var(--cookie)':'#f5ede0')+';border:none;border-radius:7px;padding:3px 7px;font-size:.65rem;font-weight:700;color:'+(isEditing?'white':'var(--text-mid)')+';cursor:pointer;font-family:inherit;flex-shrink:0">'+(isEditing?'✕':'✏️ 편집')+'</button>' +
+      '</div>';
+      if(isEditing) {
+        var catOpts3 = calCategories.map(function(c){return '<option value="'+c.id+'"'+(c.id===ev.catId?' selected':'')+'>'+c.name+'</option>';}).join('');
+        html += '<div style="padding:10px 12px;background:#fffbf5;border-top:1px solid var(--cookie-lt);display:flex;flex-direction:column;gap:7px">' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+            '<div><div class="form-label">제목 *</div><input class="register-input" id="cal-edit-title" value="'+ev.title.replace(/"/g,'&quot;')+'" style="margin-bottom:0;font-size:.8rem"></div>' +
+            '<div><div class="form-label">시간</div><input class="register-input" id="cal-edit-time" type="time" value="'+ev.time+'" style="margin-bottom:0;font-size:.8rem"></div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">' +
+            '<div><div class="form-label">카테고리</div><select class="register-input" id="cal-edit-cat" style="margin-bottom:0;font-size:.8rem">'+catOpts3+'</select></div>' +
+            '<div><div class="form-label">메모</div><input class="register-input" id="cal-edit-note" value="'+(ev.note||'').replace(/"/g,'&quot;')+'" placeholder="메모 (선택)" style="margin-bottom:0;font-size:.8rem"></div>' +
+          '</div>' +
+          '<div style="display:flex;gap:6px">' +
+            '<button onclick="saveCalEdit(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="flex:1;padding:6px;border-radius:8px;border:none;background:var(--cookie);color:white;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">💾 저장</button>' +
+            '<button onclick="if(confirm(\'일정을 삭제할까요?\')){{calDeleteEvent(\''+calSelDate+'\','+ev.id+');calEditEventId=null;calEditEventDk=null;renderCalendar(\''+who+'\',getCalEl(\''+who+'\'));}}" style="padding:6px 12px;border-radius:8px;border:none;background:#fce4ec;color:#b71c1c;font-size:.75rem;font-weight:700;cursor:pointer;font-family:inherit">🗑️ 삭제</button>' +
+          '</div>' +
         '</div>';
+      }
+      html+='</div>';
     });
     html+='</div>';
   }
@@ -4558,7 +4641,8 @@ function openMonthlyDetail(who, name, y, m) {
       if((classStudents[k]||[]).indexOf(name)>-1) clsKey=k;
     });
     if(clsKey){
-      var att = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][dk];
+      var _rw=window.currentTeacher||'cookie';
+      var att = window.classAttendance[_rw]&&window.classAttendance[_rw][clsKey]&&window.classAttendance[_rw][clsKey][name]&&window.classAttendance[_rw][clsKey][name][dk];
       if(att){
         var st = typeof att==='string'?att:(att.status||'');
         if(st.indexOf('등원')>-1||st==='출석') attData['출석']++;
@@ -5291,7 +5375,7 @@ function renderLectureDetail(lec, who, el) {
     '<div><div class="form-label">유튜브 링크 *</div><input class="register-input" id="lec-url-'+lec.id+'" placeholder="https://youtu.be/..."></div>' +
     '</div>' +
     '<div><div class="form-label">설명 (선택)</div><input class="register-input" id="lec-desc-'+lec.id+'" placeholder="강의 간단 설명"></div>' +
-    '<div>' +
+    '<div style="margin-top:20px">' +
     '<div class="form-label">📎 자료 파일 링크 <span style="font-size:.68rem;color:var(--text-soft)">(선택 · Google Drive 링크, 여러 개 가능)</span></div>' +
     '<div id="lec-pdf-links-'+lec.id+'" style="display:flex;flex-direction:column;gap:6px;margin-bottom:6px"></div>' +
     '<button onclick="addPdfLinkRow('+lec.id+')" style="background:#f5f5f5;border:1.5px solid #e0e0e0;border-radius:8px;padding:5px 14px;font-size:.75rem;font-weight:700;color:#666;cursor:pointer;font-family:inherit">+ 링크 추가</button>' +
@@ -5778,6 +5862,20 @@ function setNewLecQuizType(t, lecId) {
     else if(t==='arrange') area.innerHTML = renderNewLecArrangeInput(lecId);
     else area.innerHTML = '<div class="form-label">정답 (단답형)</div><input class="register-input" id="new-quiz-ans-'+lecId+'" placeholder="정답을 입력해요" style="margin-bottom:0">';
   }
+  // 문장 배열: 문제 입력란 고정
+  var qInput = document.getElementById('new-quiz-q-'+lecId);
+  if(qInput) {
+    if(t==='arrange') {
+      qInput.value = '다음 한글 해석에 알맞게 단어를 배열하여 영작하세요.';
+      qInput.style.color = '#888';
+      qInput.readOnly = true;
+    } else {
+      qInput.value = '';
+      qInput.style.color = '';
+      qInput.readOnly = false;
+      qInput.placeholder = '문제를 입력해요';
+    }
+  }
 }
 
 function renderNewLecMcOptions(lecId) {
@@ -5795,7 +5893,9 @@ function renderNewLecMcOptions(lecId) {
 }
 
 function renderNewLecArrangeInput(lecId) {
-  return '<div class="form-label">정답 문장</div>'+
+  return '<div class="form-label">한글 해석 <span style="font-size:.68rem;color:var(--text-soft)">(학생에게 보여줄 한글 문장)</span></div>'+
+    '<input class="register-input" id="new-arrange-korean-'+lecId+'" placeholder="예: 나는 영어를 매우 좋아해요" style="margin-bottom:8px">'+
+    '<div class="form-label">정답 문장 (영문)</div>'+
     '<input class="register-input" id="new-arrange-ans-'+lecId+'" placeholder="예: I love English very much" oninput="previewNewLecArrange(\''+lecId+'\')">'+
     '<div class="form-label" style="margin-top:8px">배열 보기 <span style="font-size:.68rem;color:var(--text-soft)">(수동 수정 가능, / 로 구분)</span></div>'+
     '<input class="register-input" id="new-arrange-words-'+lecId+'" placeholder="자동 생성됩니다">'+
@@ -5831,9 +5931,10 @@ function addNewLecQuiz(lecId) {
   } else if(t==='arrange'){
     var sentence=(document.getElementById('new-arrange-ans-'+lecId)||{value:''}).value.trim();
     var wordsRaw=(document.getElementById('new-arrange-words-'+lecId)||{value:''}).value.trim();
+    var korean=(document.getElementById('new-arrange-korean-'+lecId)||{value:''}).value.trim();
     if(!sentence){alert('정답 문장을 입력해주세요!');return;}
-    var words=wordsRaw?wordsRaw.split('/').map(function(w){return w.trim();}).filter(Boolean):shuffleArr(sentence.split(/\s+/).filter(Boolean));
-    newLecQuizzes[lecId].push({type:'arrange',question:q,answer:sentence,words:words});
+    var words=wordsRaw?wordsRaw.split('/').map(function(w){return w.trim();}).filter(Boolean):sentence.split(/\s+/).filter(Boolean);
+    newLecQuizzes[lecId].push({type:'arrange',question:q,answer:sentence,words:words,korean:korean});
   } else {
     var ans2=(document.getElementById('new-quiz-ans-'+lecId)||{value:''}).value.trim();
     newLecQuizzes[lecId].push({type:'sa',question:q,answer:ans2});
@@ -6632,7 +6733,7 @@ function renderAttList(who,clsKey,stuList){
   if(stuList.length===0) return '<div class="t-placeholder"><span class="ph-ico">🤷</span><div class="ph-desc">이 클래스엔 등록된 학생이 없어요.</div></div>';
   var tk=todayKey();
   return stuList.map(function(name,i){
-    var col=avatarPalette[i%7], rec=window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk];
+    var col=avatarPalette[i%7], rec=window.classAttendance[who]&&window.classAttendance[who][clsKey]&&window.classAttendance[who][clsKey][name]&&window.classAttendance[who][clsKey][name][tk];
     var recStatus = attStatus(rec);
     var reason = absenceReasons[clsKey]&&absenceReasons[clsKey][name]&&absenceReasons[clsKey][name][tk]||'';
     var safeId = clsKey.replace(/[\/-]/g,'_');
@@ -6705,7 +6806,7 @@ function saveAbsenceReason(who, clsKey, name) {
   if(!absenceReasons[clsKey][name]) absenceReasons[clsKey][name]={};
   absenceReasons[clsKey][name][tk] = reason;
   // Firebase 저장
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][tk]||'');
+  if(window.fbSaveAttendance) window.fbSaveAttendance(who, clsKey, name, tk, window.classAttendance[who]&&window.classAttendance[who][clsKey]&&window.classAttendance[who][clsKey][name]&&window.classAttendance[who][clsKey][name][tk]||'');
   if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+tk, {clsKey:clsKey,name:name,dateKey:tk,reason:reason});
   renderAttSub(who);
 }
@@ -6751,9 +6852,10 @@ function getSmartAttStatus(name) {
 
 function setTodayAtt(who,clsKey,name,opt){
   var tk=todayKey();
-  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
-  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
-  var cur = window.classAttendance[clsKey][name][tk];
+  if(!window.classAttendance[who]) window.classAttendance[who]={};
+  if(!window.classAttendance[who][clsKey]) window.classAttendance[who][clsKey]={};
+  if(!window.classAttendance[who][clsKey][name]) window.classAttendance[who][clsKey][name]={};
+  var cur = window.classAttendance[who][clsKey][name][tk];
   var curStatus = attStatus(cur);
   var now = nowTimeStr();
 
@@ -6787,17 +6889,17 @@ function setTodayAtt(who,clsKey,name,opt){
 
   // 메모리 즉시 업데이트
   if(newVal===null) {
-    delete window.classAttendance[clsKey][name][tk];
+    delete window.classAttendance[who][clsKey][name][tk];
   } else {
-    window.classAttendance[clsKey][name][tk] = newVal;
+    window.classAttendance[who][clsKey][name][tk] = newVal;
   }
 
   // Firebase 저장 (비동기, 메모리와 무관하게 진행)
-  var safeKey = (clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
+  var safeKey = (who+'_'+clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
   if(newVal===null) {
     if(window.fbDel) window.fbDel('attendance/'+safeKey);
   } else {
-    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, newVal);
+    if(window.fbSaveAttendance) window.fbSaveAttendance(who, clsKey, name, tk, newVal);
   }
 
   // 이달의 출결 캘린더를 오늘 날짜 기준으로 동기화
@@ -6812,12 +6914,14 @@ function renderMonthlyAtt(who,el){
   var DOW=['일','월','화','수','목','금','토'];
   var firstDay=new Date(tAttCalYear,tAttCalMonth,1).getDay(), days=new Date(tAttCalYear,tAttCalMonth+1,0).getDate(), prevDays=new Date(tAttCalYear,tAttCalMonth,0).getDate(), tk=todayKey();
   var byDate={};
-  Object.keys(window.classAttendance).forEach(function(clsKey){
-    Object.keys(window.classAttendance[clsKey]).forEach(function(name){
-      Object.keys(window.classAttendance[clsKey][name]).forEach(function(dk){
-        var val = window.classAttendance[clsKey][name][dk];
+  var whoForAtt = who;
+  var attByWho = (window.classAttendance[whoForAtt]||{});
+  Object.keys(attByWho).forEach(function(clsKey){
+    Object.keys(attByWho[clsKey]).forEach(function(name){
+      Object.keys(attByWho[clsKey][name]).forEach(function(dk){
+        var val = attByWho[clsKey][name][dk];
         var s = attStatus(val);
-        if(!s) return; // 빈 상태 제외
+        if(!s) return;
         if(!byDate[dk]) byDate[dk]=[];
         byDate[dk].push({name:name, clsKey:clsKey, status:s});
       });
@@ -6941,8 +7045,9 @@ function addNewAtt(who, clsKey, name, dk, status) {
     });});
   }
   if(!clsKey) { alert('클래스 정보를 찾을 수 없어요.'); return; }
-  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
-  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
+  if(!window.classAttendance[who]) window.classAttendance[who]={};
+  if(!window.classAttendance[who][clsKey]) window.classAttendance[who][clsKey]={};
+  if(!window.classAttendance[who][clsKey][name]) window.classAttendance[who][clsKey][name]={};
   var now = nowTimeStr();
   var newVal = {status:status};
   // 복합 status 시간 처리
@@ -6950,8 +7055,8 @@ function addNewAtt(who, clsKey, name, dk, status) {
   else if(status==='지각+하원') { newVal.지각Time=now; newVal.하원Time=now; }
   else if(status==='보강+하원') { newVal.보강Time=now; newVal.하원Time=now; }
   else                          { newVal[status+'Time']=now; }
-  window.classAttendance[clsKey][name][dk] = newVal;
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
+  window.classAttendance[who][clsKey][name][dk] = newVal;
+  if(window.fbSaveAttendance) window.fbSaveAttendance(who, clsKey, name, dk, newVal);
   renderAttSub(who);
 }
 
@@ -6960,17 +7065,16 @@ function changeTAttMonth(who,dir){ tAttCalMonth+=dir; if(tAttCalMonth<0){tAttCal
 
 function deleteMonthlyAtt(who, clsKey, name, dk) {
   if(!confirm('출결기록을 삭제할까요?')) return;
-  if(window.classAttendance[clsKey] && window.classAttendance[clsKey][name]) {
-    delete window.classAttendance[clsKey][name][dk];
+  if(window.classAttendance[who] && window.classAttendance[who][clsKey] && window.classAttendance[who][clsKey][name]) {
+    delete window.classAttendance[who][clsKey][name][dk];
   }
-  // Firebase에서 실제 삭제
-  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
+  var safeKey = (who+'_'+clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
   if(window.fbDel) window.fbDel('attendance/'+safeKey);
   renderAttSub(who);
 }
 
 function openAttEditModal(who, clsKey, name, dk) {
-  var cur = window.classAttendance[clsKey]&&window.classAttendance[clsKey][name]&&window.classAttendance[clsKey][name][dk];
+  var cur = window.classAttendance[who]&&window.classAttendance[who][clsKey]&&window.classAttendance[who][clsKey][name]&&window.classAttendance[who][clsKey][name][dk];
   var curStatus = attStatus(cur)||'';
 
   // 현재 상태를 임시로 보관 (완료 전까지 실제 저장 안 함)
@@ -7088,21 +7192,23 @@ function openAttEditModal(who, clsKey, name, dk) {
     else if(tempStatus==='보강+하원') newVal={status:'보강+하원', 보강Time:attTime(cur,'보강Time')||now, 하원Time:attTime(cur,'하원Time')||now};
     else if(tempStatus) { newVal={status:tempStatus}; newVal[tempStatus+'Time']=now; }
 
-    if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
-    if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
-    if(newVal===null || tempStatus==='') delete window.classAttendance[clsKey][name][dk];
-    else window.classAttendance[clsKey][name][dk] = newVal;
+    if(!window.classAttendance[who]) window.classAttendance[who]={};
+    if(!window.classAttendance[who][clsKey]) window.classAttendance[who][clsKey]={};
+    if(!window.classAttendance[who][clsKey][name]) window.classAttendance[who][clsKey][name]={};
+    if(newVal===null || tempStatus==='') delete window.classAttendance[who][clsKey][name][dk];
+    else window.classAttendance[who][clsKey][name][dk] = newVal;
 
-    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+    if(window.fbSaveAttendance) window.fbSaveAttendance(who, clsKey, name, dk, newVal||'');
     overlay.remove();
     renderAttSub(who);
   };
 }
 
 function applyAttEdit(who, clsKey, name, dk, newStatus) {
-  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
-  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
-  var cur = window.classAttendance[clsKey][name][dk];
+  if(!window.classAttendance[who]) window.classAttendance[who]={};
+  if(!window.classAttendance[who][clsKey]) window.classAttendance[who][clsKey]={};
+  if(!window.classAttendance[who][clsKey][name]) window.classAttendance[who][clsKey][name]={};
+  var cur = (window.classAttendance[who]&&window.classAttendance[who][clsKey]&&window.classAttendance[who][clsKey][name])||{};cur=cur[dk];
   var curStatus = attStatus(cur);
   var now = nowTimeStr();
   var newVal;
@@ -7123,10 +7229,13 @@ function applyAttEdit(who, clsKey, name, dk, newStatus) {
     else { newVal={status:newStatus}; newVal[newStatus+'Time']=now; }
   }
 
-  if(newVal===null) delete window.classAttendance[clsKey][name][dk];
-  else window.classAttendance[clsKey][name][dk] = newVal;
+  if(!window.classAttendance[who]) window.classAttendance[who]={};
+  if(!window.classAttendance[who][clsKey]) window.classAttendance[who][clsKey]={};
+  if(!window.classAttendance[who][clsKey][name]) window.classAttendance[who][clsKey][name]={};
+  if(newVal===null) delete window.classAttendance[who][clsKey][name][dk];
+  else window.classAttendance[who][clsKey][name][dk] = newVal;
 
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+  if(window.fbSaveAttendance) window.fbSaveAttendance(who, clsKey, name, dk, newVal||'');
 
   // 모달 버튼 상태 갱신 (applyAttEdit은 더 이상 직접 호출 안 함 - openAttEditModal에서 처리)
   var newCurStatus = newVal ? attStatus(newVal) : '';
@@ -7156,7 +7265,8 @@ function openMonthlyAtt(name,clsKey){
 }
 function renderMonthlyAttModal(name,clsKey,year,month){
   var DOW=['일','월','화','수','목','금','토'];
-  var rec=(window.classAttendance[clsKey]&&window.classAttendance[clsKey][name])||{};
+  var _tw=window.currentTeacher||'cookie';
+  var rec=(window.classAttendance[_tw]&&window.classAttendance[_tw][clsKey]&&window.classAttendance[_tw][clsKey][name])||{};
   var firstDay=new Date(year,month,1).getDay(), days=new Date(year,month+1,0).getDate(), prevDays=new Date(year,month,0).getDate();
   var isMonWed=clsKey.indexOf('월/수')>-1, classDays=isMonWed?[1,3]:[2,4], tk=todayKey();
   var total=Math.ceil((firstDay+days)/7)*7, cells='';
@@ -7189,7 +7299,8 @@ function renderMonthlyAttModal(name,clsKey,year,month){
 function editMonthlyAtt(name, clsKey, dk, year, month) {
   var panel = document.getElementById('monthly-att-edit-panel');
   if(!panel) return;
-  var rec = (window.classAttendance[clsKey]&&window.classAttendance[clsKey][name])||{};
+  var _ew2=window.currentTeacher||'cookie';
+  var rec = (window.classAttendance[_ew2]&&window.classAttendance[_ew2][clsKey]&&window.classAttendance[_ew2][clsKey][name])||{};
   var cur = rec[dk]||'';
   var dt = new Date(dk);
   var DOW2=['일','월','화','수','목','금','토'];
@@ -7210,25 +7321,28 @@ function editMonthlyAtt(name, clsKey, dk, year, month) {
 }
 
 function setMonthlyAtt(name, clsKey, dk, opt, year, month) {
-  if(!window.classAttendance[clsKey]) window.classAttendance[clsKey]={};
-  if(!window.classAttendance[clsKey][name]) window.classAttendance[clsKey][name]={};
-  var cur = window.classAttendance[clsKey][name][dk]||'';
-  if(opt==='하원'&&cur==='등원') window.classAttendance[clsKey][name][dk]='등원+하원';
-  else if(opt==='등원'&&cur==='등원+하원') window.classAttendance[clsKey][name][dk]='하원';
-  else if(opt==='하원'&&cur==='등원+하원') window.classAttendance[clsKey][name][dk]='등원';
-  else if(cur===opt) window.classAttendance[clsKey][name][dk]='';
-  else window.classAttendance[clsKey][name][dk]=opt;
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey,name,dk,window.classAttendance[clsKey][name][dk]||'');
+  var _ew=window.currentTeacher||'cookie';
+  if(!window.classAttendance[_ew]) window.classAttendance[_ew]={};
+  if(!window.classAttendance[_ew][clsKey]) window.classAttendance[_ew][clsKey]={};
+  if(!window.classAttendance[_ew][clsKey][name]) window.classAttendance[_ew][clsKey][name]={};
+  var cur = window.classAttendance[_ew][clsKey][name][dk]||'';
+  if(opt==='하원'&&cur==='등원') window.classAttendance[_ew][clsKey][name][dk]='등원+하원';
+  else if(opt==='등원'&&cur==='등원+하원') window.classAttendance[_ew][clsKey][name][dk]='하원';
+  else if(opt==='하원'&&cur==='등원+하원') window.classAttendance[_ew][clsKey][name][dk]='등원';
+  else if(cur===opt) window.classAttendance[_ew][clsKey][name][dk]='';
+  else window.classAttendance[_ew][clsKey][name][dk]=opt;
+  if(window.fbSaveAttendance) window.fbSaveAttendance(_ew,clsKey,name,dk,window.classAttendance[_ew][clsKey][name][dk]||'');
   renderMonthlyAttModal(name,clsKey,year,month);
   editMonthlyAtt(name,clsKey,dk,year,month);
 }
 
 function deleteMonthlyAttModal(name, clsKey, dk, year, month) {
   if(!confirm('출결기록을 삭제할까요?')) return;
-  if(window.classAttendance[clsKey] && window.classAttendance[clsKey][name]) {
-    delete window.classAttendance[clsKey][name][dk];
+  var _who = window.currentTeacher||'cookie';
+  if(window.classAttendance[_who] && window.classAttendance[_who][clsKey] && window.classAttendance[_who][clsKey][name]) {
+    delete window.classAttendance[_who][clsKey][name][dk];
   }
-  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
+  var safeKey = (_who+'_'+clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
   if(window.fbDel) window.fbDel('attendance/'+safeKey);
   renderMonthlyAttModal(name,clsKey,year,month);
 }
@@ -7237,9 +7351,10 @@ function deleteMonthlyAttModal(name, clsKey, dk, year, month) {
 function renderMakeupNeeded(who){
   var monthPrefix=tAttCalYear+'-'+String(tAttCalMonth+1).padStart(2,'0');
   var ATTENDED=['등원','하원','지각','보강'], results=[];
-  Object.keys(window.classAttendance).forEach(function(clsKey){
-    Object.keys(window.classAttendance[clsKey]).forEach(function(name){
-      var dateMap=window.classAttendance[clsKey][name];
+  var _attWho = window.classAttendance[who]||{};
+  Object.keys(_attWho).forEach(function(clsKey){
+    Object.keys(_attWho[clsKey]).forEach(function(name){
+      var dateMap=_attWho[clsKey][name];
       var monthEntries=Object.keys(dateMap).filter(function(dk){return dk.startsWith(monthPrefix);}).map(function(dk){return {dk:dk,s:dateMap[dk]};});
       var count=monthEntries.filter(function(e){return ATTENDED.indexOf(e.s)>-1;}).length;
       var late=monthEntries.filter(function(e){return e.s==='지각';}).length;
@@ -7516,7 +7631,7 @@ function permanentDelete(who, id) {
 
   // 3. 출결 기록 삭제
   Object.keys(window.classAttendance).forEach(function(k){
-    if(window.classAttendance[k][name]) delete window.classAttendance[k][name];
+    ['cookie','butter'].forEach(function(w){if(window.classAttendance[w]&&window.classAttendance[w][k]&&window.classAttendance[w][k][name]) delete window.classAttendance[w][k][name];});
   });
 
   // 4. 과제 기록 삭제
@@ -7999,16 +8114,18 @@ try {
     snapshot.docChanges().forEach(function(change) {
       var a = change.doc.data();
       if(!a.clsKey || !a.name || !a.dateKey) return;
+      if(!a.who) return; // who 없는 구버전 데이터 무시
       if(!window.classAttendance) window.classAttendance = {};
 
       if(change.type === 'removed') {
         // 삭제된 문서 → 메모리에서도 제거
-        if(window.classAttendance[a.clsKey]&&window.classAttendance[a.clsKey][a.name]) {
-          delete window.classAttendance[a.clsKey][a.name][a.dateKey];
+        if(window.classAttendance[a.who]&&window.classAttendance[a.who][a.clsKey]&&window.classAttendance[a.who][a.clsKey][a.name]) {
+          delete window.classAttendance[a.who][a.clsKey][a.name][a.dateKey];
         }
       } else if(change.type === 'added' || change.type === 'modified') {
-        if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey] = {};
-        if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name] = {};
+        if(!window.classAttendance[a.who]) window.classAttendance[a.who]={};
+        if(!window.classAttendance[a.who][a.clsKey]) window.classAttendance[a.who][a.clsKey] = {};
+        if(!window.classAttendance[a.who][a.clsKey][a.name]) window.classAttendance[a.who][a.clsKey][a.name] = {};
         var hasTime = a.등원Time || a.하원Time || a.지각Time || a.보강Time;
         if(hasTime) {
           var obj = {status: a.status};
@@ -8016,9 +8133,9 @@ try {
           if(a.하원Time) obj.하원Time = a.하원Time;
           if(a.지각Time) obj.지각Time = a.지각Time;
           if(a.보강Time) obj.보강Time = a.보강Time;
-          window.classAttendance[a.clsKey][a.name][a.dateKey] = obj;
+          window.classAttendance[a.who][a.clsKey][a.name][a.dateKey] = obj;
         } else if(a.status) {
-          window.classAttendance[a.clsKey][a.name][a.dateKey] = a.status;
+          window.classAttendance[a.who][a.clsKey][a.name][a.dateKey] = a.status;
         }
       }
       if(window.currentTeacher && window.activeMenu === 'att') {
@@ -8082,9 +8199,9 @@ window.fbDel = async function(path) {
 var fbDel = window.fbDel;
 
 /* ── DB 저장 함수들 ── */
-window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
-  var safeKey = (clsKey+'_'+name+'_'+dateKey).replace(/[\/-]/g,'_');
-  var data = {clsKey:clsKey, name:name, dateKey:dateKey};
+window.fbSaveAttendance = async function(who, clsKey, name, dateKey, statusOrObj) {
+  var safeKey = (who+'_'+clsKey+'_'+name+'_'+dateKey).replace(/[\/-]/g,'_');
+  var data = {who:who, clsKey:clsKey, name:name, dateKey:dateKey};
   if(typeof statusOrObj === 'object' && statusOrObj !== null) {
     Object.assign(data, statusOrObj);
   } else {
@@ -8165,12 +8282,12 @@ window.fbSaveLecComplete = async function(name, lecId, vi) {
   await fbSet('lecComplete/'+key, {name:name, lecId:lecId, vi:vi, completedAt:new Date().toISOString()});
 };
 
-window.fbSaveTuition = async function(ym, name, data) {
-  var key = ym+'_'+(name||'').replace(/\s/g,'_');
+window.fbSaveTuition = async function(who, ym, name, data) {
+  var key = who+'_'+ym+'_'+(name||'').replace(/\s/g,'_');
   if(data===null) {
     await window.fbDel('tuition/'+key);
   } else {
-    await fbSet('tuition/'+key, Object.assign({ym:ym, name:name}, data));
+    await fbSet('tuition/'+key, Object.assign({who:who, ym:ym, name:name}, data));
   }
 };
 
@@ -8420,22 +8537,20 @@ async function loadAllData() {
   var attData = await fbGetCol('attendance');
   Object.keys(attData).forEach(function(key) {
     var a = attData[key];
-    if(!a.clsKey||!a.name||!a.dateKey||!a.status) return;
-    if(!window.classAttendance[a.clsKey]) window.classAttendance[a.clsKey]={};
-    if(!window.classAttendance[a.clsKey][a.name]) window.classAttendance[a.clsKey][a.name]={};
-    if(a.status) {
-      // 시간 정보가 있으면 객체로, 없으면 문자열로 저장
-      var hasTime = a.등원Time||a.하원Time||a.지각Time||a.보강Time;
-      if(hasTime) {
-        var obj = {status:a.status};
-        if(a.등원Time) obj.등원Time=a.등원Time;
-        if(a.하원Time) obj.하원Time=a.하원Time;
-        if(a.지각Time) obj.지각Time=a.지각Time;
-        if(a.보강Time) obj.보강Time=a.보강Time;
-        window.classAttendance[a.clsKey][a.name][a.dateKey]=obj;
-      } else {
-        window.classAttendance[a.clsKey][a.name][a.dateKey]=a.status;
-      }
+    if(!a.clsKey||!a.name||!a.dateKey||!a.status||!a.who) return; // who 없는 구버전 무시
+    if(!window.classAttendance[a.who]) window.classAttendance[a.who]={};
+    if(!window.classAttendance[a.who][a.clsKey]) window.classAttendance[a.who][a.clsKey]={};
+    if(!window.classAttendance[a.who][a.clsKey][a.name]) window.classAttendance[a.who][a.clsKey][a.name]={};
+    var hasTime = a.등원Time||a.하원Time||a.지각Time||a.보강Time;
+    if(hasTime) {
+      var obj = {status:a.status};
+      if(a.등원Time) obj.등원Time=a.등원Time;
+      if(a.하원Time) obj.하원Time=a.하원Time;
+      if(a.지각Time) obj.지각Time=a.지각Time;
+      if(a.보강Time) obj.보강Time=a.보강Time;
+      window.classAttendance[a.who][a.clsKey][a.name][a.dateKey]=obj;
+    } else {
+      window.classAttendance[a.who][a.clsKey][a.name][a.dateKey]=a.status;
     }
   });
 
@@ -8476,9 +8591,10 @@ async function loadAllData() {
   var tuitionSnap = await fbGetCol('tuition');
   Object.keys(tuitionSnap).forEach(function(key){
     var d = tuitionSnap[key];
-    if(!d.ym||!d.name) return;
-    if(!tuitionData[d.ym]) tuitionData[d.ym]={};
-    tuitionData[d.ym][d.name]={paid:d.paid,paidAt:d.paidAt||'',method:d.method||'',amount:d.amount||0};
+    if(!d.who||!d.ym||!d.name) return;
+    if(!tuitionData[d.who]) tuitionData[d.who]={};
+    if(!tuitionData[d.who][d.ym]) tuitionData[d.who][d.ym]={};
+    tuitionData[d.who][d.ym][d.name]={paid:d.paid,paidAt:d.paidAt||'',method:d.method||'',amount:d.amount||0};
   });
 
   // 지출 데이터 불러오기

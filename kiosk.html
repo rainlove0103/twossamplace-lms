@@ -274,10 +274,10 @@ async function submitAtt(type) {
   Object.keys(classStudents).forEach(function(k){ if((classStudents[k]||[]).indexOf(s.name)>-1) clsKey=k; });
   if(!clsKey) clsKey=s.class+'-'+s.day;
 
-  // LMS와 동일한 safeKey 방식 (구분자: '_', 특수문자 '/', '-' 모두 '_'로)
-  var safeKey = (clsKey+'_'+s.name+'_'+dk).replace(/[\/-]/g,'_');
+  // LMS와 동일한 safeKey 방식 (who 포함)
+  var safeKey = (s.who+'_'+clsKey+'_'+s.name+'_'+dk).replace(/[\/-]/g,'_');
 
-  var data={clsKey:clsKey, name:s.name, dateKey:dk, status:effectiveType};
+  var data={who:s.who, clsKey:clsKey, name:s.name, dateKey:dk, status:effectiveType};
   data[effectiveType+'Time']=ts;
 
   try {
