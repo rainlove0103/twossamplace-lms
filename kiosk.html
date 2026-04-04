@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -34,7 +35,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cook
   padding: 10px; font-size: 1rem; color: var(--brown);
   font-weight: 600; letter-spacing: 1px; flex-shrink: 0;
   border-bottom: 1px solid var(--cookie-lt);
-}.kiosk-display-area {
+}
+.kiosk-display-area {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--soft); min-height: 0;
 }
@@ -44,7 +46,8 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: var(--cook
   font-family: 'Noto Sans KR', sans-serif;
 }
 .kiosk-display.empty { color: #ccc; font-size: 1.6rem; letter-spacing: 1px; font-weight: 500; }
-.keypad-wrap { flex-shrink: 0; background: var(--soft); }.keypad-grid {
+.keypad-wrap { flex-shrink: 0; background: var(--soft); }
+.keypad-grid {
   display: grid; grid-template-columns: repeat(3, 1fr);
   border-top: 1px solid var(--cookie-lt);
 }
@@ -127,7 +130,8 @@ function updateDatetime() {
   var now = new Date();
   var pad = function(n){ return String(n).padStart(2,'0'); };
   document.getElementById('datetime-bar').textContent =
-    now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+pad(now.getHours())+':'+pad(now.getMinutes());
+    now.getFullYear()+'-'+pad(now.getMonth()+1)+'-'+pad(now.getDate())+' '+
+    pad(now.getHours())+':'+pad(now.getMinutes());
 }
 updateDatetime(); setInterval(updateDatetime, 1000);
 
@@ -138,10 +142,10 @@ function updateDisplay() {
 }
 
 function buildKeypad() {
-  var keys = ['1','2','3','4','5','6','7','8','9','__','0','DEL'];
+  var keys = ['1','2','3','4','5','6','7','8','9','**','0','DEL'];
   document.getElementById('keypad-grid').innerHTML = keys.map(function(k){
-    if(k==='__') return '<div class="key-btn empty-cell"></div>';
-    if(k==='DEL') return '<button class="key-btn del" onclick="keyDel()">⌫</button>';
+    if(k==='**') return '<div class="key-btn empty-cell"></div>';
+    if(k==='DEL') return '<button class="key-btn del" onclick="keyDel()"><span style="transform:translateY(-6px);display:inline-block">⌫</span></button>';
     return '<button class="key-btn" onclick="keyNum(\''+k+'\')">' + k + '</button>';
   }).join('');
 }
@@ -162,7 +166,10 @@ function showPopup(icon, title, msg, time, timeClass, isError) {
   tel.className = 'popup-time '+(timeClass||'');
   document.getElementById('popup-overlay').classList.add('show');
   if(popupTimer) clearTimeout(popupTimer);
-  popupTimer = setTimeout(function(){ document.getElementById('popup-overlay').classList.remove('show'); inputCode=''; updateDisplay(); }, isError?2200:3200);
+  popupTimer = setTimeout(function(){
+    document.getElementById('popup-overlay').classList.remove('show');
+    inputCode=''; updateDisplay();
+  }, isError?2200:3200);
 }
 
 function initKiosk() {
@@ -192,7 +199,8 @@ function findStudent(code) {
   var found=null;
   ['cookie','butter'].forEach(function(who){
     (memberRoster[who]||[]).forEach(function(s){
-      if(s.status==='active' && String(s.attCode||s.attNo||'')===code) found=Object.assign({},s,{who:who});
+      if(s.status==='active' && String(s.attCode||s.attNo||'')===code)
+        found=Object.assign({},s,{who:who});
     });
   });
   return found;
@@ -210,6 +218,7 @@ var KR_HOLIDAYS = (function(){
   add(10,9,'한글날'); add(12,25,'크리스마스');
   return h;
 })();
+
 /* 음력 공휴일 (연도별 양력 날짜) - 2025~2027 */
 var KR_LUNAR_HOLIDAYS = {
   '2025-01-28':'설날 연휴','2025-01-29':'설날','2025-01-30':'설날 연휴',
@@ -224,9 +233,7 @@ function getHolidayName(dk){
   return KR_HOLIDAYS[dk.slice(5)] || null;
 }
 
-/* 오늘이 해당 학생의 보강 수업일인지 판단
-   - 토요일(6), 일요일(0), 공휴일은 무조건 보강
-   - 평일이더라도 학생의 정규 수업 요일이 아니면 보강 */
+/* 오늘이 학생의 정규 수업일인지 판단 → 보강 여부 결정 */
 function isMakeupArrival(student, now) {
   var dow = now.getDay(); // 0=일,1=월,...,6=토
   var dk  = fmtDate(now);
@@ -235,8 +242,8 @@ function isMakeupArrival(student, now) {
   if(dow === 0 || dow === 6) return true;
   if(getHolidayName(dk)) return true;
 
-  // 학생의 정규 수업 요일 계산
-  var dayStr = student.day || ''; // '월/수' or '화/목'
+  // 학생의 정규 수업 요일
+  var dayStr = student.day || '';
   var regularDOWs = [];
   if(dayStr.indexOf('월') > -1) regularDOWs.push(1);
   if(dayStr.indexOf('화') > -1) regularDOWs.push(2);
@@ -266,8 +273,11 @@ async function submitAtt(type) {
   var clsKey=null;
   Object.keys(classStudents).forEach(function(k){ if((classStudents[k]||[]).indexOf(s.name)>-1) clsKey=k; });
   if(!clsKey) clsKey=s.class+'-'+s.day;
-  var safeKey=(clsKey+'_'+s.name+'_'+dk).replace(/[\/-]/g,'_');
-  var data={clsKey:clsKey,name:s.name,dateKey:dk,status:effectiveType};
+
+  // LMS와 동일한 safeKey 방식 (구분자: '_', 특수문자 '/', '-' 모두 '_'로)
+  var safeKey = (clsKey+'_'+s.name+'_'+dk).replace(/[\/-]/g,'_');
+
+  var data={clsKey:clsKey, name:s.name, dateKey:dk, status:effectiveType};
   data[effectiveType+'Time']=ts;
 
   try {
@@ -276,14 +286,24 @@ async function submitAtt(type) {
       if(ex.exists){
         var prev=ex.data(), ps=prev.status||'';
         // 하원 버튼: 기존 상태와 합산
-        if(type==='하원'&&ps==='등원'){ data.status='등원+하원'; data['등원Time']=prev['등원Time']||''; data['하원Time']=ts; }
-        else if(type==='하원'&&ps==='보강'){ data.status='보강+하원'; data['보강Time']=prev['보강Time']||''; data['하원Time']=ts; }
-        else if(type==='등원'&&ps==='하원'){ data.status='등원+하원'; data['등원Time']=ts; data['하원Time']=prev['하원Time']||''; }
-        else if(effectiveType==='보강'&&ps==='하원'){ data.status='보강+하원'; data['보강Time']=ts; data['하원Time']=prev['하원Time']||''; }
+        if(type==='하원'&&ps==='등원'){
+          data.status='등원+하원'; data['등원Time']=prev['등원Time']||''; data['하원Time']=ts;
+        } else if(type==='하원'&&ps==='지각'){
+          data.status='지각+하원'; data['지각Time']=prev['지각Time']||''; data['하원Time']=ts;
+        } else if(type==='하원'&&ps==='보강'){
+          data.status='보강+하원'; data['보강Time']=prev['보강Time']||''; data['하원Time']=ts;
+        } else if(type==='하원'&&ps==='등원+하원'){
+          // 이미 등하원 완료
+          showPopup('✅','이미 등하원 완료',s.name+' 학생\n이미 등하원 처리가 완료됐어요!','','arrive',true);
+          return;
+        } else if(type==='하원'&&ps==='보강+하원'){
+          showPopup('✅','이미 보강 등하원 완료',s.name+' 학생\n이미 보강 등하원 처리가 완료됐어요!','','makeup',true);
+          return;
+        }
       } else {
-        // 오늘 출결 기록이 아예 없는데 하원 버튼을 누른 경우
+        // 오늘 기록 없는데 하원 버튼
         if(type==='하원'){
-          showPopup('🙋','등원 버튼을 먼저 눌러주세요',s.name+' 학생\n아직 등원 기록이 없어요!\n등원 버튼을 눌러 출결해주세요 😊','','',true);
+          showPopup('🙋','등원 버튼을 먼저 눌러주세요',s.name+' 학생\n아직 등원 기록이 없어요!\n등원 버튼을 먼저 눌러주세요 😊','','',true);
           return;
         }
       }
@@ -291,17 +311,22 @@ async function submitAtt(type) {
     }
   } catch(e){ console.error(e); }
 
-  var icons={'등원':'🌅','하원':'🌙','지각':'⏰','등원+하원':'✅','보강':'🔄','보강+하원':'✅'};
+  var icons={
+    '등원':'🌅','하원':'🌙','지각':'⏰',
+    '등원+하원':'✅','지각+하원':'✅',
+    '보강':'🔄','보강+하원':'✅'
+  };
   var msgs={
     '등원':s.name+' 학생\n등원 완료되었습니다 😊',
     '하원':s.name+' 학생\n하원 완료되었습니다 👋',
     '지각':s.name+' 학생\n지각 처리되었습니다',
     '등원+하원':s.name+' 학생\n등하원 완료되었습니다 ✅',
+    '지각+하원':s.name+' 학생\n지각+하원 완료되었습니다 ✅',
     '보강':s.name+' 학생\n보강 수업 등원 완료되었습니다 🔄',
     '보강+하원':s.name+' 학생\n보강 등하원 완료되었습니다 ✅'
   };
   var ft=data.status;
-  var tc = (ft==='보강'||ft==='보강+하원') ? 'makeup' : type==='등원'?'arrive':type==='하원'?'leave':'late';
+  var tc=(ft==='보강'||ft==='보강+하원')?'makeup':type==='등원'?'arrive':type==='하원'?'leave':'late';
   showPopup(icons[ft]||'✅', ft+' 완료', msgs[ft]||s.name+' '+ft, ts, tc, false);
 }
 </script>
