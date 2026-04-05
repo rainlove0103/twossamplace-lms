@@ -7752,9 +7752,10 @@ function setMgmtTab(who,tab){
 function permanentDelete(who, id) {
   var s = (memberRoster[who]||[]).find(function(m){return m.id===id;});
   if(!s) return;
-  if(!confirm('⚠️ ['+s.name+'] 학생의 모든 데이터를 영구 삭제할까요?\n출결, 과제, 리포트, 상담 기록 등 모든 정보가 삭제되며 복구할 수 없어요.')) return;
+  if(!confirm('⚠️ ['+s.name+'] 학생의 모든 데이터를 영구 삭제할까요?\n출결, 과제, 리포트, 원비, 상담 기록 등 모든 정보가 삭제되며 복구할 수 없어요.')) return;
 
   var name = s.name;
+  var clsKey = s.class+'-'+s.day;
 
   // 1. 원생 목록에서 제거
   memberRoster[who] = (memberRoster[who]||[]).filter(function(m){return m.id!==id;});
@@ -7764,9 +7765,14 @@ function permanentDelete(who, id) {
     classStudents[k] = classStudents[k].filter(function(n){return n!==name;});
   });
 
-  // 3. 출결 기록 삭제
-  Object.keys(window.classAttendance).forEach(function(k){
-    ['cookie','butter'].forEach(function(w){if(window.classAttendance[w]&&window.classAttendance[w][k]&&window.classAttendance[w][k][name]) delete window.classAttendance[w][k][name];});
+  // 3. 출결 기록 삭제 (메모리)
+  ['cookie','butter'].forEach(function(w){
+    if(window.classAttendance[w]) {
+      Object.keys(window.classAttendance[w]).forEach(function(k){
+        if(window.classAttendance[w][k]&&window.classAttendance[w][k][name])
+          delete window.classAttendance[w][k][name];
+      });
+    }
   });
 
   // 4. 과제 기록 삭제
@@ -7784,14 +7790,27 @@ function permanentDelete(who, id) {
   // 8. 보강 일정 삭제
   if(makeupSchedules[name]) delete makeupSchedules[name];
 
-  // 9. 데일리리포트 삭제
-  if(dailyReports[who]) {
-    Object.keys(dailyReports[who]).forEach(function(dk){
-      if(dailyReports[who][dk][name]) delete dailyReports[who][dk][name];
-    });
-  }
+  // 9. 데일리리포트 삭제 (메모리)
+  ['cookie','butter'].forEach(function(w){
+    if(dailyReports[w]) {
+      Object.keys(dailyReports[w]).forEach(function(dk){
+        if(dailyReports[w][dk]&&dailyReports[w][dk][name])
+          delete dailyReports[w][dk][name];
+      });
+    }
+  });
 
-  // 10. 강의 수강 학생 목록에서 제거
+  // 10. 원비 기록 삭제 (메모리)
+  ['cookie','butter'].forEach(function(w){
+    if(tuitionData[w]) {
+      Object.keys(tuitionData[w]).forEach(function(ym){
+        if(tuitionData[w][ym]&&tuitionData[w][ym][name])
+          delete tuitionData[w][ym][name];
+      });
+    }
+  });
+
+  // 11. 강의 수강 학생 목록에서 제거
   Object.keys(lectureStudents).forEach(function(lid){
     lectureStudents[lid].delete(name);
     if(window.fbSaveLecStudents) window.fbSaveLecStudents(parseInt(lid));
@@ -7800,33 +7819,41 @@ function permanentDelete(who, id) {
     lectureGroupStudents[gid].delete(name);
   });
 
-  // 11. Firebase에서 삭제
-  if(window._fbDel) {
-    // 원생 목록 저장 (삭제 후)
-    window.fbSaveMemberRoster(who);
+  // 12. Firebase에서 삭제
+  if(window._fbDb) {
+    // 원생 목록 저장
+    if(window.fbSaveMemberRoster) window.fbSaveMemberRoster(who);
+    // classStudents 저장
+    if(window.fbSaveClassStudents) window.fbSaveClassStudents(clsKey);
     // 과제 삭제
-    window._fbDel('hwAssigned/'+name);
+    if(window._fbDel) window._fbDel('hwAssigned/'+name);
     // 독서 기록 삭제
-    window._fbDel('bookRecords/'+name);
+    if(window._fbDel) window._fbDel('bookRecords/'+name);
     // 상담 기록 삭제
-    window._fbDel('counsel/'+name);
-    // 리포트 삭제 (Firebase에서 해당 학생 리포트 전부)
-    if(window._fbDb) {
-      window._fbDb.collection('reports').where('name','==',name).get().then(function(snap){
-        snap.forEach(function(doc){ doc.ref.delete(); });
-      });
-      // 출결 삭제
-      window._fbDb.collection('attendance').where('name','==',name).get().then(function(snap){
-        snap.forEach(function(doc){ doc.ref.delete(); });
-      });
-      // 결석 사유 삭제
-      window._fbDb.collection('absenceReasons').where('name','==',name).get().then(function(snap){
-        snap.forEach(function(doc){ doc.ref.delete(); });
-      });
-    }
+    if(window._fbDel) window._fbDel('counsel/'+name);
+    // 리포트 삭제
+    window._fbDb.collection('reports').where('name','==',name).get().then(function(snap){
+      snap.forEach(function(doc){ doc.ref.delete(); });
+    });
+    // 출결 삭제
+    window._fbDb.collection('attendance').where('name','==',name).get().then(function(snap){
+      snap.forEach(function(doc){ doc.ref.delete(); });
+    });
+    // 결석 사유 삭제
+    window._fbDb.collection('absenceReasons').where('name','==',name).get().then(function(snap){
+      snap.forEach(function(doc){ doc.ref.delete(); });
+    });
+    // 원비 삭제
+    window._fbDb.collection('tuition').where('name','==',name).get().then(function(snap){
+      snap.forEach(function(doc){ doc.ref.delete(); });
+    });
+    // 학부모 리포트 삭제
+    window._fbDb.collection('parentReports').where('name','==',name).get().then(function(snap){
+      snap.forEach(function(doc){ doc.ref.delete(); });
+    });
   }
-  if(window.populateStudentSelect) window.populateStudentSelect();
 
+  if(window.populateStudentSelect) window.populateStudentSelect();
   var el = document.getElementById(who+'-main-content');
   renderStudentMgmt(who, el);
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
