@@ -1,0 +1,980 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>투쌤플레이스 라이브러리 📚</title>
+<link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#fff9fb;
+  --warm:#fff0f5;
+  --pink:#ff8fab;
+  --pink-lt:#ffb3c6;
+  --pink-bg:#fff0f5;
+  --pink-deep:#e8547a;
+  --rose:#fce4ec;
+  --rose-lt:#ffd6e7;
+  --brown:#4a1a2c;
+  --text:#4a1a2c;
+  --text-mid:#8b3a5a;
+  --text-soft:#c48aaa;
+  --mint:#62d2a2;
+  --sky:#7ec8e3;
+  --lavender:#c4b5fd;
+  --gold:#f5a623;
+  --teal:#1a8a6a;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--text);min-height:100vh;overflow-x:hidden;}
+
+/* 배경 데코 */
+.bg-deco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0;}
+.bg-dot{position:absolute;border-radius:50%;opacity:.12;}
+
+/* 헤더 */
+.header{background:white;border-bottom:2px solid var(--rose-lt);padding:0 28px;height:64px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(255,143,171,.15);}
+.header-brand{display:flex;align-items:center;gap:10px;}
+.header-brand .title{font-family:'Noto Sans KR',sans-serif;font-size:1.4rem;font-weight:700;color:var(--brown);line-height:1.2;}
+.header-brand .title-sub{font-family:'Gaegu',cursive;font-size:.8rem;font-weight:400;color:var(--text-soft);display:block;line-height:1.3;}
+.header-right{display:flex;align-items:center;gap:8px;}
+.header-badge{background:var(--pink-bg);border:2px solid var(--pink-lt);border-radius:100px;padding:5px 14px;font-size:.75rem;font-weight:700;color:var(--pink-deep);}
+
+/* 탭 네비 */
+.tab-nav{background:white;border-bottom:2px solid var(--rose-lt);padding:0 28px;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;}
+.tab-nav::-webkit-scrollbar{display:none;}
+.tab-btn{padding:.7rem 1.2rem;border:none;background:none;font-family:'Noto Sans KR',sans-serif;font-size:.85rem;font-weight:600;color:var(--text-soft);cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap;transition:all .2s;}
+.tab-btn:hover{color:var(--pink-deep);}
+.tab-btn.active{color:var(--pink-deep);border-bottom-color:var(--pink-deep);}
+.tab-btn .cnt{display:inline-block;font-size:.68rem;background:var(--rose);border-radius:10px;padding:1px 7px;margin-left:4px;color:var(--text-soft);}
+.tab-btn.active .cnt{background:var(--pink-bg);color:var(--pink-deep);}
+
+/* 페이지 */
+.page{display:none;} .page.active{display:block;}
+
+/* 배너 */
+.banner{background:linear-gradient(135deg,var(--pink-lt),var(--pink-deep));border-radius:24px;padding:24px 28px;margin:24px 28px 0;display:flex;align-items:center;justify-content:space-between;box-shadow:0 6px 24px rgba(255,143,171,.35);position:relative;overflow:hidden;}
+.banner::before{content:'';position:absolute;right:-20px;top:-20px;width:120px;height:120px;background:rgba(255,255,255,.12);border-radius:50%;}
+.banner-text h2{font-family:'Gaegu',cursive;font-size:1.9rem;color:white;margin-bottom:4px;}
+.banner-text p{font-size:.82rem;color:rgba(255,255,255,.88);}
+.banner-emoji{font-size:3.2rem;filter:drop-shadow(0 3px 6px rgba(0,0,0,.15));}
+
+/* 본문 */
+.body{padding:20px 28px 48px;}
+
+/* 섹션 타이틀 */
+.section-title{font-family:'Noto Sans KR',sans-serif;font-size:1.05rem;font-weight:700;color:var(--brown);margin-bottom:12px;display:flex;align-items:center;gap:7px;}
+
+/* 클래스 카드 그리드 */
+.class-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px;margin-bottom:28px;}
+.class-card{background:white;border-radius:20px;padding:18px 16px;text-align:center;border:2px solid;cursor:pointer;transition:transform .22s cubic-bezier(.34,1.56,.64,1),box-shadow .22s;box-shadow:0 3px 14px rgba(0,0,0,.06);}
+.class-card:hover{transform:translateY(-5px);}
+.class-card .cc-emoji{font-size:2rem;margin-bottom:8px;display:block;}
+.class-card .cc-name{font-weight:700;font-size:.9rem;color:var(--brown);margin-bottom:2px;}
+.class-card .cc-range{font-size:.72rem;color:var(--text-soft);}
+.class-card .cc-cnt{display:inline-block;margin-top:8px;font-size:.7rem;font-weight:700;border-radius:100px;padding:2px 10px;}
+.cc-pb{border-color:#ffb3c6;background:linear-gradient(145deg,#fff5f8,#ffe8ef);}
+.cc-pb:hover{box-shadow:0 10px 28px rgba(255,143,171,.28);}
+.cc-pb .cc-cnt{background:#ffe0ec;color:#e8547a;}
+.cc-rd{border-color:#ffd6b3;background:linear-gradient(145deg,#fff8f0,#ffeed9);}
+.cc-rd:hover{box-shadow:0 10px 28px rgba(255,180,100,.28);}
+.cc-rd .cc-cnt{background:#ffe8cc;color:#c45a20;}
+.cc-ch{border-color:#b3e0ff;background:linear-gradient(145deg,#f0f8ff,#dceeff);}
+.cc-ch:hover{box-shadow:0 10px 28px rgba(100,180,255,.28);}
+.cc-ch .cc-cnt{background:#cce8ff;color:#1a6ab0;}
+.cc-ni{border-color:#c8f0c8;background:linear-gradient(145deg,#f0fff0,#dcffdc);}
+.cc-ni:hover{box-shadow:0 10px 28px rgba(100,210,100,.28);}
+.cc-ni .cc-cnt{background:#c8f0c8;color:#1a7a30;}
+.cc-nv{border-color:#d4b3ff;background:linear-gradient(145deg,#f8f0ff,#eedcff);}
+.cc-nv:hover{box-shadow:0 10px 28px rgba(180,120,255,.28);}
+.cc-nv .cc-cnt{background:#e0c8ff;color:#6a20c8;}
+.cc-by{border-color:#ffc8a0;background:linear-gradient(145deg,#fff4ee,#ffe8d8);}
+.cc-by:hover{box-shadow:0 10px 28px rgba(255,140,80,.28);}
+.cc-by .cc-cnt{background:#ffdcc8;color:#c84820;}
+
+/* 도서 검색 영역 */
+.search-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:white;border-radius:16px;padding:14px 18px;box-shadow:0 2px 12px rgba(255,143,171,.1);border:1.5px solid var(--rose-lt);}
+.search-wrap{position:relative;flex:1;min-width:200px;}
+.search-wrap input{width:100%;padding:.55rem .75rem .55rem 2.1rem;border:2px solid var(--rose-lt);border-radius:12px;font-size:.85rem;font-family:inherit;outline:none;background:var(--cream);color:var(--text);transition:border-color .2s;}
+.search-wrap input:focus{border-color:var(--pink-lt);}
+.search-wrap .si{position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--text-soft);font-size:.85rem;}
+.sel{padding:.5rem .8rem;border:2px solid var(--rose-lt);border-radius:12px;font-size:.8rem;font-family:inherit;background:var(--cream);color:var(--text);outline:none;cursor:pointer;}
+.pill-row{display:flex;gap:5px;flex-wrap:wrap;}
+.pill{padding:.32rem .9rem;border-radius:100px;font-size:.76rem;font-weight:600;cursor:pointer;border:2px solid var(--rose-lt);background:transparent;color:var(--text-soft);transition:all .15s;font-family:inherit;}
+.pill:hover{background:var(--rose);}
+.pill.on{background:var(--pink-deep);color:white;border-color:var(--pink-deep);}
+
+/* 통계 칩 */
+.stats-chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.chip{background:white;border:1.5px solid var(--rose-lt);border-radius:100px;padding:4px 14px;font-size:.76rem;color:var(--text-soft);}
+.chip b{color:var(--pink-deep);font-weight:700;}
+
+/* 도서 그리드 */
+.book-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;}
+.book-card{background:white;border:1.5px solid var(--rose-lt);border-radius:16px;padding:14px 16px;display:flex;flex-direction:row;gap:12px;transition:box-shadow .2s,border-color .2s;position:relative;}
+.book-card:hover{box-shadow:0 5px 20px rgba(255,143,171,.18);border-color:var(--pink-lt);}
+.card-cover{flex-shrink:0;width:64px;}
+.card-cover img{width:64px;height:90px;object-fit:cover;border-radius:6px;box-shadow:0 3px 10px rgba(0,0,0,.15);border:1px solid var(--rose-lt);}
+.card-cover .cover-ph{width:64px;height:90px;border-radius:6px;background:linear-gradient(145deg,var(--rose),var(--pink-bg));display:flex;align-items:center;justify-content:center;font-size:1.6rem;border:1px solid var(--rose-lt);}
+.card-body{flex:1;display:flex;flex-direction:column;gap:0;min-width:0;}
+.card-top{display:flex;align-items:baseline;gap:0;margin-bottom:4px;}
+.card-num{font-size:.68rem;color:var(--text-soft);min-width:22px;flex-shrink:0;line-height:1.4;}
+.card-title{font-size:.88rem;font-weight:700;line-height:1.4;flex:1;color:var(--brown);word-break:break-word;}
+.card-row2{display:flex;align-items:center;gap:0;margin-bottom:6px;padding-left:22px;}
+.card-author{font-size:.76rem;color:var(--text-mid);}
+.card-meta{display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-left:22px;margin-bottom:5px;}
+.card-note{font-size:.71rem;color:var(--text-soft);padding-left:22px;}
+.badge{display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;}
+.b-fi{background:#e8f3fb;color:#1a5a9a;}
+.b-nf{background:#e8f5ee;color:#1a6a3a;}
+.b-ar{background:var(--rose);color:var(--pink-deep);}
+.b-sr{background:#fef9e8;color:#8a6a00;}
+.b-topic{background:#f3eeff;color:#6a30c8;}
+
+/* 페이지네이션 */
+.pager{display:flex;gap:8px;align-items:center;justify-content:center;padding:1.5rem 0;font-size:.82rem;color:var(--text-soft);}
+.pager button{padding:.4rem 1rem;border-radius:10px;border:2px solid var(--rose-lt);background:white;cursor:pointer;font-size:.8rem;font-family:inherit;color:var(--text-mid);font-weight:600;transition:all .15s;}
+.pager button:hover{background:var(--pink-bg);border-color:var(--pink-lt);color:var(--pink-deep);}
+
+/* 지수 비교표 */
+.index-section{display:flex;flex-direction:column;gap:24px;}
+.index-card{background:white;border:1.5px solid var(--rose-lt);border-radius:20px;overflow:hidden;box-shadow:0 3px 14px rgba(255,143,171,.1);}
+.index-card-title{background:linear-gradient(135deg,var(--pink-bg),white);padding:14px 20px;font-weight:700;font-size:.95rem;color:var(--brown);border-bottom:1.5px solid var(--rose-lt);display:flex;align-items:center;gap:8px;}
+.tbl{width:100%;border-collapse:collapse;font-size:.82rem;}
+.tbl th{background:var(--rose);color:var(--pink-deep);font-weight:700;padding:10px 14px;text-align:left;font-size:.76rem;}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--rose-lt);color:var(--text);vertical-align:top;line-height:1.5;}
+.tbl tr:last-child td{border-bottom:none;}
+.tbl tr:hover td{background:var(--cream);}
+.tbl .row-label{color:var(--text-soft);font-size:.76rem;font-weight:600;white-space:nowrap;}
+.idx-badge{display:inline-block;font-size:.72rem;font-weight:700;padding:2px 10px;border-radius:10px;}
+.idx-ar{background:#e8f0fb;color:#1a40a0;}
+.idx-sr{background:#f3eeff;color:#5a20c8;}
+.idx-lx{background:#e8f5ee;color:#1a6a3a;}
+
+/* 클래스별 대조 바 */
+.bar-wrap{height:8px;background:var(--rose);border-radius:4px;overflow:hidden;margin-top:5px;}
+.bar{height:100%;border-radius:4px;}
+
+/* 빈 결과 */
+.no-result{text-align:center;padding:3rem;color:var(--text-soft);font-size:.9rem;grid-column:1/-1;}
+.no-result .nr-emoji{font-size:2.5rem;display:block;margin-bottom:8px;}
+
+/* 반응형 */
+@media(max-width:700px){
+  .header{padding:0 16px;}.tab-nav{padding:0 16px;}
+  .banner{margin:16px 16px 0;padding:18px 20px;}.banner-text h2{font-size:1.5rem;}
+  .body{padding:16px 16px 48px;}
+  .book-grid{grid-template-columns:1fr;}
+  .class-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div class="bg-deco">
+  <div class="bg-dot" style="width:160px;height:160px;background:var(--pink);top:-40px;right:-40px;"></div>
+  <div class="bg-dot" style="width:80px;height:80px;background:var(--pink-lt);bottom:10%;left:-20px;"></div>
+  <div class="bg-dot" style="width:50px;height:50px;background:var(--rose-lt);top:40%;right:5%;"></div>
+</div>
+
+<!-- 헤더 -->
+<div class="header">
+  <div class="header-brand">
+    <div class="title">
+      투쌤플레이스 라이브러리 📚
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="header-badge">🔒 선생님 전용</div>
+  </div>
+</div>
+
+<!-- 탭 네비 -->
+<div class="tab-nav">
+  <button class="tab-btn active" onclick="switchTab('library',this)">📖 도서 라이브러리</button>
+  <button class="tab-btn" onclick="switchTab('index',this)">📊 지수 비교표</button>
+</div>
+
+<!-- ══════════════ 도서 라이브러리 탭 ══════════════ -->
+<div class="page active" id="tab-library">
+
+  <div class="banner">
+    <div class="banner-text">
+      <h2>📚 원서 도서 라이브러리</h2>
+      <p>클래스별 추천 원서 목록 · AR·렉사일 지수 기준 정리</p>
+    </div>
+    <span class="banner-emoji">🌸</span>
+  </div>
+
+  <div class="body">
+
+    <!-- 클래스 선택 -->
+    <div class="section-title">🏷️ 클래스 선택</div>
+    <div class="class-grid" id="classGrid">
+      <div class="class-card cc-pb" onclick="selectClass('picturebook')">
+        <span class="cc-emoji">🖼️</span>
+        <div class="cc-name">파닉스</div>
+        <div class="cc-range">AR 0 ~ 2.5</div>
+        <span class="cc-cnt" id="cnt-picturebook">50권</span>
+      </div>
+      <div class="class-card cc-rd" onclick="selectClass('readers')">
+        <span class="cc-emoji">📗</span>
+        <div class="cc-name">리더스북</div>
+        <div class="cc-range">AR 0 ~ 3.5</div>
+        <span class="cc-cnt" id="cnt-readers">50권</span>
+      </div>
+      <div class="class-card cc-ch" onclick="selectClass('chapter')">
+        <span class="cc-emoji">📘</span>
+        <div class="cc-name">챕터북</div>
+        <div class="cc-range">AR 2.5 ~ 4.5</div>
+        <span class="cc-cnt" id="cnt-chapter">50권</span>
+      </div>
+      <div class="class-card cc-ni" onclick="selectClass('novel_basic')">
+        <span class="cc-emoji">📙</span>
+        <div class="cc-name">노블 베이직</div>
+        <div class="cc-range">AR 3.5 ~ 5.5</div>
+        <span class="cc-cnt" id="cnt-novel_basic">50권</span>
+      </div>
+      <div class="class-card cc-nv" onclick="selectClass('novel_plus')">
+        <span class="cc-emoji">📕</span>
+        <div class="cc-name">노블 플러스</div>
+        <div class="cc-range">AR 4.5 ~ 6.5</div>
+        <span class="cc-cnt" id="cnt-novel_plus">50권</span>
+      </div>
+      <div class="class-card cc-by" onclick="selectClass('beyond')">
+        <span class="cc-emoji">📓</span>
+        <div class="cc-name">비욘드</div>
+        <div class="cc-range">AR 6.0 ~ 10.0</div>
+        <span class="cc-cnt" id="cnt-beyond">50권</span>
+      </div>
+    </div>
+
+    <!-- 도서 목록 영역 -->
+    <div id="bookSection" style="display:none;">
+      <div class="section-title" id="bookSectionTitle">📣 파닉스 도서 목록</div>
+
+      <div class="search-bar">
+        <div class="search-wrap">
+          <span class="si">🔍</span>
+          <input type="text" id="q" placeholder="제목, 저자 검색..." oninput="render()">
+        </div>
+        <select class="sel" id="topicSel" onchange="render()">
+          <option value="">전체 주제</option>
+          <option>동물·자연</option>
+          <option>과학·STEAM</option>
+          <option>사회·감정</option>
+          <option>역사·문화</option>
+          <option>언어·유머</option>
+          <option>수학·개념</option>
+          <option>모험·판타지</option>
+          <option>일상·성장</option>
+        </select>
+        <select class="sel" id="arSel" onchange="render()">
+          <option value="">전체 AR</option>
+          <option value="0,1.0">AR 0~1.0</option>
+          <option value="1.0,1.5">AR 1.0~1.5</option>
+          <option value="1.5,2.0">AR 1.5~2.0</option>
+          <option value="2.0,2.5">AR 2.0~2.5</option>
+          <option value="2.5,3.5">AR 2.5~3.5</option>
+        </select>
+        <div class="pill-row">
+          <button class="pill on" data-f="all" onclick="setFilter(this,'all')">전체</button>
+          <button class="pill" data-f="Fiction" onclick="setFilter(this,'Fiction')">픽션</button>
+          <button class="pill" data-f="Nonfiction" onclick="setFilter(this,'Nonfiction')">논픽션</button>
+          <button class="pill" data-f="Series" onclick="setFilter(this,'Series')">시리즈</button>
+        </div>
+      </div>
+
+      <div class="stats-chips" id="statsChips"></div>
+      <div class="book-grid" id="bookGrid"></div>
+      <div class="pager" id="pager"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════ 지수 비교표 탭 ══════════════ -->
+<div class="page" id="tab-index">
+
+  <div class="banner">
+    <div class="banner-text">
+      <h2>📊 영어 읽기 지수 비교</h2>
+      <p>AR · SR · 렉사일 지수 특성 및 클래스별 대조 기준</p>
+    </div>
+    <span class="banner-emoji">🔢</span>
+  </div>
+
+  <div class="body">
+    <div class="index-section">
+
+      <!-- 세 지수 특성 비교 -->
+      <div>
+        <div class="section-title">🔍 세 지수 특성 비교</div>
+        <div class="index-card">
+          <div class="index-card-title">📋 AR · SR · 렉사일 핵심 비교</div>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:16%">구분</th>
+                <th><span class="idx-badge idx-ar">AR 지수 (ATOS)</span></th>
+                <th><span class="idx-badge idx-sr">SR 지수 (Star Reading)</span></th>
+                <th><span class="idx-badge idx-lx">렉사일 (Lexile)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="row-label">개발사</td>
+                <td>Renaissance Learning</td>
+                <td>Renaissance Learning</td>
+                <td>MetaMetrics</td>
+              </tr>
+              <tr>
+                <td class="row-label">측정 대상</td>
+                <td>📚 책(텍스트) 난이도</td>
+                <td>🧑 학생 읽기 능력</td>
+                <td>📚🧑 책 & 학생 모두</td>
+              </tr>
+              <tr>
+                <td class="row-label">측정 방식</td>
+                <td>문장 길이 + 단어 난이도 → 학년 수준 환산</td>
+                <td>학생이 독해 퀴즈 풀면 IRT 모델로 능력치 산출</td>
+                <td>문장 길이 + 단어 빈도 (통계 기반 회귀 모델)</td>
+              </tr>
+              <tr>
+                <td class="row-label">범위</td>
+                <td>0.1 – 13.0</td>
+                <td>0 – 1400+ (GE 단위)</td>
+                <td>BR (입문) – 2000L+</td>
+              </tr>
+              <tr>
+                <td class="row-label">단위 의미</td>
+                <td>3.5 = 미국 3학년 5개월 텍스트 수준</td>
+                <td>GE 3.5 = 미국 3학년 5개월 학생 능력</td>
+                <td>숫자가 높을수록 어려운 텍스트. 700L = 중학 초반</td>
+              </tr>
+              <tr>
+                <td class="row-label">무엇을 알려주나</td>
+                <td>"이 <b>책</b>이 몇 학년 수준인가"</td>
+                <td>"이 <b>학생</b>이 몇 학년 수준인가"</td>
+                <td>"이 책/학생이 몇 L인가" (동일 척도)</td>
+              </tr>
+              <tr>
+                <td class="row-label">시험 방법</td>
+                <td>별도 시험 없음 (책에 자동 부여)</td>
+                <td>Star Reading 시험 응시 (약 20~34문항, 20분)</td>
+                <td>책: 자동 분석 / 학생: 렉사일 평가</td>
+              </tr>
+              <tr>
+                <td class="row-label">국내 활용</td>
+                <td>학원·공부방 레벨 배치 기준, AR 퀴즈 연동</td>
+                <td>일부 영어 학원 진단 평가, Renaissance 플랫폼</td>
+                <td>원서 구매·도서관 분류, 아마존·교보 원서 표기</td>
+              </tr>
+              <tr>
+                <td class="row-label">강점</td>
+                <td>책 선정 직관적, AR 퀴즈 완벽 연동</td>
+                <td>학생 개인 능력 진단 정확, 성장 추이 추적</td>
+                <td>책·학생 동일 척도 매칭, 국제적으로 가장 널리 사용</td>
+              </tr>
+              <tr>
+                <td class="row-label">한계</td>
+                <td>흥미·장르·배경지식 미반영, 학생 능력 측정 불가</td>
+                <td>책 난이도 표기 아님, AR과 별도 관리 필요</td>
+                <td>문학적 복잡성·어조 미반영, 환산 시 ±100L 오차</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 클래스별 대조표 -->
+      <div>
+        <div class="section-title">🏷️ 투쌤플레이스 클래스</div>
+        <div class="index-card">
+          <div class="index-card-title">📐 투쌤플레이스 클래스 AR · SR · 렉사일 범위</div>
+          <table class="tbl">
+            <thead>
+              <tr>
+                <th style="width:16%">클래스</th>
+                <th style="width:13%">AR 지수</th>
+                <th style="width:13%">SR (GE)</th>
+                <th style="width:15%">렉사일 (L)</th>
+                <th style="width:14%">미국 학년</th>
+                <th style="width:13%">한국 학년</th>
+                <th>난이도</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge" style="background:#ffe0ec;color:#e8547a;font-size:.76rem;padding:3px 10px;border-radius:10px;">📣 파닉스</span></td>
+                <td><b>0 – 2.5</b></td>
+                <td>0 – 2.5</td>
+                <td>BR – 500L</td>
+                <td>Pre-K – 1</td>
+                <td>유아 – 초1</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:14%;background:#ff8fab;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:#ffe8cc;color:#c45a20;font-size:.76rem;padding:3px 10px;border-radius:10px;">📗 리더스북</span></td>
+                <td><b>0 – 3.5</b></td>
+                <td>0 – 3.5</td>
+                <td>BR – 650L</td>
+                <td>K – 3</td>
+                <td>유아 – 초2</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:26%;background:#f5a623;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:#cce8ff;color:#1a6ab0;font-size:.76rem;padding:3px 10px;border-radius:10px;">📘 챕터북</span></td>
+                <td><b>2.5 – 4.5</b></td>
+                <td>2.5 – 4.5</td>
+                <td>500 – 800L</td>
+                <td>2 – 4</td>
+                <td>초2 – 초4</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:42%;background:#7ec8e3;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:#c8f0c8;color:#1a7a30;font-size:.76rem;padding:3px 10px;border-radius:10px;">📙 노블 베이직</span></td>
+                <td><b>3.5 – 5.5</b></td>
+                <td>3.5 – 5.5</td>
+                <td>650 – 950L</td>
+                <td>3 – 6</td>
+                <td>초3 – 초5</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:58%;background:#62d2a2;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:#e0c8ff;color:#6a20c8;font-size:.76rem;padding:3px 10px;border-radius:10px;">📕 노블 플러스</span></td>
+                <td><b>4.5 – 6.5</b></td>
+                <td>4.5 – 6.5</td>
+                <td>800 – 1100L</td>
+                <td>5 – 8</td>
+                <td>초5 – 중2</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:74%;background:#c4b5fd;"></div></div></td>
+              </tr>
+              <tr>
+                <td><span class="badge" style="background:#ffdcc8;color:#c84820;font-size:.76rem;padding:3px 10px;border-radius:10px;">📓 비욘드</span></td>
+                <td><b>6.0 – 10.0</b></td>
+                <td>6.0 – 10.0+</td>
+                <td>1050 – 1500L+</td>
+                <td>8 – 대학</td>
+                <td>중2 – 고등</td>
+                <td><div class="bar-wrap"><div class="bar" style="width:100%;background:#f5a623;"></div></div></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 활용 팁 -->
+      <div>
+        <div class="section-title">💡 실전 활용 가이드</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">🎯 클래스 배치</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">렉사일 테스트 결과를 위 대조표에 대입해서 반 배치 결정. 부모 상담 시 "520L이라 챕터북 반에 배치했어요"처럼 수치로 설명 가능.</div>
+          </div>
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">📖 도서 선정</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">학생 지수에서 <b>-50L~+100L</b>이 편안한 독서 구간. 수업 정독용은 지수보다 살짝 높게, 다독·자유독서용은 지수와 비슷하게.</div>
+          </div>
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">📈 성장 추적</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">학기 초·중·말 렉사일 테스트 3회 반복. "3개월 만에 580L→720L" 같은 수치로 학부모 상담 자료 활용.</div>
+          </div>
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">🔄 AR·SR 병행</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">AR은 책에 붙는 번호, SR은 학생에게 붙는 번호. 학기 초 SR 시험으로 학생 수준 진단 후, 그 GE 값에 맞는 AR 지수 책 선정.</div>
+          </div>
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">⚠️ 주의사항</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">AR ↔ 렉사일 완전한 1:1 변환 불가. ±50~100L 오차 있음. 겹치는 구간은 그림 비중·챕터 유무·주제 성숙도로 배치 결정.</div>
+          </div>
+          <div class="index-card" style="padding:18px 20px;">
+            <div style="font-size:1.2rem;margin-bottom:8px;">🌸 소리영어 연계</div>
+            <div style="font-size:.82rem;color:var(--text-mid);line-height:1.7;">지수 낮으면 소리 먼저 충분히 → 텍스트. 지수 높으면 읽기+말하기 병행 비중 높이기. 렉사일을 개인별 루틴 조율 기준으로 활용.</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 데이터 ──────────────────────────────────────────────────────
+const BOOKS = {
+  picturebook: [
+    {n:1,t:"The Very Hungry Caterpillar",a:"Eric Carle",ar:2.0,type:"Nonfiction",topic:"동물·자연",note:"생애주기·숫자·계절변화"},
+    {n:2,t:"Brown Bear, Brown Bear, What Do You See?",a:"Bill Martin Jr.",ar:1.4,type:"Fiction",topic:"동물·자연",note:"반복패턴·색깔 인식"},
+    {n:3,t:"Polar Bear, Polar Bear, What Do You Hear?",a:"Bill Martin Jr.",ar:1.4,type:"Fiction",topic:"동물·자연",note:"반복패턴·동물 소리",s:true},
+    {n:4,t:"Chicka Chicka Boom Boom",a:"Bill Martin Jr.",ar:1.4,type:"Fiction",topic:"언어·유머",note:"알파벳·운율·파닉스"},
+    {n:5,t:"Green Eggs and Ham",a:"Dr. Seuss",ar:1.5,type:"Fiction",topic:"언어·유머",note:"파닉스·반복 구조·설득"},
+    {n:6,t:"The Cat in the Hat",a:"Dr. Seuss",ar:2.1,type:"Fiction",topic:"언어·유머",note:"파닉스·운율·상상력"},
+    {n:7,t:"One Fish Two Fish Red Fish Blue Fish",a:"Dr. Seuss",ar:1.4,type:"Fiction",topic:"언어·유머",note:"숫자·색·반대말"},
+    {n:8,t:"Fox in Socks",a:"Dr. Seuss",ar:0.5,type:"Fiction",topic:"언어·유머",note:"Tongue twister·음운 인식"},
+    {n:9,t:"The Lorax",a:"Dr. Seuss",ar:2.2,type:"Fiction",topic:"동물·자연",note:"환경보호·STEAM·설득"},
+    {n:10,t:"How the Grinch Stole Christmas",a:"Dr. Seuss",ar:2.3,type:"Fiction",topic:"사회·감정",note:"나눔·공동체·변화"},
+    {n:11,t:"Goodnight Moon",a:"Margaret Wise Brown",ar:2.1,type:"Fiction",topic:"일상·성장",note:"취침 루틴·반복·안정감"},
+    {n:12,t:"The Runaway Bunny",a:"Margaret Wise Brown",ar:2.2,type:"Fiction",topic:"사회·감정",note:"무조건적 사랑·애착"},
+    {n:13,t:"Swimmy",a:"Leo Lionni",ar:2.3,type:"Fiction",topic:"사회·감정",note:"협력·리더십·다양성",s:true},
+    {n:14,t:"Frederick",a:"Leo Lionni",ar:2.1,type:"Fiction",topic:"사회·감정",note:"창의·예술의 역할·공동체",s:true},
+    {n:15,t:"Alexander and the Wind-Up Mouse",a:"Leo Lionni",ar:2.5,type:"Fiction",topic:"사회·감정",note:"정체성·우정·소망",s:true},
+    {n:16,t:"Inch by Inch",a:"Leo Lionni",ar:1.8,type:"Fiction",topic:"수학·개념",note:"측정·전략·기지",s:true},
+    {n:17,t:"Olivia",a:"Ian Falconer",ar:1.9,type:"Fiction",topic:"일상·성장",note:"자아·상상·개성",s:true},
+    {n:18,t:"Don't Let the Pigeon Drive the Bus!",a:"Mo Willems",ar:0.9,type:"Fiction",topic:"언어·유머",note:"설득·유머·규칙",s:true},
+    {n:19,t:"Knuffle Bunny",a:"Mo Willems",ar:1.0,type:"Fiction",topic:"사회·감정",note:"감정 표현·언어 발달",s:true},
+    {n:20,t:"We Are in a Book!",a:"Mo Willems",ar:0.8,type:"Fiction",topic:"언어·유머",note:"메타픽션·독자 참여",s:true},
+    {n:21,t:"The Snowy Day",a:"Ezra Jack Keats",ar:2.0,type:"Fiction",topic:"일상·성장",note:"계절·탐구·다양성"},
+    {n:22,t:"Where the Wild Things Are",a:"Maurice Sendak",ar:3.4,type:"Fiction",topic:"모험·판타지",note:"감정 조절·상상·자아"},
+    {n:23,t:"Stellaluna",a:"Janell Cannon",ar:2.5,type:"Fiction",topic:"동물·자연",note:"박쥐 생태·정체성·수용"},
+    {n:24,t:"The Grouchy Ladybug",a:"Eric Carle",ar:2.2,type:"Fiction",topic:"사회·감정",note:"시간 개념·태도·반성"},
+    {n:25,t:"The Giving Tree",a:"Shel Silverstein",ar:2.3,type:"Fiction",topic:"사회·감정",note:"나눔·관계·희생"},
+    {n:26,t:"Tops and Bottoms",a:"Janet Stevens",ar:2.4,type:"Fiction",topic:"역사·문화",note:"이솝 민담·전략적 사고"},
+    {n:27,t:"Anansi the Spider",a:"Gerald McDermott",ar:2.1,type:"Fiction",topic:"역사·문화",note:"서아프리카 민담·지혜"},
+    {n:28,t:"Lon Po Po",a:"Ed Young",ar:2.3,type:"Fiction",topic:"역사·문화",note:"중국 민담·늑대·기지"},
+    {n:29,t:"The Mitten",a:"Jan Brett",ar:2.4,type:"Fiction",topic:"역사·문화",note:"우크라이나 민담·겨울"},
+    {n:30,t:"Goldilocks and the Three Bears",a:"Jan Brett",ar:2.5,type:"Fiction",topic:"역사·문화",note:"전래동화·결과·예의"},
+    {n:31,t:"What Do You Do with a Problem?",a:"Kobi Yamada",ar:2.3,type:"Fiction",topic:"사회·감정",note:"문제해결·성장형 사고"},
+    {n:32,t:"What Do You Do with an Idea?",a:"Kobi Yamada",ar:2.0,type:"Fiction",topic:"과학·STEAM",note:"창의·아이디어·도전",s:true},
+    {n:33,t:"The Most Magnificent Thing",a:"Ashley Spires",ar:2.2,type:"Fiction",topic:"과학·STEAM",note:"공학적 사고·실패·끈기"},
+    {n:34,t:"Rosie Revere, Engineer",a:"Andrea Beaty",ar:2.8,type:"Fiction",topic:"과학·STEAM",note:"공학·실패·STEAM 여성",s:true},
+    {n:35,t:"Iggy Peck, Architect",a:"Andrea Beaty",ar:2.5,type:"Fiction",topic:"과학·STEAM",note:"건축·열정·창의",s:true},
+    {n:36,t:"Ada Twist, Scientist",a:"Andrea Beaty",ar:2.7,type:"Fiction",topic:"과학·STEAM",note:"과학적 방법·질문·STEAM",s:true},
+    {n:37,t:"Actual Size",a:"Steve Jenkins",ar:2.0,type:"Nonfiction",topic:"동물·자연",note:"동물 크기 비교·측정",s:true},
+    {n:38,t:"What Do You Do with a Tail Like This?",a:"Steve Jenkins",ar:2.2,type:"Nonfiction",topic:"동물·자연",note:"동물 신체 적응·추론"},
+    {n:39,t:"Hottest Coldest Highest Deepest",a:"Steve Jenkins",ar:2.3,type:"Nonfiction",topic:"과학·STEAM",note:"지구 기록·지리·비교"},
+    {n:40,t:"Grand Canyon",a:"Jason Chin",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"지질학·생태계·자연사"},
+    {n:41,t:"Gravity",a:"Jason Chin",ar:1.8,type:"Nonfiction",topic:"과학·STEAM",note:"중력·물리·과학 개념"},
+    {n:42,t:"Your Fantastic Elastic Brain",a:"JoAnn Deak",ar:2.3,type:"Nonfiction",topic:"과학·STEAM",note:"뇌과학·성장형 사고·학습"},
+    {n:43,t:"From Seed to Plant",a:"Gail Gibbons",ar:2.2,type:"Nonfiction",topic:"동물·자연",note:"식물 생애주기·과학 관찰"},
+    {n:44,t:"Monarch Butterfly",a:"Gail Gibbons",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"나비 이동·변태·생태",s:true},
+    {n:45,t:"The Planets",a:"Gail Gibbons",ar:2.4,type:"Nonfiction",topic:"과학·STEAM",note:"태양계·천문학·우주",s:true},
+    {n:46,t:"Last Stop on Market Street",a:"Matt de la Peña",ar:2.5,type:"Fiction",topic:"사회·감정",note:"감사·다양성·공동체"},
+    {n:47,t:"Each Kindness",a:"Jacqueline Woodson",ar:2.2,type:"Fiction",topic:"사회·감정",note:"친절·후회·두 번째 기회"},
+    {n:48,t:"The Day You Begin",a:"Jacqueline Woodson",ar:2.5,type:"Fiction",topic:"사회·감정",note:"다양성·소속감·용기"},
+    {n:49,t:"Wangari's Trees of Peace",a:"Jeanette Winter",ar:2.5,type:"Nonfiction",topic:"역사·문화",note:"환경·케냐·여성 리더십"},
+    {n:50,t:"Malala's Magic Pencil",a:"Malala Yousafzai",ar:2.5,type:"Nonfiction",topic:"역사·문화",note:"교육권·파키스탄·여성"},
+  ],
+  readers: [
+    {n:1,t:"Henry and Mudge: The First Book",a:"Cynthia Rylant",ar:2.2,type:"Fiction",topic:"동물·자연",note:"강아지·우정·책임감",s:true},
+    {n:2,t:"Henry and Mudge in Puddle Trouble",a:"Cynthia Rylant",ar:2.4,type:"Fiction",topic:"일상·성장",note:"계절·탐구·우정",s:true},
+    {n:3,t:"Henry and Mudge and the Happy Cat",a:"Cynthia Rylant",ar:2.3,type:"Fiction",topic:"동물·자연",note:"고양이·공감·가족",s:true},
+    {n:4,t:"Mr. Putter and Tabby Pour the Tea",a:"Cynthia Rylant",ar:2.3,type:"Fiction",topic:"사회·감정",note:"노인·고양이·우정",s:true},
+    {n:5,t:"Mr. Putter and Tabby Walk the Dog",a:"Cynthia Rylant",ar:2.4,type:"Fiction",topic:"일상·성장",note:"책임·이웃·유머",s:true},
+    {n:6,t:"Nate the Great",a:"Marjorie Weinman Sharmat",ar:2.3,type:"Fiction",topic:"모험·판타지",note:"미스터리·추론·논리",s:true},
+    {n:7,t:"Nate the Great and the Phony Clue",a:"Marjorie Weinman Sharmat",ar:2.3,type:"Fiction",topic:"모험·판타지",note:"단서·추론",s:true},
+    {n:8,t:"Nate the Great and the Lost List",a:"Marjorie Weinman Sharmat",ar:2.4,type:"Fiction",topic:"모험·판타지",note:"미스터리·논리",s:true},
+    {n:9,t:"Amelia Bedelia",a:"Peggy Parish",ar:2.3,type:"Fiction",topic:"언어·유머",note:"관용어·유머·언어유희",s:true},
+    {n:10,t:"Amelia Bedelia and the Surprise Shower",a:"Peggy Parish",ar:2.4,type:"Fiction",topic:"언어·유머",note:"언어유희·유머",s:true},
+    {n:11,t:"Cam Jansen and the Mystery of the Stolen Diamonds",a:"David Adler",ar:2.9,type:"Fiction",topic:"모험·판타지",note:"사진기억·추리·미스터리",s:true},
+    {n:12,t:"Cam Jansen and the Mystery of the UFO",a:"David Adler",ar:2.8,type:"Fiction",topic:"과학·STEAM",note:"UFO·추리",s:true},
+    {n:13,t:"Little Bear",a:"Else Holmelund Minarik",ar:2.1,type:"Fiction",topic:"사회·감정",note:"가족·상상·따뜻함",s:true},
+    {n:14,t:"Little Bear's Friend",a:"Else Holmelund Minarik",ar:2.4,type:"Fiction",topic:"사회·감정",note:"우정·이별·성장",s:true},
+    {n:15,t:"Little Bear's Visit",a:"Else Holmelund Minarik",ar:2.2,type:"Fiction",topic:"역사·문화",note:"조부모·이야기·문화",s:true},
+    {n:16,t:"Danny and the Dinosaur",a:"Syd Hoff",ar:1.7,type:"Fiction",topic:"모험·판타지",note:"공룡·상상·우정",s:true},
+    {n:17,t:"Sammy the Seal",a:"Syd Hoff",ar:1.7,type:"Fiction",topic:"동물·자연",note:"물개·도시·자연",s:true},
+    {n:18,t:"Biscuit",a:"Alyssa Satin Capucilli",ar:1.0,type:"Fiction",topic:"동물·자연",note:"강아지·루틴·사랑",s:true},
+    {n:19,t:"Biscuit Finds a Friend",a:"Alyssa Satin Capucilli",ar:1.2,type:"Fiction",topic:"동물·자연",note:"강아지·우정·오리",s:true},
+    {n:20,t:"Biscuit Goes to School",a:"Alyssa Satin Capucilli",ar:1.2,type:"Fiction",topic:"일상·성장",note:"학교·규칙·유머",s:true},
+    {n:21,t:"National Geographic Readers: Frogs",a:"Elizabeth Carney",ar:2.1,type:"Nonfiction",topic:"동물·자연",note:"개구리·생태·사진자료",s:true},
+    {n:22,t:"National Geographic Readers: Dolphins",a:"Melissa Stewart",ar:2.0,type:"Nonfiction",topic:"동물·자연",note:"돌고래·지능·생태",s:true},
+    {n:23,t:"National Geographic Readers: Sharks",a:"Anne Schreiber",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"상어·먹이사슬·해부",s:true},
+    {n:24,t:"National Geographic Readers: Penguins",a:"Anne Schreiber",ar:1.9,type:"Nonfiction",topic:"동물·자연",note:"펭귄·남극·생존",s:true},
+    {n:25,t:"National Geographic Readers: Cats vs. Dogs",a:"Elizabeth Carney",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"비교·동물·논증",s:true},
+    {n:26,t:"National Geographic Readers: Dinosaurs",a:"Kelly Milner Halls",ar:2.1,type:"Nonfiction",topic:"과학·STEAM",note:"공룡·화석·분류",s:true},
+    {n:27,t:"National Geographic Readers: Volcanoes",a:"Anne Schreiber",ar:2.5,type:"Nonfiction",topic:"과학·STEAM",note:"화산·지구과학·재난"},
+    {n:28,t:"National Geographic Readers: Spiders",a:"Laura Marsh",ar:1.9,type:"Nonfiction",topic:"동물·자연",note:"거미·거미줄·생태"},
+    {n:29,t:"Fly Guy Presents: Sharks",a:"Tedd Arnold",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"상어·유머·사진",s:true},
+    {n:30,t:"Fly Guy Presents: Space",a:"Tedd Arnold",ar:2.2,type:"Nonfiction",topic:"과학·STEAM",note:"우주·행성·탐험",s:true},
+    {n:31,t:"Fly Guy Presents: Dinosaurs",a:"Tedd Arnold",ar:2.4,type:"Nonfiction",topic:"과학·STEAM",note:"공룡·시대·화석",s:true},
+    {n:32,t:"Fly Guy Presents: Insects",a:"Tedd Arnold",ar:2.3,type:"Nonfiction",topic:"동물·자연",note:"곤충·분류·생태",s:true},
+    {n:33,t:"Magic Tree House #1: Dinosaurs Before Dark",a:"Mary Pope Osborne",ar:2.6,type:"Fiction",topic:"모험·판타지",note:"시간여행·공룡·모험",s:true},
+    {n:34,t:"Magic Tree House #2: The Knight at Dawn",a:"Mary Pope Osborne",ar:2.8,type:"Fiction",topic:"역사·문화",note:"중세·기사·성",s:true},
+    {n:35,t:"Magic Tree House #3: Mummies in the Morning",a:"Mary Pope Osborne",ar:2.9,type:"Fiction",topic:"역사·문화",note:"이집트·미라·역사",s:true},
+    {n:36,t:"Magic Tree House #4: Pirates Past Noon",a:"Mary Pope Osborne",ar:2.9,type:"Fiction",topic:"역사·문화",note:"해적·보물·모험",s:true},
+    {n:37,t:"Magic Tree House Fact Tracker: Dinosaurs",a:"Mary Pope Osborne",ar:3.9,type:"Nonfiction",topic:"과학·STEAM",note:"공룡·논픽션·STEAM 연계",s:true},
+    {n:38,t:"Magic Tree House Fact Tracker: Ancient Egypt",a:"Mary Pope Osborne",ar:3.7,type:"Nonfiction",topic:"역사·문화",note:"이집트·피라미드·역사",s:true},
+    {n:39,t:"Frog and Toad Are Friends",a:"Arnold Lobel",ar:2.4,type:"Fiction",topic:"사회·감정",note:"우정·배려·신뢰"},
+    {n:40,t:"Frog and Toad Together",a:"Arnold Lobel",ar:2.0,type:"Fiction",topic:"사회·감정",note:"의지력·우정·목표",s:true},
+    {n:41,t:"Mouse Soup",a:"Arnold Lobel",ar:2.1,type:"Fiction",topic:"언어·유머",note:"이야기의 힘·지혜·유머"},
+    {n:42,t:"Horrible Harry in Room 2B",a:"Suzy Kline",ar:2.7,type:"Fiction",topic:"일상·성장",note:"학교생활·우정·유머",s:true},
+    {n:43,t:"Horrible Harry and the Ant Invasion",a:"Suzy Kline",ar:2.5,type:"Fiction",topic:"과학·STEAM",note:"개미·과학탐구·학교",s:true},
+    {n:44,t:"The Zack Files: My Teacher Is an Alien",a:"Bruce Coville",ar:3.1,type:"Fiction",topic:"모험·판타지",note:"외계인·학교·유머",s:true},
+    {n:45,t:"Freckle Juice",a:"Judy Blume",ar:2.9,type:"Fiction",topic:"일상·성장",note:"외모·또래압력·유머"},
+    {n:46,t:"The Stories Julian Tells",a:"Ann Cameron",ar:2.9,type:"Fiction",topic:"일상·성장",note:"상상·형제·가족"},
+    {n:47,t:"DK Readers Level 2: Bugs! Bugs! Bugs!",a:"DK",ar:2.2,type:"Nonfiction",topic:"동물·자연",note:"곤충·사진·분류",s:true},
+    {n:48,t:"DK Readers Level 2: Amazing Buildings",a:"DK",ar:2.8,type:"Nonfiction",topic:"과학·STEAM",note:"건축·세계·공학",s:true},
+    {n:49,t:"Who Was Albert Einstein?",a:"Jess Brallier",ar:4.4,type:"Nonfiction",topic:"과학·STEAM",note:"과학자·위인·물리",s:true},
+    {n:50,t:"Who Was Marie Curie?",a:"Megan Stine",ar:4.6,type:"Nonfiction",topic:"과학·STEAM",note:"여성과학자·위인·화학",s:true},
+  ],
+  chapter: [
+    {n:1,t:"Junie B. Jones and the Stupid Smelly Bus",a:"Barbara Park",ar:2.6,type:"Fiction",topic:"일상·성장",note:"학교생활·유머·감정표현",s:true},
+    {n:2,t:"Junie B. Jones Is a Party Animal",a:"Barbara Park",ar:2.8,type:"Fiction",topic:"일상·성장",note:"우정·파티·규칙",s:true},
+    {n:3,t:"Junie B. Jones Is Not a Crook",a:"Barbara Park",ar:2.9,type:"Fiction",topic:"사회·감정",note:"정직·도덕·유머",s:true},
+    {n:4,t:"Junie B., First Grader: Boss of Lunch",a:"Barbara Park",ar:2.9,type:"Fiction",topic:"일상·성장",note:"학교·공감·친사회적행동",s:true},
+    {n:5,t:"The Boxcar Children #1",a:"Gertrude Chandler Warner",ar:3.6,type:"Fiction",topic:"모험·판타지",note:"독립·생존·형제자매",s:true},
+    {n:6,t:"The Boxcar Children #2: Surprise Island",a:"Gertrude Chandler Warner",ar:3.7,type:"Fiction",topic:"모험·판타지",note:"탐험·추리·자연",s:true},
+    {n:7,t:"A to Z Mysteries: The Absent Author",a:"Ron Roy",ar:3.4,type:"Fiction",topic:"모험·판타지",note:"추리·미스터리·협력",s:true},
+    {n:8,t:"A to Z Mysteries: The Bald Bandit",a:"Ron Roy",ar:3.3,type:"Fiction",topic:"모험·판타지",note:"추리·단서·미스터리",s:true},
+    {n:9,t:"A to Z Mysteries: The Canary Caper",a:"Ron Roy",ar:3.2,type:"Fiction",topic:"모험·판타지",note:"추리·친구·협동",s:true},
+    {n:10,t:"My Weird School #1: Miss Daisy Is Crazy!",a:"Dan Gutman",ar:3.3,type:"Fiction",topic:"일상·성장",note:"학교·유머·뒤집기",s:true},
+    {n:11,t:"My Weird School #2: Mr. Klutz Is Nuts!",a:"Dan Gutman",ar:3.5,type:"Fiction",topic:"일상·성장",note:"학교·교장선생님·유머",s:true},
+    {n:12,t:"My Weird School #3: Mrs. Roopy Is Loopy!",a:"Dan Gutman",ar:3.4,type:"Fiction",topic:"일상·성장",note:"도서관·역할모델·유머",s:true},
+    {n:13,t:"Dragon Masters #1: Rise of the Earth Dragon",a:"Tracey West",ar:3.2,type:"Fiction",topic:"모험·판타지",note:"용·마법·우정",s:true},
+    {n:14,t:"Dragon Masters #2: Saving the Sun Dragon",a:"Tracey West",ar:3.3,type:"Fiction",topic:"모험·판타지",note:"용·협력·모험",s:true},
+    {n:15,t:"Dragon Masters #3: Secret of the Water Dragon",a:"Tracey West",ar:3.1,type:"Fiction",topic:"모험·판타지",note:"비밀·물·용",s:true},
+    {n:16,t:"Flat Stanley",a:"Jeff Brown",ar:3.4,type:"Fiction",topic:"모험·판타지",note:"납작해진 소년·창의·모험",s:true},
+    {n:17,t:"Flat Stanley's Worldwide Adventures #1",a:"Jeff Brown",ar:3.2,type:"Fiction",topic:"역사·문화",note:"세계여행·문화·모험",s:true},
+    {n:18,t:"Encyclopedia Brown, Boy Detective",a:"Donald J. Sobol",ar:3.5,type:"Fiction",topic:"모험·판타지",note:"추리·논리·미스터리",s:true},
+    {n:19,t:"Encyclopedia Brown Finds the Clues",a:"Donald J. Sobol",ar:3.7,type:"Fiction",topic:"모험·판타지",note:"단서·추론·비판적사고",s:true},
+    {n:20,t:"Geronimo Stilton #1: Lost Treasure of the Emerald Eye",a:"Geronimo Stilton",ar:3.4,type:"Fiction",topic:"모험·판타지",note:"모험·보물·유머",s:true},
+    {n:21,t:"Geronimo Stilton #2: The Curse of the Cheese Pyramid",a:"Geronimo Stilton",ar:3.5,type:"Fiction",topic:"역사·문화",note:"이집트·모험·역사",s:true},
+    {n:22,t:"Captain Underpants and the Attack of the Talking Toilets",a:"Dav Pilkey",ar:3.6,type:"Fiction",topic:"언어·유머",note:"유머·만화·상상",s:true},
+    {n:23,t:"Dog Man #1",a:"Dav Pilkey",ar:2.6,type:"Fiction",topic:"언어·유머",note:"그래픽노블·유머·영웅",s:true},
+    {n:24,t:"Dog Man #2: Unleashed",a:"Dav Pilkey",ar:2.4,type:"Fiction",topic:"언어·유머",note:"유머·선악·창의",s:true},
+    {n:25,t:"Big Nate: In a Class by Himself",a:"Lincoln Peirce",ar:2.7,type:"Fiction",topic:"일상·성장",note:"학교·자신감·유머",s:true},
+    {n:26,t:"Big Nate Strikes Again",a:"Lincoln Peirce",ar:2.8,type:"Fiction",topic:"일상·성장",note:"경쟁·우정·유머",s:true},
+    {n:27,t:"Wayside School Is Falling Down",a:"Louis Sachar",ar:3.8,type:"Fiction",topic:"언어·유머",note:"학교·메타픽션·유머"},
+    {n:28,t:"Sideways Stories from Wayside School",a:"Louis Sachar",ar:2.9,type:"Fiction",topic:"언어·유머",note:"유머·학교·단편연작"},
+    {n:29,t:"Marvin Redpost: Kidnapped at Birth?",a:"Louis Sachar",ar:2.6,type:"Fiction",topic:"사회·감정",note:"정체성·가족·유머",s:true},
+    {n:30,t:"Ramona the Pest",a:"Beverly Cleary",ar:3.5,type:"Fiction",topic:"일상·성장",note:"학교입학·개성·성장",s:true},
+    {n:31,t:"Ramona Quimby, Age 8",a:"Beverly Cleary",ar:3.4,type:"Fiction",topic:"일상·성장",note:"가족·학교·공감",s:true},
+    {n:32,t:"Beezus and Ramona",a:"Beverly Cleary",ar:3.8,type:"Fiction",topic:"사회·감정",note:"자매·갈등·사랑",s:true},
+    {n:33,t:"The Magic School Bus: Inside the Human Body",a:"Joanna Cole",ar:3.9,type:"Fiction",topic:"과학·STEAM",note:"신체·과학탐구·유머",s:true},
+    {n:34,t:"The Magic School Bus: Lost in the Solar System",a:"Joanna Cole",ar:3.9,type:"Fiction",topic:"과학·STEAM",note:"태양계·우주·탐험",s:true},
+    {n:35,t:"The Magic School Bus: On the Ocean Floor",a:"Joanna Cole",ar:4.0,type:"Fiction",topic:"과학·STEAM",note:"해양·생태·탐험",s:true},
+    {n:36,t:"The Magic School Bus: Inside a Beehive",a:"Joanna Cole",ar:3.9,type:"Fiction",topic:"과학·STEAM",note:"꿀벌·사회·과학",s:true},
+    {n:37,t:"Horrible Science: Blood, Bones and Body Bits",a:"Nick Arnold",ar:3.5,type:"Nonfiction",topic:"과학·STEAM",note:"인체·유머·STEAM",s:true},
+    {n:38,t:"Horrible Geography: Violent Volcanoes",a:"Anita Ganeri",ar:3.7,type:"Nonfiction",topic:"과학·STEAM",note:"화산·지구과학·유머",s:true},
+    {n:39,t:"My Weird School Fast Facts: Space, Humans, and Farts",a:"Dan Gutman",ar:3.8,type:"Nonfiction",topic:"과학·STEAM",note:"우주·인체·유머",s:true},
+    {n:40,t:"What If You Had Animal Teeth?",a:"Sandra Markle",ar:3.2,type:"Nonfiction",topic:"동물·자연",note:"동물해부·비교·STEAM",s:true},
+    {n:41,t:"What If You Had Animal Hair?",a:"Sandra Markle",ar:3.1,type:"Nonfiction",topic:"동물·자연",note:"동물털·적응·비교",s:true},
+    {n:42,t:"Shark Lady",a:"Jess Keating",ar:4.5,type:"Nonfiction",topic:"동물·자연",note:"여성과학자·상어·도전"},
+    {n:43,t:"National Geographic Kids: Everything Volcanoes",a:"Kathy Furgang",ar:4.1,type:"Nonfiction",topic:"과학·STEAM",note:"화산·지구과학·사진"},
+    {n:44,t:"Ada Twist and the Perilous Pants",a:"Andrea Beaty",ar:3.1,type:"Fiction",topic:"과학·STEAM",note:"과학·질문·STEAM",s:true},
+    {n:45,t:"Hilo: The Boy Who Crashed to Earth",a:"Judd Winick",ar:2.6,type:"Fiction",topic:"모험·판타지",note:"로봇·외계인·우정",s:true},
+    {n:46,t:"Amulet #1: The Stonekeeper",a:"Kazu Kibuishi",ar:2.6,type:"Fiction",topic:"모험·판타지",note:"그래픽노블·모험·가족",s:true},
+    {n:47,t:"Smile",a:"Raina Telgemeier",ar:2.4,type:"Fiction",topic:"사회·감정",note:"성장·치아·그래픽노블"},
+    {n:48,t:"Sisters",a:"Raina Telgemeier",ar:2.5,type:"Fiction",topic:"사회·감정",note:"자매·갈등·성장",s:true},
+    {n:49,t:"The One and Only Ivan",a:"Katherine Applegate",ar:3.6,type:"Fiction",topic:"동물·자연",note:"고릴라·자유·예술"},
+    {n:50,t:"Because of Winn-Dixie",a:"Kate DiCamillo",ar:3.9,type:"Fiction",topic:"사회·감정",note:"강아지·우정·상실"},
+  ],
+  novel_basic: [
+    {n:1,t:"Charlotte's Web",a:"E.B. White",ar:4.4,type:"Fiction",topic:"동물·자연",note:"우정·죽음·삶의 순환"},
+    {n:2,t:"Stuart Little",a:"E.B. White",ar:4.5,type:"Fiction",topic:"모험·판타지",note:"정체성·모험·가족"},
+    {n:3,t:"The Trumpet of the Swan",a:"E.B. White",ar:4.8,type:"Fiction",topic:"사회·감정",note:"장애·극복·음악"},
+    {n:4,t:"Fantastic Mr. Fox",a:"Roald Dahl",ar:4.1,type:"Fiction",topic:"모험·판타지",note:"지혜·생존·가족"},
+    {n:5,t:"Danny the Champion of the World",a:"Roald Dahl",ar:4.1,type:"Fiction",topic:"사회·감정",note:"아버지와 아들·정의·모험"},
+    {n:6,t:"James and the Giant Peach",a:"Roald Dahl",ar:4.8,type:"Fiction",topic:"모험·판타지",note:"상상·자유·가족의 의미"},
+    {n:7,t:"The BFG",a:"Roald Dahl",ar:4.8,type:"Fiction",topic:"모험·판타지",note:"우정·꿈·선악"},
+    {n:8,t:"Charlie and the Chocolate Factory",a:"Roald Dahl",ar:5.0,type:"Fiction",topic:"사회·감정",note:"욕심·겸손·보상"},
+    {n:9,t:"Matilda",a:"Roald Dahl",ar:5.0,type:"Fiction",topic:"사회·감정",note:"독서의힘·정의·자립"},
+    {n:10,t:"The Witches",a:"Roald Dahl",ar:4.7,type:"Fiction",topic:"모험·판타지",note:"용기·선악·변신"},
+    {n:11,t:"Sarah, Plain and Tall",a:"Patricia MacLachlan",ar:3.4,type:"Fiction",topic:"역사·문화",note:"개척시대·가족·적응"},
+    {n:12,t:"Number the Stars",a:"Lois Lowry",ar:4.5,type:"Fiction",topic:"역사·문화",note:"2차세계대전·용기·우정"},
+    {n:13,t:"The Giver",a:"Lois Lowry",ar:5.7,type:"Fiction",topic:"사회·감정",note:"디스토피아·자유·선택"},
+    {n:14,t:"Gathering Blue",a:"Lois Lowry",ar:5.0,type:"Fiction",topic:"사회·감정",note:"예술·사회·자립",s:true},
+    {n:15,t:"Holes",a:"Louis Sachar",ar:4.6,type:"Fiction",topic:"사회·감정",note:"운명·우정·정의"},
+    {n:16,t:"Hatchet",a:"Gary Paulsen",ar:5.7,type:"Fiction",topic:"모험·판타지",note:"생존·자립·자연"},
+    {n:17,t:"My Side of the Mountain",a:"Jean Craighead George",ar:5.2,type:"Fiction",topic:"동물·자연",note:"자연·독립·생존"},
+    {n:18,t:"Island of the Blue Dolphins",a:"Scott O'Dell",ar:5.4,type:"Fiction",topic:"동물·자연",note:"생존·고독·원주민문화"},
+    {n:19,t:"The Cricket in Times Square",a:"George Selden",ar:4.0,type:"Fiction",topic:"동물·자연",note:"도시·우정·음악"},
+    {n:20,t:"Mrs. Frisby and the Rats of NIMH",a:"Robert C. O'Brien",ar:4.0,type:"Fiction",topic:"과학·STEAM",note:"과학실험·지능·모성"},
+    {n:21,t:"The Phantom Tollbooth",a:"Norton Juster",ar:6.7,type:"Fiction",topic:"언어·유머",note:"언어·수학·상상"},
+    {n:22,t:"Pippi Longstocking",a:"Astrid Lindgren",ar:3.6,type:"Fiction",topic:"모험·판타지",note:"자유·독립·유머"},
+    {n:23,t:"The Borrowers",a:"Mary Norton",ar:3.5,type:"Fiction",topic:"모험·판타지",note:"소인·시각전환·생존"},
+    {n:24,t:"A Wrinkle in Time",a:"Madeleine L'Engle",ar:5.1,type:"Fiction",topic:"과학·STEAM",note:"시공간·가족·선악"},
+    {n:25,t:"From the Mixed-Up Files of Mrs. Basil E. Frankweiler",a:"E.L. Konigsburg",ar:4.7,type:"Fiction",topic:"역사·문화",note:"박물관·미술·추리"},
+    {n:26,t:"Harriet the Spy",a:"Louise Fitzhugh",ar:4.6,type:"Fiction",topic:"사회·감정",note:"관찰·글쓰기·공감"},
+    {n:27,t:"The Lemonade War",a:"Jacqueline Davies",ar:3.7,type:"Fiction",topic:"수학·개념",note:"경제·수학·형제",s:true},
+    {n:28,t:"Wonder",a:"R.J. Palacio",ar:4.8,type:"Fiction",topic:"사회·감정",note:"다양성·공감·친절"},
+    {n:29,t:"The One and Only Bob",a:"Katherine Applegate",ar:3.9,type:"Fiction",topic:"동물·자연",note:"용기·우정·자연재해",s:true},
+    {n:30,t:"Crenshaw",a:"Katherine Applegate",ar:3.8,type:"Fiction",topic:"사회·감정",note:"빈곤·상상·가족"},
+    {n:31,t:"Front Desk",a:"Kelly Yang",ar:4.2,type:"Fiction",topic:"역사·문화",note:"이민·차별·꿈"},
+    {n:32,t:"Inside Out and Back Again",a:"Thanhha Lai",ar:4.6,type:"Fiction",topic:"역사·문화",note:"베트남전·이민·적응"},
+    {n:33,t:"The Wild Robot",a:"Peter Brown",ar:4.4,type:"Fiction",topic:"과학·STEAM",note:"AI·자연·모성"},
+    {n:34,t:"The Wild Robot Escapes",a:"Peter Brown",ar:4.8,type:"Fiction",topic:"과학·STEAM",note:"AI·자유·농장",s:true},
+    {n:35,t:"See You in the Cosmos",a:"Jack Cheng",ar:4.8,type:"Fiction",topic:"과학·STEAM",note:"우주·탐험·가족"},
+    {n:36,t:"The Invention of Hugo Cabret",a:"Brian Selznick",ar:5.1,type:"Fiction",topic:"역사·문화",note:"기계·영화역사·비밀"},
+    {n:37,t:"Esperanza Rising",a:"Pam Muñoz Ryan",ar:5.3,type:"Fiction",topic:"역사·문화",note:"이민·계급·희망"},
+    {n:38,t:"Shiloh",a:"Phyllis Reynolds Naylor",ar:4.4,type:"Fiction",topic:"사회·감정",note:"강아지·도덕적딜레마·정직"},
+    {n:39,t:"Walk Two Moons",a:"Sharon Creech",ar:4.9,type:"Fiction",topic:"사회·감정",note:"상실·여행·정체성"},
+    {n:40,t:"Love That Dog",a:"Sharon Creech",ar:4.0,type:"Fiction",topic:"언어·유머",note:"시·글쓰기·슬픔"},
+    {n:41,t:"Chasing Lincoln's Killer",a:"James L. Swanson",ar:6.0,type:"Nonfiction",topic:"역사·문화",note:"링컨·암살·추적"},
+    {n:42,t:"I Survived: The Sinking of the Titanic",a:"Lauren Tarshis",ar:3.9,type:"Fiction",topic:"역사·문화",note:"타이타닉·생존·역사",s:true},
+    {n:43,t:"I Survived: The Battle of Gettysburg",a:"Lauren Tarshis",ar:3.9,type:"Fiction",topic:"역사·문화",note:"남북전쟁·생존·역사",s:true},
+    {n:44,t:"I Survived: The Nazi Invasion",a:"Lauren Tarshis",ar:4.4,type:"Fiction",topic:"역사·문화",note:"2차세계대전·생존·용기",s:true},
+    {n:45,t:"Drowned City: Hurricane Katrina",a:"Don Brown",ar:4.5,type:"Nonfiction",topic:"과학·STEAM",note:"허리케인·재난·복구"},
+    {n:46,t:"A Black Hole Is Not a Hole",a:"Carolyn Cinami DeCristofano",ar:4.8,type:"Nonfiction",topic:"과학·STEAM",note:"블랙홀·천문학·물리"},
+    {n:47,t:"The Boy Who Harnessed the Wind",a:"William Kamkwamba",ar:3.8,type:"Nonfiction",topic:"과학·STEAM",note:"아프리카·풍력·발명"},
+    {n:48,t:"Hidden Figures Young Readers' Edition",a:"Margot Lee Shetterly",ar:5.8,type:"Nonfiction",topic:"역사·문화",note:"NASA·여성·흑인과학자"},
+    {n:49,t:"Escape! The Story of the Great Houdini",a:"Sid Fleischman",ar:5.3,type:"Nonfiction",topic:"역사·문화",note:"마술·탈출·위인"},
+    {n:50,t:"Kakapo Rescue",a:"Sy Montgomery",ar:5.8,type:"Nonfiction",topic:"동물·자연",note:"멸종위기·뉴질랜드·보전"},
+  ],
+  novel_plus: [
+    {n:1,t:"Harry Potter and the Sorcerer's Stone",a:"J.K. Rowling",ar:5.5,type:"Fiction",topic:"모험·판타지",note:"마법·우정·선악",s:true},
+    {n:2,t:"Harry Potter and the Chamber of Secrets",a:"J.K. Rowling",ar:6.0,type:"Fiction",topic:"모험·판타지",note:"정체성·용기·편견",s:true},
+    {n:3,t:"Harry Potter and the Prisoner of Azkaban",a:"J.K. Rowling",ar:6.0,type:"Fiction",topic:"모험·판타지",note:"시간·정의·신뢰",s:true},
+    {n:4,t:"The Lion, the Witch and the Wardrobe",a:"C.S. Lewis",ar:5.7,type:"Fiction",topic:"모험·판타지",note:"선악·희생·믿음"},
+    {n:5,t:"Prince Caspian",a:"C.S. Lewis",ar:5.7,type:"Fiction",topic:"모험·판타지",note:"용기·귀환·믿음",s:true},
+    {n:6,t:"The Voyage of the Dawn Treader",a:"C.S. Lewis",ar:6.0,type:"Fiction",topic:"모험·판타지",note:"탐험·욕망·성장",s:true},
+    {n:7,t:"The Hobbit",a:"J.R.R. Tolkien",ar:6.6,type:"Fiction",topic:"모험·판타지",note:"모험·용기·정체성"},
+    {n:8,t:"Percy Jackson and the Olympians: The Lightning Thief",a:"Rick Riordan",ar:4.7,type:"Fiction",topic:"역사·문화",note:"그리스신화·정체성·모험",s:true},
+    {n:9,t:"Percy Jackson: The Sea of Monsters",a:"Rick Riordan",ar:4.6,type:"Fiction",topic:"역사·문화",note:"그리스신화·우정·모험",s:true},
+    {n:10,t:"The Mysterious Benedict Society",a:"Trenton Lee Stewart",ar:5.5,type:"Fiction",topic:"모험·판타지",note:"퍼즐·협력·정체성"},
+    {n:11,t:"The Hunger Games",a:"Suzanne Collins",ar:5.3,type:"Fiction",topic:"사회·감정",note:"디스토피아·생존·저항",s:true},
+    {n:12,t:"Catching Fire",a:"Suzanne Collins",ar:5.3,type:"Fiction",topic:"사회·감정",note:"혁명·리더십·희생",s:true},
+    {n:13,t:"The Outsiders",a:"S.E. Hinton",ar:4.7,type:"Fiction",topic:"사회·감정",note:"계층·우정·정체성"},
+    {n:14,t:"To Kill a Mockingbird",a:"Harper Lee",ar:5.6,type:"Fiction",topic:"역사·문화",note:"인종차별·정의·공감"},
+    {n:15,t:"Animal Farm",a:"George Orwell",ar:7.3,type:"Fiction",topic:"사회·감정",note:"정치·권력·풍자"},
+    {n:16,t:"The Giver (full series)",a:"Lois Lowry",ar:5.7,type:"Fiction",topic:"사회·감정",note:"디스토피아·자유·기억",s:true},
+    {n:17,t:"Coraline",a:"Neil Gaiman",ar:5.1,type:"Fiction",topic:"모험·판타지",note:"평행세계·용기·가족"},
+    {n:18,t:"The Graveyard Book",a:"Neil Gaiman",ar:5.1,type:"Fiction",topic:"모험·판타지",note:"죽음·성장·정체성"},
+    {n:19,t:"The Book Thief",a:"Markus Zusak",ar:5.1,type:"Fiction",topic:"역사·문화",note:"2차세계대전·언어의힘·죽음"},
+    {n:20,t:"The Curious Incident of the Dog in the Night-Time",a:"Mark Haddon",ar:5.1,type:"Fiction",topic:"사회·감정",note:"자폐·논리·가족"},
+    {n:21,t:"The Kite Runner",a:"Khaled Hosseini",ar:5.2,type:"Fiction",topic:"역사·문화",note:"아프가니스탄·속죄·우정"},
+    {n:22,t:"Bud, Not Buddy",a:"Christopher Paul Curtis",ar:5.0,type:"Fiction",topic:"역사·문화",note:"대공황·흑인역사·가족"},
+    {n:23,t:"Roll of Thunder, Hear My Cry",a:"Mildred D. Taylor",ar:5.7,type:"Fiction",topic:"역사·문화",note:"인종차별·가족·대공황"},
+    {n:24,t:"Maniac Magee",a:"Jerry Spinelli",ar:4.7,type:"Fiction",topic:"사회·감정",note:"인종통합·신화·자유"},
+    {n:25,t:"Holes",a:"Louis Sachar",ar:4.6,type:"Fiction",topic:"사회·감정",note:"운명·우정·정의"},
+    {n:26,t:"Refugee",a:"Alan Gratz",ar:5.3,type:"Fiction",topic:"역사·문화",note:"난민·역사·생존"},
+    {n:27,t:"Esperanza Rising",a:"Pam Muñoz Ryan",ar:5.3,type:"Fiction",topic:"역사·문화",note:"이민·계급·희망"},
+    {n:28,t:"The Secret Garden",a:"Frances Hodgson Burnett",ar:6.0,type:"Fiction",topic:"동물·자연",note:"자연치유·성장·우정"},
+    {n:29,t:"A Little Princess",a:"Frances Hodgson Burnett",ar:5.8,type:"Fiction",topic:"사회·감정",note:"역경·품위·상상력"},
+    {n:30,t:"Little Women",a:"Louisa May Alcott",ar:6.4,type:"Fiction",topic:"역사·문화",note:"남북전쟁·여성·성장"},
+    {n:31,t:"Anne of Green Gables",a:"L.M. Montgomery",ar:7.3,type:"Fiction",topic:"사회·감정",note:"정체성·상상·소속감"},
+    {n:32,t:"Tuck Everlasting",a:"Natalie Babbitt",ar:5.0,type:"Fiction",topic:"사회·감정",note:"영원·죽음·선택"},
+    {n:33,t:"The Witch of Blackbird Pond",a:"Elizabeth George Speare",ar:5.7,type:"Fiction",topic:"역사·문화",note:"청교도·마녀사냥·정의"},
+    {n:34,t:"Fahrenheit 451",a:"Ray Bradbury",ar:5.0,type:"Fiction",topic:"사회·감정",note:"검열·책의가치·자유"},
+    {n:35,t:"Call of the Wild",a:"Jack London",ar:6.1,type:"Fiction",topic:"동물·자연",note:"야생·본능·생존"},
+    {n:36,t:"White Fang",a:"Jack London",ar:6.2,type:"Fiction",topic:"동물·자연",note:"야생·길들임·인간과동물",s:true},
+    {n:37,t:"The Pearl",a:"John Steinbeck",ar:7.3,type:"Fiction",topic:"사회·감정",note:"탐욕·운명·빈곤"},
+    {n:38,t:"Of Mice and Men",a:"John Steinbeck",ar:4.5,type:"Fiction",topic:"사회·감정",note:"우정·꿈·현실"},
+    {n:39,t:"The Old Man and the Sea",a:"Ernest Hemingway",ar:4.9,type:"Fiction",topic:"사회·감정",note:"끈기·노년·자연"},
+    {n:40,t:"Flowers for Algernon",a:"Daniel Keyes",ar:5.8,type:"Fiction",topic:"과학·STEAM",note:"지능·윤리·인간성"},
+    {n:41,t:"The Diary of a Young Girl",a:"Anne Frank",ar:6.5,type:"Nonfiction",topic:"역사·문화",note:"2차세계대전·일기·희망"},
+    {n:42,t:"Night",a:"Elie Wiesel",ar:4.8,type:"Nonfiction",topic:"역사·문화",note:"홀로코스트·생존·기억"},
+    {n:43,t:"I Am Malala (Young Readers Edition)",a:"Malala Yousafzai",ar:5.6,type:"Nonfiction",topic:"역사·문화",note:"교육권·파키스탄·용기"},
+    {n:44,t:"Unbroken (Young Adult Adaptation)",a:"Laura Hillenbrand",ar:6.3,type:"Nonfiction",topic:"역사·문화",note:"2차세계대전·생존·의지"},
+    {n:45,t:"The Immortal Life of Henrietta Lacks",a:"Rebecca Skloot",ar:6.0,type:"Nonfiction",topic:"과학·STEAM",note:"의학·인종·윤리"},
+    {n:46,t:"Shipwreck at the Bottom of the World",a:"Jennifer Armstrong",ar:6.4,type:"Nonfiction",topic:"과학·STEAM",note:"남극·탐험·생존"},
+    {n:47,t:"Boys in the Boat (Young Readers)",a:"Daniel James Brown",ar:5.6,type:"Nonfiction",topic:"역사·문화",note:"베를린올림픽·팀워크·도전"},
+    {n:48,t:"Into the Wild",a:"Jon Krakauer",ar:7.0,type:"Nonfiction",topic:"동물·자연",note:"자연·자유·삶의의미"},
+    {n:49,t:"The Sixth Extinction (YA Ed.)",a:"Elizabeth Kolbert",ar:6.5,type:"Nonfiction",topic:"과학·STEAM",note:"멸종·환경·과학"},
+    {n:50,t:"A Short History of Nearly Everything (Young Readers)",a:"Bill Bryson",ar:6.9,type:"Nonfiction",topic:"과학·STEAM",note:"과학사·우주·생명"},
+  ],
+  beyond: [
+    {n:1,t:"1984",a:"George Orwell",ar:7.0,type:"Fiction",topic:"사회·감정",note:"전체주의·감시·언어"},
+    {n:2,t:"Brave New World",a:"Aldous Huxley",ar:6.4,type:"Fiction",topic:"사회·감정",note:"디스토피아·과학·자유"},
+    {n:3,t:"Lord of the Flies",a:"William Golding",ar:5.0,type:"Fiction",topic:"사회·감정",note:"인간본성·문명·권력"},
+    {n:4,t:"The Great Gatsby",a:"F. Scott Fitzgerald",ar:7.3,type:"Fiction",topic:"역사·문화",note:"아메리칸드림·계층·환멸"},
+    {n:5,t:"Jane Eyre",a:"Charlotte Brontë",ar:6.2,type:"Fiction",topic:"사회·감정",note:"여성자립·도덕·사랑"},
+    {n:6,t:"Wuthering Heights",a:"Emily Brontë",ar:5.9,type:"Fiction",topic:"사회·감정",note:"집착·복수·계층"},
+    {n:7,t:"Pride and Prejudice",a:"Jane Austen",ar:6.2,type:"Fiction",topic:"역사·문화",note:"결혼·편견·사회비판"},
+    {n:8,t:"A Tale of Two Cities",a:"Charles Dickens",ar:9.1,type:"Fiction",topic:"역사·문화",note:"프랑스혁명·희생·이중성"},
+    {n:9,t:"Great Expectations",a:"Charles Dickens",ar:8.3,type:"Fiction",topic:"사회·감정",note:"계층·정체성·은인"},
+    {n:10,t:"The Picture of Dorian Gray",a:"Oscar Wilde",ar:6.4,type:"Fiction",topic:"사회·감정",note:"도덕·아름다움·부패"},
+    {n:11,t:"Frankenstein",a:"Mary Shelley",ar:6.2,type:"Fiction",topic:"과학·STEAM",note:"과학윤리·창조·책임"},
+    {n:12,t:"Dracula",a:"Bram Stoker",ar:6.6,type:"Fiction",topic:"모험·판타지",note:"공포·선악·빅토리아"},
+    {n:13,t:"The Strange Case of Dr. Jekyll and Mr. Hyde",a:"R.L. Stevenson",ar:7.0,type:"Fiction",topic:"과학·STEAM",note:"이중성·과학윤리·인간"},
+    {n:14,t:"The Time Machine",a:"H.G. Wells",ar:6.8,type:"Fiction",topic:"과학·STEAM",note:"시간여행·계층·진화"},
+    {n:15,t:"Crime and Punishment",a:"Fyodor Dostoevsky",ar:8.8,type:"Fiction",topic:"사회·감정",note:"죄책감·심리·도덕"},
+    {n:16,t:"The Brothers Karamazov",a:"Fyodor Dostoevsky",ar:8.4,type:"Fiction",topic:"사회·감정",note:"신앙·가족·자유의지"},
+    {n:17,t:"Anna Karenina",a:"Leo Tolstoy",ar:8.1,type:"Fiction",topic:"사회·감정",note:"사랑·계층·도덕"},
+    {n:18,t:"One Hundred Years of Solitude",a:"Gabriel García Márquez",ar:8.0,type:"Fiction",topic:"역사·문화",note:"마술적사실주의·역사·가족"},
+    {n:19,t:"The Stranger",a:"Albert Camus",ar:6.6,type:"Fiction",topic:"사회·감정",note:"실존주의·부조리·무관심"},
+    {n:20,t:"Siddhartha",a:"Hermann Hesse",ar:7.2,type:"Fiction",topic:"역사·문화",note:"불교·자아·깨달음"},
+    {n:21,t:"The Alchemist",a:"Paulo Coelho",ar:6.4,type:"Fiction",topic:"사회·감정",note:"꿈·여정·운명"},
+    {n:22,t:"Life of Pi",a:"Yann Martel",ar:5.0,type:"Fiction",topic:"동물·자연",note:"생존·신앙·이야기의힘"},
+    {n:23,t:"Never Let Me Go",a:"Kazuo Ishiguro",ar:5.3,type:"Fiction",topic:"과학·STEAM",note:"복제·윤리·인간성"},
+    {n:24,t:"The Remains of the Day",a:"Kazuo Ishiguro",ar:6.8,type:"Fiction",topic:"사회·감정",note:"후회·충성·자아"},
+    {n:25,t:"Catch-22",a:"Joseph Heller",ar:7.3,type:"Fiction",topic:"역사·문화",note:"2차세계대전·풍자·관료주의"},
+    {n:26,t:"Slaughterhouse-Five",a:"Kurt Vonnegut",ar:7.5,type:"Fiction",topic:"역사·문화",note:"드레스덴·반전·시간"},
+    {n:27,t:"The Bell Jar",a:"Sylvia Plath",ar:6.3,type:"Fiction",topic:"사회·감정",note:"정신건강·여성·정체성"},
+    {n:28,t:"Beloved",a:"Toni Morrison",ar:5.4,type:"Fiction",topic:"역사·문화",note:"노예제·트라우마·모성"},
+    {n:29,t:"Their Eyes Were Watching God",a:"Zora Neale Hurston",ar:4.6,type:"Fiction",topic:"역사·문화",note:"흑인여성·자아·사랑"},
+    {n:30,t:"Invisible Man",a:"Ralph Ellison",ar:6.3,type:"Fiction",topic:"역사·문화",note:"흑인정체성·인종·사회"},
+    {n:31,t:"Sapiens: A Brief History of Humankind",a:"Yuval Noah Harari",ar:9.2,type:"Nonfiction",topic:"역사·문화",note:"인류사·문명·미래"},
+    {n:32,t:"A Brief History of Time",a:"Stephen Hawking",ar:8.5,type:"Nonfiction",topic:"과학·STEAM",note:"우주론·블랙홀·시간"},
+    {n:33,t:"The Selfish Gene",a:"Richard Dawkins",ar:9.1,type:"Nonfiction",topic:"과학·STEAM",note:"진화·유전자·생물학"},
+    {n:34,t:"Thinking, Fast and Slow",a:"Daniel Kahneman",ar:8.6,type:"Nonfiction",topic:"과학·STEAM",note:"인지심리·편향·의사결정"},
+    {n:35,t:"Freakonomics",a:"Steven D. Levitt",ar:9.3,type:"Nonfiction",topic:"수학·개념",note:"경제학·데이터·인센티브"},
+    {n:36,t:"Outliers",a:"Malcolm Gladwell",ar:9.1,type:"Nonfiction",topic:"사회·감정",note:"성공·기회·문화"},
+    {n:37,t:"Blink",a:"Malcolm Gladwell",ar:8.4,type:"Nonfiction",topic:"과학·STEAM",note:"직관·무의식·판단"},
+    {n:38,t:"The Tipping Point",a:"Malcolm Gladwell",ar:9.0,type:"Nonfiction",topic:"사회·감정",note:"사회변화·전파·트렌드"},
+    {n:39,t:"Silent Spring",a:"Rachel Carson",ar:7.0,type:"Nonfiction",topic:"과학·STEAM",note:"환경운동·농약·생태"},
+    {n:40,t:"The Double Helix",a:"James D. Watson",ar:8.3,type:"Nonfiction",topic:"과학·STEAM",note:"DNA·과학사·발견"},
+    {n:41,t:"Being Mortal",a:"Atul Gawande",ar:9.3,type:"Nonfiction",topic:"사회·감정",note:"노년·죽음·의료윤리"},
+    {n:42,t:"The Emperor of All Maladies",a:"Siddhartha Mukherjee",ar:10.2,type:"Nonfiction",topic:"과학·STEAM",note:"암의역사·의학·과학"},
+    {n:43,t:"Educated",a:"Tara Westover",ar:5.7,type:"Nonfiction",topic:"역사·문화",note:"교육·자립·가족"},
+    {n:44,t:"The Glass Castle",a:"Jeannette Walls",ar:6.3,type:"Nonfiction",topic:"사회·감정",note:"빈곤·가족·회복력"},
+    {n:45,t:"Into Thin Air",a:"Jon Krakauer",ar:6.5,type:"Nonfiction",topic:"동물·자연",note:"에베레스트·재난·생존"},
+    {n:46,t:"In Cold Blood",a:"Truman Capote",ar:7.1,type:"Nonfiction",topic:"사회·감정",note:"범죄·심리·저널리즘"},
+    {n:47,t:"The Omnivore's Dilemma",a:"Michael Pollan",ar:6.3,type:"Nonfiction",topic:"과학·STEAM",note:"식품·농업·환경"},
+    {n:48,t:"Meditations",a:"Marcus Aurelius",ar:8.3,type:"Nonfiction",topic:"사회·감정",note:"스토아철학·자기수양·삶"},
+    {n:49,t:"The Prince",a:"Niccolò Machiavelli",ar:9.2,type:"Nonfiction",topic:"역사·문화",note:"정치·권력·리더십"},
+    {n:50,t:"The Republic",a:"Plato",ar:10.8,type:"Nonfiction",topic:"사회·감정",note:"정의·철학·이상국가"},
+  ]
+};
+
+// ── 상태 ─────────────────────────────────────────────────────────
+let currentClass = null;
+let filterType = 'all';
+let page = 1;
+const PER = 20;
+
+// ── 탭 전환 ──────────────────────────────────────────────────────
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+}
+
+// ── 클래스 선택 ──────────────────────────────────────────────────
+function selectClass(cls) {
+  currentClass = cls;
+  filterType = 'all';
+  page = 1;
+  document.getElementById('q').value = '';
+  document.getElementById('topicSel').value = '';
+  document.getElementById('arSel').value = '';
+  document.querySelectorAll('.pill').forEach(p => p.classList.toggle('on', p.dataset.f === 'all'));
+
+  const names = {
+    picturebook: '📣 파닉스 도서 목록',
+    readers: '📗 리더스북 도서 목록',
+    chapter: '📘 챕터북 도서 목록',
+    novel_basic: '📙 노블 베이직 도서 목록',
+    novel_plus: '📕 노블 플러스 도서 목록',
+    beyond: '📓 비욘드 도서 목록'
+  };
+  document.getElementById('bookSectionTitle').textContent = names[cls] || '도서 목록';
+  document.getElementById('bookSection').style.display = 'block';
+  document.getElementById('bookSection').scrollIntoView({behavior:'smooth', block:'start'});
+  render();
+}
+
+// ── 필터 ─────────────────────────────────────────────────────────
+function setFilter(btn, val) {
+  filterType = val;
+  document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
+  btn.classList.add('on');
+  page = 1;
+  render();
+}
+
+// ── 필터링 ───────────────────────────────────────────────────────
+function getFiltered() {
+  if (!currentClass) return [];
+  const data = BOOKS[currentClass] || [];
+  const q = (document.getElementById('q').value || '').toLowerCase();
+  const topic = document.getElementById('topicSel').value;
+  const arRange = document.getElementById('arSel').value;
+
+  return data.filter(b => {
+    if (filterType === 'Fiction' && b.type !== 'Fiction') return false;
+    if (filterType === 'Nonfiction' && b.type !== 'Nonfiction') return false;
+    if (filterType === 'Series' && !b.s) return false;
+    if (topic && b.topic !== topic) return false;
+    if (arRange) {
+      const [lo, hi] = arRange.split(',').map(Number);
+      if (b.ar < lo || b.ar >= hi) return false;
+    }
+    if (q && !b.t.toLowerCase().includes(q) && !b.a.toLowerCase().includes(q)) return false;
+    return true;
+  });
+}
+
+// ── 렌더 ─────────────────────────────────────────────────────────
+function render() {
+  const data = getFiltered();
+  const all = BOOKS[currentClass] || [];
+  const fi = all.filter(b => b.type === 'Fiction').length;
+  const nf = all.filter(b => b.type === 'Nonfiction').length;
+  const sr = all.filter(b => b.s).length;
+
+  document.getElementById('statsChips').innerHTML = `
+    <div class="chip">전체 <b>${all.length}</b>권</div>
+    <div class="chip">픽션 <b>${fi}</b>권</div>
+    <div class="chip">논픽션 <b>${nf}</b>권</div>
+    <div class="chip">시리즈 <b>${sr}</b>권</div>
+    <div class="chip">표시 중 <b>${data.length}</b>권</div>
+  `;
+
+  const slice = data.slice((page - 1) * PER, page * PER);
+  const grid = document.getElementById('bookGrid');
+
+  if (!slice.length) {
+    grid.innerHTML = `<div class="no-result"><span class="nr-emoji">🔍</span>검색 결과가 없어요.</div>`;
+    document.getElementById('pager').innerHTML = '';
+    return;
+  }
+
+  grid.innerHTML = slice.map(b => `
+    <div class="book-card" id="card-${b.n}">
+      <div class="card-cover">
+        <div class="cover-ph" id="cover-${b.n}">📖</div>
+      </div>
+      <div class="card-body">
+        <div class="card-top">
+          <span class="card-num">${b.n}</span>
+          <span class="card-title">${b.t}</span>
+        </div>
+        <div class="card-row2">
+          <span class="card-author">✍️ ${b.a}</span>
+        </div>
+        <div class="card-meta">
+          <span class="badge ${b.type === 'Fiction' ? 'b-fi' : 'b-nf'}">${b.type === 'Fiction' ? '픽션' : '논픽션'}</span>
+          <span class="badge b-ar">AR ${b.ar.toFixed(1)}</span>
+          <span class="badge b-topic">${b.topic}</span>
+          ${b.s ? '<span class="badge b-sr">시리즈</span>' : ''}
+        </div>
+        <div class="card-note">💬 ${b.note}</div>
+      </div>
+    </div>
+  `).join('');
+
+  slice.forEach(b => fetchCover(b));
+
+  const pages = Math.ceil(data.length / PER);
+  let pg = `<span>${data.length}권 · ${page}/${pages} 페이지</span>`;
+  if (page > 1) pg += `<button onclick="page--;render()">◀ 이전</button>`;
+  if (page < pages) pg += `<button onclick="page++;render()">다음 ▶</button>`;
+  document.getElementById('pager').innerHTML = pg;
+}
+
+// ── Google Books 표지 이미지 ──────────────────────────────────────
+const coverCache = {};
+function fetchCover(b) {
+  const el = document.getElementById('cover-' + b.n);
+  if (!el) return;
+  if (coverCache[b.n]) {
+    el.outerHTML = `<img src="${coverCache[b.n]}" alt="${b.t}" onerror="this.outerHTML='<div class=cover-ph>📖</div>'">`;
+    return;
+  }
+  const q = encodeURIComponent(`intitle:${b.t}+inauthor:${b.a}`);
+  fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1&fields=items(volumeInfo(imageLinks))`)
+    .then(r => r.json())
+    .then(data => {
+      const img = data?.items?.[0]?.volumeInfo?.imageLinks?.thumbnail;
+      if (img) {
+        const src = img.replace('http://', 'https://');
+        coverCache[b.n] = src;
+        const cur = document.getElementById('cover-' + b.n);
+        if (cur) cur.outerHTML = `<img src="${src}" alt="${b.t}" onerror="this.outerHTML='<div class=cover-ph>📖</div>'">`;
+      }
+    })
+    .catch(() => {});
+}
+
+// ── 카운트 표시 ──────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  Object.keys(BOOKS).forEach(function(cls) {
+    const cnt = BOOKS[cls].length;
+    const el = document.getElementById('cnt-' + cls);
+    if (el && cnt > 0) el.textContent = cnt + '권';
+  });
+});
+</script>
+</body>
+</html>
