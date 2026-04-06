@@ -3015,13 +3015,13 @@ function renderTeacherDash(who){
     {ico:'📊',lbl:'리포트 관리',key:'report'},
     {ico:'📋',lbl:'출결 관리',key:'att'},
     {ico:'📚',lbl:'클래스 관리',key:'class'},
+    {ico:'📗',lbl:'도서 라이브러리',key:'library'},
     {ico:'⭐',lbl:'포인트 관리',key:'point'},
     {ico:'👩‍🎓',lbl:'원생 관리',key:'student'},
     {ico:'💰',lbl:'원비 관리',key:'tuition'},
     {ico:'📖',lbl:'교재 관리',key:'textbook'},
     {ico:'🧾',lbl:'회계 관리',key:'account'},
     {ico:'📣',lbl:'공지사항',key:'notice'},
-    {ico:'📗',lbl:'도서 라이브러리',key:'library'},
   ];
   document.getElementById(who+'-stats').innerHTML=menus.map(function(m){return '<div class="t-menu-btn" id="tmenu-'+who+'-'+m.key+'" onclick="selectMenu(\''+who+'\',\''+m.key+'\')"><div class="t-menu-ico">'+m.ico+'</div><div class="t-menu-lbl">'+m.lbl+'</div></div>';}).join('');
   document.getElementById(who+'-main-content').innerHTML='';
@@ -8794,6 +8794,11 @@ var LIB_CLASSES = [
 var libSelClass = null;
 var libEditId = null;
 var libSearchQ = '';
+var libFilterType = 'all';
+var libTopicFilter = '';
+var libArFilter = '';
+var libPage = 1;
+var LIB_PER = 21; // 3열 × 7행
 
 function renderLibraryMgmt(who, el) {
   var html = '<div class="t-section-title">📗 도서 라이브러리 관리</div>';
@@ -8813,7 +8818,7 @@ function renderLibraryMgmt(who, el) {
   LIB_CLASSES.forEach(function(c) {
     var cnt = (libraryBooks[c.key]||[]).length;
     var isActive = libSelClass === c.key;
-    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';libFilterType=\'all\';libTopicFilter=\'\';libArFilter=\'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
       'style="padding:7px 14px;border-radius:10px;border:2px solid '+(isActive?'var(--cookie)':'#f0e8dc')+';background:'+(isActive?'var(--cookie-bg)':'white')+';font-size:.78rem;font-weight:700;color:'+(isActive?'var(--brown)':'var(--text-soft)')+';cursor:pointer;font-family:inherit">'+
       c.emoji+' '+c.label+' <span style="font-size:.68rem;opacity:.7">'+cnt+'권</span></button>';
   });
@@ -8828,13 +8833,38 @@ function renderLibraryMgmt(who, el) {
   var cls = LIB_CLASSES.find(function(c){return c.key===libSelClass;});
   var books = (libraryBooks[libSelClass]||[]).slice();
 
-  // 검색창 + 추가 버튼
-  html += '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">' +
-    '<input id="lib-search" value="'+libSearchQ+'" oninput="libSearchQ=this.value;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" placeholder="제목, 저자 검색..." style="flex:1;padding:8px 12px;border-radius:10px;border:1.5px solid #f0e8dc;font-size:.82rem;font-family:inherit;outline:none">' +
-    '<button onclick="libEditId=\'new\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:8px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ 책 추가</button>' +
+  // 검색/필터 박스
+  html += '<div style="background:white;border-radius:16px;padding:14px 18px;box-shadow:0 2px 12px rgba(180,120,40,.08);border:1.5px solid #f0e8dc;margin-bottom:14px">' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">' +
+      '<div style="position:relative;flex:1;min-width:180px">' +
+        '<span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--text-soft);font-size:.85rem">🔍</span>' +
+        '<input id="lib-search" value="'+libSearchQ+'" oninput="libSearchQ=this.value;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" placeholder="제목, 저자 검색..." style="width:100%;padding:.55rem .75rem .55rem 2.1rem;border:2px solid #f0e8dc;border-radius:12px;font-size:.82rem;font-family:inherit;outline:none;background:#fffbf5;color:var(--brown);transition:border-color .2s" onfocus="this.style.borderColor=\'var(--cookie-lt)\'" onblur="this.style.borderColor=\'#f0e8dc\'">' +
+      '</div>' +
+      '<select id="lib-topic-filter" onchange="libTopicFilter=this.value;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:.5rem .8rem;border:2px solid #f0e8dc;border-radius:12px;font-size:.78rem;font-family:inherit;background:#fffbf5;color:var(--brown);outline:none;cursor:pointer">' +
+        '<option value="">전체 주제</option>' +
+        ['동물·자연','과학·STEAM','사회·감정','역사·문화','언어·유머','수학·개념','모험·판타지','일상·성장'].map(function(t){
+          return '<option value="'+t+'"'+(libTopicFilter===t?' selected':'')+'>'+t+'</option>';
+        }).join('') +
+      '</select>' +
+      '<select id="lib-ar-filter" onchange="libArFilter=this.value;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:.5rem .8rem;border:2px solid #f0e8dc;border-radius:12px;font-size:.78rem;font-family:inherit;background:#fffbf5;color:var(--brown);outline:none;cursor:pointer">' +
+        '<option value="">전체 AR</option>' +
+        [['0,2','AR 0~2'],['2,4','AR 2~4'],['4,6','AR 4~6'],['6,8','AR 6~8'],['8,15','AR 8+']].map(function(r){
+          return '<option value="'+r[0]+'"'+(libArFilter===r[0]?' selected':'')+'>'+r[1]+'</option>';
+        }).join('') +
+      '</select>' +
+    '</div>' +
+    '<div style="display:flex;gap:5px;flex-wrap:wrap">' +
+      [['all','전체'],['Fiction','픽션'],['Nonfiction','논픽션']].map(function(f){
+        var isOn = libFilterType===f[0];
+        return '<button onclick="libFilterType=\''+f[0]+'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:4px 14px;border-radius:100px;border:2px solid '+(isOn?'var(--cookie)':'#f0e8dc')+';background:'+(isOn?'var(--cookie)':'transparent')+';color:'+(isOn?'white':'var(--text-soft)')+';font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s">'+f[1]+'</button>';
+      }).join('') +
+    '</div>' +
   '</div>';
 
-  // 추가/수정 폼
+  // 추가 버튼
+  html += '<div style="display:flex;justify-content:flex-end;margin-bottom:12px">' +
+    '<button onclick="libEditId=\'new\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:7px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit">+ 책 추가</button>' +
+  '</div>';
   if (libEditId !== null) {
     var editing = libEditId !== 'new' ? books.find(function(b){return b.id===libEditId;}) : null;
     html += '<div class="register-form-box" style="margin-bottom:16px">' +
@@ -8866,31 +8896,73 @@ function renderLibraryMgmt(who, el) {
     '</div>';
   }
 
-  // 검색 필터
+  // 검색/필터 적용 + 알파벳 정렬
+  var filtered = books.slice();
   if (libSearchQ) {
     var q = libSearchQ.toLowerCase();
-    books = books.filter(function(b){return b.t.toLowerCase().includes(q)||b.a.toLowerCase().includes(q);});
+    filtered = filtered.filter(function(b){return b.t.toLowerCase().includes(q)||b.a.toLowerCase().includes(q);});
   }
+  if (libFilterType !== 'all') {
+    filtered = filtered.filter(function(b){return b.type===libFilterType;});
+  }
+  if (libTopicFilter) {
+    filtered = filtered.filter(function(b){return b.topic===libTopicFilter;});
+  }
+  if (libArFilter) {
+    var arParts = libArFilter.split(',').map(Number);
+    filtered = filtered.filter(function(b){return b.ar>=arParts[0]&&b.ar<arParts[1];});
+  }
+  // 알파벳 순 정렬
+  filtered.sort(function(a,b){return a.t.localeCompare(b.t);});
 
-  // 책 목록
-  html += '<div style="font-size:.75rem;color:var(--text-soft);margin-bottom:8px">'+books.length+'권 표시</div>';
-  if (books.length === 0) {
-    html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">아직 등록된 책이 없어요. + 책 추가 버튼으로 추가해요!</div></div>';
+  // 페이지네이션
+  var totalPages = Math.ceil(filtered.length / LIB_PER);
+  if (libPage > totalPages) libPage = Math.max(1, totalPages);
+  var pageStart = (libPage - 1) * LIB_PER;
+  var pageBooks = filtered.slice(pageStart, pageStart + LIB_PER);
+
+  // 통계 칩
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">전체 <b style="color:var(--cookie)">'+books.length+'</b>권</span>' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">픽션 <b style="color:var(--cookie)">'+books.filter(function(b){return b.type==='Fiction';}).length+'</b>권</span>' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">논픽션 <b style="color:var(--cookie)">'+books.filter(function(b){return b.type==='Nonfiction';}).length+'</b>권</span>' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">표시 <b style="color:var(--cookie)">'+filtered.length+'</b>권</span>' +
+  '</div>';
+  if (filtered.length === 0) {
+    html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">검색 결과가 없어요.</div></div>';
   } else {
-    html += '<div style="display:flex;flex-direction:column;gap:6px">';
-    books.forEach(function(b) {
+    html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+    pageBooks.forEach(function(b) {
       var isEditing = libEditId === b.id;
-      html += '<div style="background:white;border-radius:12px;border:1.5px solid '+(isEditing?'var(--cookie)':'#f0e8dc')+';padding:10px 14px;display:flex;align-items:center;gap:10px">' +
-        '<span style="font-size:.68rem;color:var(--text-soft);min-width:24px">'+b.n+'</span>' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:.85rem;font-weight:700;color:var(--brown)">'+b.t+'</div>' +
-          '<div style="font-size:.72rem;color:var(--text-soft)">'+b.a+' · AR '+b.ar.toFixed(1)+' · '+b.topic+'</div>' +
+      html += '<div style="background:white;border-radius:16px;border:1.5px solid '+(isEditing?'var(--cookie)':'#f0e8dc')+';padding:14px 16px;display:flex;flex-direction:column;gap:0;transition:box-shadow .2s;position:relative">' +
+        '<div style="display:flex;align-items:baseline;gap:0;margin-bottom:4px">' +
+          '<span style="font-size:.68rem;color:var(--text-soft);min-width:22px;flex-shrink:0;line-height:1.4">'+b.n+'</span>' +
+          '<span style="font-size:.88rem;font-weight:700;line-height:1.4;flex:1;color:var(--brown);word-break:break-word">'+b.t+'</span>' +
         '</div>' +
-        '<span style="font-size:.65rem;padding:2px 8px;border-radius:8px;background:'+(b.type==='Fiction'?'#e8f3fb':'#e8f5ee')+';color:'+(b.type==='Fiction'?'#1a5a9a':'#1a6a3a')+'">'+( b.type==='Fiction'?'픽션':'논픽션')+'</span>' +
-        '<button onclick="libEditId=\''+b.id+'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.7rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 수정</button>' +
+        '<div style="padding-left:22px;margin-bottom:6px">' +
+          '<span style="font-size:.76rem;color:var(--text-mid)">✍️ '+b.a+'</span>' +
+        '</div>' +
+        '<div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;padding-left:22px;margin-bottom:5px">' +
+          '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:'+(b.type==='Fiction'?'#e8f3fb':'#e8f5ee')+';color:'+(b.type==='Fiction'?'#1a5a9a':'#1a6a3a')+'">'+(b.type==='Fiction'?'픽션':'논픽션')+'</span>' +
+          '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--cookie-bg);color:var(--cookie)">AR '+b.ar.toFixed(1)+'</span>' +
+          '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:#f3eeff;color:#6a30c8">'+b.topic+'</span>' +
+        '</div>' +
+        '<div style="font-size:.71rem;color:var(--text-soft);padding-left:22px;margin-bottom:8px">💬 '+b.note+'</div>' +
+        '<div style="padding-left:22px">' +
+          '<button onclick="libEditId=\''+b.id+'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.68rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 수정</button>' +
+        '</div>' +
       '</div>';
     });
     html += '</div>';
+
+    // 페이지네이션
+    if (totalPages > 1) {
+      html += '<div style="display:flex;gap:8px;align-items:center;justify-content:center;padding:16px 0;font-size:.82rem;color:var(--text-soft)">' +
+        (libPage > 1 ? '<button onclick="libPage='+(libPage-1)+';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:5px 14px;border-radius:10px;border:2px solid #f0e8dc;background:white;cursor:pointer;font-size:.78rem;font-family:inherit;color:var(--text-mid);font-weight:600">◀ 이전</button>' : '') +
+        '<span>'+filtered.length+'권 · '+libPage+'/'+totalPages+' 페이지</span>' +
+        (libPage < totalPages ? '<button onclick="libPage='+(libPage+1)+';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:5px 14px;border-radius:10px;border:2px solid #f0e8dc;background:white;cursor:pointer;font-size:.78rem;font-family:inherit;color:var(--text-mid);font-weight:600">다음 ▶</button>' : '') +
+      '</div>';
+    }
   }
 
   el.innerHTML = html;

@@ -264,9 +264,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
       <div class="search-bar">
         <div class="search-wrap">
           <span class="si">🔍</span>
-          <input type="text" id="q" placeholder="제목, 저자 검색..." oninput="render()">
+          <input type="text" id="q" placeholder="제목, 저자 검색..." oninput="page=1;render()">
         </div>
-        <select class="sel" id="topicSel" onchange="render()">
+        <select class="sel" id="topicSel" onchange="page=1;render()">
           <option value="">전체 주제</option>
           <option>동물·자연</option>
           <option>과학·STEAM</option>
@@ -277,7 +277,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
           <option>모험·판타지</option>
           <option>일상·성장</option>
         </select>
-        <select class="sel" id="arSel" onchange="render()">
+        <select class="sel" id="arSel" onchange="page=1;render()">
           <option value="">전체 AR</option>
           <option value="0,1.0">AR 0~1.0</option>
           <option value="1.0,1.5">AR 1.0~1.5</option>
@@ -1183,7 +1183,7 @@ const BOOKS = {
 let currentClass = null;
 let filterType = 'all';
 let page = 1;
-const PER = 20;
+const PER = 21; // 3열 × 7행
 
 // ── Firebase 초기화 및 실시간 동기화 ──────────────────────────────
 var _db = null;
@@ -1286,7 +1286,7 @@ function getFiltered() {
   const topic = document.getElementById('topicSel').value;
   const arRange = document.getElementById('arSel').value;
 
-  return data.filter(b => {
+  const filtered = data.filter(b => {
     if (filterType === 'Fiction' && b.type !== 'Fiction') return false;
     if (filterType === 'Nonfiction' && b.type !== 'Nonfiction') return false;
     if (filterType === 'Series' && !b.s) return false;
@@ -1298,6 +1298,9 @@ function getFiltered() {
     if (q && !b.t.toLowerCase().includes(q) && !b.a.toLowerCase().includes(q)) return false;
     return true;
   });
+
+  // 알파벳 순 정렬
+  return filtered.sort((a, b) => a.t.localeCompare(b.t));
 }
 
 // ── 렌더 ─────────────────────────────────────────────────────────
