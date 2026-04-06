@@ -8803,15 +8803,15 @@ var LIB_PER = 21; // 3열 × 7행
 function renderLibraryMgmt(who, el) {
   var html = '<div class="t-section-title">📗 도서 라이브러리 관리</div>';
 
-  // Firebase 미업로드 상태면 업로드 버튼 표시
+  // 일괄 업로드 버튼 (항상 표시)
   var totalInFirebase = Object.keys(libraryBooks).reduce(function(acc,k){return acc+(libraryBooks[k]||[]).length;},0);
-  if (totalInFirebase === 0) {
-    html += '<div style="background:#fff8ee;border:1.5px solid #f5d9b0;border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:14px">' +
-      '<div style="flex:1"><div style="font-size:.85rem;font-weight:700;color:var(--brown);margin-bottom:4px">📤 Firebase에 도서 데이터가 없어요</div>' +
-      '<div style="font-size:.75rem;color:var(--text-soft)">기본 도서 653권을 Firebase에 업로드하면 라이브러리와 실시간 연동돼요.</div></div>' +
-      '<button onclick="libUploadDefaultBooks(\''+who+'\')" style="padding:8px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">일괄 업로드</button>' +
-    '</div>';
-  }
+  html += '<div style="background:#fff8ee;border:1.5px solid #f5d9b0;border-radius:14px;padding:14px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px">' +
+    '<div style="flex:1">' +
+      '<div style="font-size:.82rem;font-weight:700;color:var(--brown);margin-bottom:3px">📤 도서 데이터 일괄 업로드</div>' +
+      '<div style="font-size:.73rem;color:var(--text-soft)">' + (totalInFirebase > 0 ? 'Firebase에 '+totalInFirebase+'권 등록됨. 렉사일 지수 추가 등 업데이트 시 다시 업로드하세요.' : '기본 도서 653권을 Firebase에 업로드하면 라이브러리와 실시간 연동돼요.') + '</div>' +
+    '</div>' +
+    '<button onclick="libUploadDefaultBooks(\''+who+'\')" style="padding:7px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">일괄 업로드</button>' +
+  '</div>';
 
   // 클래스 선택 탭
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">';

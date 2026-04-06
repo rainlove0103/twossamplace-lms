@@ -1440,6 +1440,8 @@ function downloadBookListPDF() {
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => {
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
       document.fonts.ready.then(async () => {
+        // 폰트 완전 로딩 대기
+        await new Promise(r => setTimeout(r, 800));
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const A4_W = 210, A4_H = 297;
@@ -1449,10 +1451,15 @@ function downloadBookListPDF() {
         const captureEl = (html) => {
           const el = document.createElement('div');
           el.style.cssText = 'position:fixed;left:-9999px;top:0;';
-          el.innerHTML = html;
+          el.innerHTML = '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">' + html;
           document.body.appendChild(el);
-          return html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' })
-            .then(c => { document.body.removeChild(el); return c; });
+          return html2canvas(el, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            logging: false,
+            onclone: (doc) => { doc.fonts && doc.fonts.ready; }
+          }).then(c => { document.body.removeChild(el); return c; });
         };
 
         // 1페이지: 헤더 + 첫 30권
