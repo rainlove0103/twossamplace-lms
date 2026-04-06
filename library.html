@@ -1222,22 +1222,18 @@ var _db = null;
       var d = change.doc.data();
       if (!d.clsKey) return;
       if (change.type === 'removed') {
-        // Firebase에서 삭제되면 기본 BOOKS로 복원
         BOOKS[d.clsKey] = DEFAULT_BOOKS[d.clsKey] || [];
       } else {
         try {
           var books = JSON.parse(d.books || '[]');
-          if (books.length > 0) {
-            BOOKS[d.clsKey] = books;
-          }
+          // 빈 배열도 그대로 반영 (전체 삭제 시)
+          BOOKS[d.clsKey] = books;
         } catch(e) {}
       }
-      // 현재 보고 있는 클래스면 즉시 갱신
       if (currentClass === d.clsKey) {
         page = 1;
         render();
       }
-      // 카운트 업데이트
       updateCounts();
     });
   });
