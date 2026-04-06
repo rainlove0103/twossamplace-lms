@@ -7851,13 +7851,49 @@ function renderCurriculumPanel(who, el, titleHtml) {
 
   html += '<div style="display:flex;flex-direction:column;gap:12px">';
   CURR_FIELDS.forEach(function(f) {
-    html += '<div class="register-form-box" style="margin-bottom:0">' +
-      '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
-      '<span style="font-size:1.1rem">'+f.ico+'</span>' +
-      '<div style="font-family:\'Noto Sans KR\',sans-serif;font-size:1rem;font-weight:700;color:var(--brown)">'+f.label+'</div>' +
-      '</div>' +
-      '<textarea id="curr-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:72px;margin-bottom:0">'+d[f.key]+'</textarea>' +
+    if (f.key === 'book') {
+      // 원서 필드: 칩 + 자동완성
+      var savedBooks = [];
+      try { savedBooks = JSON.parse(d.book || '[]'); } catch(e) { if(d.book) savedBooks = [{t:d.book}]; }
+
+      var chipsHtml = savedBooks.map(function(b, i) {
+        var label = b.t + (b.ar ? ' AR'+b.ar : '');
+        return '<span style="display:inline-flex;align-items:center;gap:5px;background:#e8f3fb;color:#1a5a9a;border-radius:100px;padding:4px 10px 4px 8px;font-size:.78rem;font-weight:700;white-space:nowrap">' +
+          '📖 ' + label +
+          '<button onclick="currBookRemove('+i+',\''+who+'\')" style="background:none;border:none;cursor:pointer;color:#1a5a9a;font-size:.9rem;padding:0;line-height:1">✕</button>' +
+        '</span>';
+      }).join('');
+
+      html += '<div class="register-form-box" style="margin-bottom:0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+          '<span style="font-size:1.1rem">📖</span>' +
+          '<div style="font-family:\'Noto Sans KR\',sans-serif;font-size:1rem;font-weight:700;color:var(--brown)">원서</div>' +
+          '<span style="font-size:.72rem;color:var(--text-soft);margin-left:2px">라이브러리에서 검색해 추가해요</span>' +
+        '</div>' +
+        // 칩 영역
+        '<div id="curr-book-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;min-height:20px">' + chipsHtml + '</div>' +
+        // 검색 입력
+        '<div style="position:relative">' +
+          '<input id="curr-book-search" placeholder="📚 책 제목 검색..." autocomplete="off" ' +
+            'oninput="currBookSearch(this.value,\''+who+'\')" ' +
+            'onfocus="currBookSearch(this.value,\''+who+'\')" ' +
+            'onblur="setTimeout(function(){var d=document.getElementById(\'curr-book-dropdown\');if(d)d.style.display=\'none\';},200)" ' +
+            'style="width:100%;padding:.5rem .75rem;border:2px solid #f0e8dc;border-radius:12px;font-size:.82rem;font-family:inherit;outline:none;background:#fffbf5;color:var(--brown);box-sizing:border-box" ' +
+            'onfocus="this.style.borderColor=\'var(--cookie-lt)\'" onblur="this.style.borderColor=\'#f0e8dc\'">' +
+          '<div id="curr-book-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid #f0e8dc;border-radius:12px;box-shadow:0 4px 16px rgba(180,120,40,.12);z-index:100;max-height:220px;overflow-y:auto;margin-top:4px"></div>' +
+        '</div>' +
+        // hidden 저장용
+        '<input type="hidden" id="curr-book" value="'+encodeURIComponent(d.book||'[]')+'">' +
       '</div>';
+    } else {
+      html += '<div class="register-form-box" style="margin-bottom:0">' +
+        '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+        '<span style="font-size:1.1rem">'+f.ico+'</span>' +
+        '<div style="font-family:\'Noto Sans KR\',sans-serif;font-size:1rem;font-weight:700;color:var(--brown)">'+f.label+'</div>' +
+        '</div>' +
+        '<textarea id="curr-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:72px;margin-bottom:0">'+d[f.key]+'</textarea>' +
+        '</div>';
+    }
   });
   html += '</div>';
   el.innerHTML = html;
@@ -7877,15 +7913,99 @@ function selectCurriculumQuarter(q, who) {
 function saveCurriculum(who) {
   var d = getCurriculum(who, curriculumClass, curriculumQuarter);
   CURR_FIELDS.forEach(function(f) {
-    var el = document.getElementById('curr-'+f.key);
-    if(el) d[f.key] = el.value.trim();
+    if (f.key === 'book') {
+      var hidden = document.getElementById('curr-book');
+      d.book = hidden ? decodeURIComponent(hidden.value) : '[]';
+    } else {
+      var el = document.getElementById('curr-'+f.key);
+      if(el) d[f.key] = el.value.trim();
+    }
   });
   if(window.fbSaveCurriculum) window.fbSaveCurriculum(who, curriculumClass, curriculumQuarter);
   var btn = document.querySelector('[onclick="saveCurriculum(\''+who+'\')"]');
   if(btn) { btn.textContent='✅ 저장됨!'; setTimeout(function(){btn.textContent='💾 저장';},1500); }
 }
 
-/* ====== STUDENT MGMT ====== */
+/* ====== 원서 칩 + 자동완성 ====== */
+function currGetBooks() {
+  var hidden = document.getElementById('curr-book');
+  if (!hidden) return [];
+  try { return JSON.parse(decodeURIComponent(hidden.value)); } catch(e) { return []; }
+}
+
+function currSetBooks(books) {
+  var hidden = document.getElementById('curr-book');
+  if (hidden) hidden.value = encodeURIComponent(JSON.stringify(books));
+}
+
+function currRenderChips(who) {
+  var books = currGetBooks();
+  var container = document.getElementById('curr-book-chips');
+  if (!container) return;
+  container.innerHTML = books.map(function(b, i) {
+    var label = b.t + (b.ar ? ' AR' + b.ar : '');
+    return '<span style="display:inline-flex;align-items:center;gap:5px;background:#e8f3fb;color:#1a5a9a;border-radius:100px;padding:4px 10px 4px 8px;font-size:.78rem;font-weight:700;white-space:nowrap">' +
+      '📖 ' + label +
+      '<button onclick="currBookRemove(' + i + ',\'' + who + '\')" style="background:none;border:none;cursor:pointer;color:#1a5a9a;font-size:.9rem;padding:0;line-height:1">✕</button>' +
+    '</span>';
+  }).join('');
+}
+
+function currBookRemove(idx, who) {
+  var books = currGetBooks();
+  books.splice(idx, 1);
+  currSetBooks(books);
+  currRenderChips(who);
+}
+
+function currBookAdd(book, who) {
+  var books = currGetBooks();
+  // 중복 방지
+  if (books.some(function(b){ return b.t === book.t; })) return;
+  books.push(book);
+  currSetBooks(books);
+  currRenderChips(who);
+  // 검색창 초기화
+  var input = document.getElementById('curr-book-search');
+  if (input) input.value = '';
+  var dd = document.getElementById('curr-book-dropdown');
+  if (dd) dd.style.display = 'none';
+}
+
+function currBookSearch(q, who) {
+  var dd = document.getElementById('curr-book-dropdown');
+  if (!dd) return;
+  q = q.trim().toLowerCase();
+  if (!q) { dd.style.display = 'none'; return; }
+
+  // 전체 libraryBooks에서 검색
+  var results = [];
+  Object.keys(libraryBooks).forEach(function(cls) {
+    (libraryBooks[cls] || []).forEach(function(b) {
+      if (b.t.toLowerCase().includes(q) || (b.a && b.a.toLowerCase().includes(q))) {
+        results.push(b);
+      }
+    });
+  });
+  results.sort(function(a,b){ return a.ar - b.ar; });
+  results = results.slice(0, 12);
+
+  if (!results.length) {
+    dd.innerHTML = '<div style="padding:10px 14px;font-size:.78rem;color:var(--text-soft)">검색 결과가 없어요</div>';
+  } else {
+    dd.innerHTML = results.map(function(b) {
+      return '<div onmousedown="currBookAdd({t:\''+b.t.replace(/'/g,"\\'")+'\''+
+        (b.ar?',ar:'+b.ar:'')+
+        (b.lex?',lex:'+b.lex:'')+'},\''+who+'\')" ' +
+        'style="padding:8px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;border-bottom:1px solid #f5ede0" ' +
+        'onmouseover="this.style.background=\'#fffbf5\'" onmouseout="this.style.background=\'white\'">' +
+        '<span style="font-size:.78rem;font-weight:700;color:var(--brown);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+b.t+'</span>' +
+        '<span style="font-size:.7rem;font-weight:700;background:#fce4ec;color:#e8547a;padding:2px 7px;border-radius:100px;white-space:nowrap;flex-shrink:0">AR '+b.ar.toFixed(1)+'</span>' +
+      '</div>';
+    }).join('');
+  }
+  dd.style.display = 'block';
+}
 var mgmtSearchQuery = '';
 var counselSearchQuery = '';
 
