@@ -863,6 +863,12 @@ var expenseCategories = ['교재비','소모품비','간식비','임대료','광
 // textbookLogs = [{id, tbId, logType:'입고'|'출고', qty, date, note, studentName, who}]
 var textbooks = [];
 var textbookLogs = [];
+
+// 도서 라이브러리 데이터
+// libraryBooks[clsKey] = [{id, n, t, a, ar, type, topic, note}, ...]
+var libraryBooks = {};
+window.libraryBooks = libraryBooks;
+var libBookIdSeq = 1;
 var tbIdSeq = 1;
 
 var classStudents = {
@@ -2346,6 +2352,7 @@ function renderTeacherDash(who){
     {ico:'📖',lbl:'교재 관리',key:'textbook'},
     {ico:'🧾',lbl:'회계 관리',key:'account'},
     {ico:'📣',lbl:'공지사항',key:'notice'},
+    {ico:'📗',lbl:'도서 라이브러리',key:'library'},
   ];
   document.getElementById(who+'-stats').innerHTML=menus.map(function(m){return '<div class="t-menu-btn" id="tmenu-'+who+'-'+m.key+'" onclick="selectMenu(\''+who+'\',\''+m.key+'\')"><div class="t-menu-ico">'+m.ico+'</div><div class="t-menu-lbl">'+m.lbl+'</div></div>';}).join('');
   document.getElementById(who+'-main-content').innerHTML='';
@@ -2380,6 +2387,7 @@ function selectMenu(who,key){
   else if(key==='textbook') renderTextbookMgmt(who,el);
   else if(key==='account')  renderAccountMgmt(who,el);
   else if(key==='notice')   renderNoticePanel(who,el);
+  else if(key==='library')  renderLibraryMgmt(who,el);
   // 메뉴 콘텐츠 열리면 상단으로 부드럽게 스크롤
   el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
@@ -8105,6 +8113,151 @@ function deleteCounsel(id){
 }
 
 /* ====== NOTICE PANEL ====== */
+/* ====== 도서 라이브러리 관리 ====== */
+var LIB_CLASSES = [
+  {key:'picturebook', label:'파닉스 리더스', ar:'AR 0~2.5', emoji:'📣'},
+  {key:'readers',     label:'리더스북',      ar:'AR 0~3.5', emoji:'📗'},
+  {key:'chapter',     label:'챕터북',        ar:'AR 2.5~4.5',emoji:'📘'},
+  {key:'novel_basic', label:'노블 베이직',   ar:'AR 3.5~5.5',emoji:'📙'},
+  {key:'novel_plus',  label:'노블 플러스',   ar:'AR 4.5~6.5',emoji:'📕'},
+  {key:'beyond',      label:'비욘드',        ar:'AR 6.0~10.0',emoji:'📓'},
+];
+var libSelClass = null;
+var libEditId = null;
+var libSearchQ = '';
+
+function renderLibraryMgmt(who, el) {
+  var html = '<div class="t-section-title">📗 도서 라이브러리 관리</div>';
+
+  // 클래스 선택 탭
+  html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">';
+  LIB_CLASSES.forEach(function(c) {
+    var cnt = (libraryBooks[c.key]||[]).length;
+    var isActive = libSelClass === c.key;
+    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+      'style="padding:7px 14px;border-radius:10px;border:2px solid '+(isActive?'var(--cookie)':'#f0e8dc')+';background:'+(isActive?'var(--cookie-bg)':'white')+';font-size:.78rem;font-weight:700;color:'+(isActive?'var(--brown)':'var(--text-soft)')+';cursor:pointer;font-family:inherit">'+
+      c.emoji+' '+c.label+' <span style="font-size:.68rem;opacity:.7">'+cnt+'권</span></button>';
+  });
+  html += '</div>';
+
+  if (!libSelClass) {
+    html += '<div class="t-placeholder"><span class="ph-ico">📗</span><div class="ph-desc">위에서 클래스를 선택하세요.</div></div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  var cls = LIB_CLASSES.find(function(c){return c.key===libSelClass;});
+  var books = (libraryBooks[libSelClass]||[]).slice();
+
+  // 검색창 + 추가 버튼
+  html += '<div style="display:flex;gap:8px;margin-bottom:14px;align-items:center">' +
+    '<input id="lib-search" value="'+libSearchQ+'" oninput="libSearchQ=this.value;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" placeholder="제목, 저자 검색..." style="flex:1;padding:8px 12px;border-radius:10px;border:1.5px solid #f0e8dc;font-size:.82rem;font-family:inherit;outline:none">' +
+    '<button onclick="libEditId=\'new\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:8px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ 책 추가</button>' +
+  '</div>';
+
+  // 추가/수정 폼
+  if (libEditId !== null) {
+    var editing = libEditId !== 'new' ? books.find(function(b){return b.id===libEditId;}) : null;
+    html += '<div class="register-form-box" style="margin-bottom:16px">' +
+      '<div class="register-form-title">'+(editing?'✏️ 책 수정':'+ 새 책 추가')+' — '+cls.emoji+' '+cls.label+' ('+cls.ar+')</div>' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">제목 *</div><input class="register-input" id="lib-t" value="'+(editing?editing.t.replace(/"/g,'&quot;'):'')+'"></div>' +
+        '<div><div class="form-label">저자 *</div><input class="register-input" id="lib-a" value="'+(editing?editing.a.replace(/"/g,'&quot;'):'')+'"></div>' +
+      '</div>' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">AR 지수 *</div><input class="register-input" id="lib-ar" type="number" step="0.1" min="0" max="15" value="'+(editing?editing.ar:'')+'"></div>' +
+        '<div><div class="form-label">유형</div><select class="register-select" id="lib-type">' +
+          '<option value="Fiction"'+(editing&&editing.type==='Fiction'?' selected':'')+'>픽션</option>' +
+          '<option value="Nonfiction"'+(editing&&editing.type==='Nonfiction'?' selected':'')+'>논픽션</option>' +
+        '</select></div>' +
+      '</div>' +
+      '<div class="register-row">' +
+        '<div><div class="form-label">주제</div><select class="register-select" id="lib-topic">' +
+          ['동물·자연','과학·STEAM','사회·감정','역사·문화','언어·유머','수학·개념','모험·판타지','일상·성장'].map(function(t){
+            return '<option value="'+t+'"'+(editing&&editing.topic===t?' selected':'')+'>'+t+'</option>';
+          }).join('') +
+        '</select></div>' +
+        '<div><div class="form-label">설명 (한글)</div><input class="register-input" id="lib-note" value="'+(editing?editing.note.replace(/"/g,'&quot;'):'')+'"></div>' +
+      '</div>' +
+      '<div class="register-form-actions">' +
+        '<button class="btn-reg-cancel" onclick="libEditId=null;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">취소</button>' +
+        (editing?'<button class="btn-reg-submit danger" onclick="libDeleteBook(\''+who+'\',\''+libSelClass+'\',\''+libEditId+'\')">🗑️ 삭제</button>':'') +
+        '<button class="btn-reg-submit" onclick="libSaveBook(\''+who+'\',\''+libSelClass+'\''+(editing?',\''+libEditId+'\'':'')+')">저장</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  // 검색 필터
+  if (libSearchQ) {
+    var q = libSearchQ.toLowerCase();
+    books = books.filter(function(b){return b.t.toLowerCase().includes(q)||b.a.toLowerCase().includes(q);});
+  }
+
+  // 책 목록
+  html += '<div style="font-size:.75rem;color:var(--text-soft);margin-bottom:8px">'+books.length+'권 표시</div>';
+  if (books.length === 0) {
+    html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">아직 등록된 책이 없어요. + 책 추가 버튼으로 추가해요!</div></div>';
+  } else {
+    html += '<div style="display:flex;flex-direction:column;gap:6px">';
+    books.forEach(function(b) {
+      var isEditing = libEditId === b.id;
+      html += '<div style="background:white;border-radius:12px;border:1.5px solid '+(isEditing?'var(--cookie)':'#f0e8dc')+';padding:10px 14px;display:flex;align-items:center;gap:10px">' +
+        '<span style="font-size:.68rem;color:var(--text-soft);min-width:24px">'+b.n+'</span>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-size:.85rem;font-weight:700;color:var(--brown)">'+b.t+'</div>' +
+          '<div style="font-size:.72rem;color:var(--text-soft)">'+b.a+' · AR '+b.ar.toFixed(1)+' · '+b.topic+'</div>' +
+        '</div>' +
+        '<span style="font-size:.65rem;padding:2px 8px;border-radius:8px;background:'+(b.type==='Fiction'?'#e8f3fb':'#e8f5ee')+';color:'+(b.type==='Fiction'?'#1a5a9a':'#1a6a3a')+'">'+( b.type==='Fiction'?'픽션':'논픽션')+'</span>' +
+        '<button onclick="libEditId=\''+b.id+'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.7rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 수정</button>' +
+      '</div>';
+    });
+    html += '</div>';
+  }
+
+  el.innerHTML = html;
+}
+
+function libSaveBook(who, clsKey, editId) {
+  var t = (document.getElementById('lib-t')||{value:''}).value.trim();
+  var a = (document.getElementById('lib-a')||{value:''}).value.trim();
+  var ar = parseFloat((document.getElementById('lib-ar')||{value:''}).value);
+  var type = (document.getElementById('lib-type')||{value:'Fiction'}).value;
+  var topic = (document.getElementById('lib-topic')||{value:''}).value;
+  var note = (document.getElementById('lib-note')||{value:''}).value.trim();
+
+  if (!t) { alert('제목을 입력해주세요.'); return; }
+  if (!a) { alert('저자를 입력해주세요.'); return; }
+  if (isNaN(ar)) { alert('AR 지수를 입력해주세요.'); return; }
+
+  if (!libraryBooks[clsKey]) libraryBooks[clsKey] = [];
+
+  if (editId) {
+    var idx = libraryBooks[clsKey].findIndex(function(b){return b.id===editId;});
+    if (idx > -1) {
+      libraryBooks[clsKey][idx] = Object.assign(libraryBooks[clsKey][idx], {t:t,a:a,ar:ar,type:type,topic:topic,note:note});
+    }
+  } else {
+    var newId = 'lib_'+Date.now();
+    var n = libraryBooks[clsKey].length + 1;
+    libraryBooks[clsKey].push({id:newId, n:n, t:t, a:a, ar:ar, type:type, topic:topic, note:note});
+  }
+  // 번호 재정렬
+  libraryBooks[clsKey].forEach(function(b,i){b.n=i+1;});
+
+  if (window.fbSaveLibraryBooks) window.fbSaveLibraryBooks(clsKey);
+  libEditId = null;
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libDeleteBook(who, clsKey, id) {
+  if (!confirm('이 책을 삭제할까요?')) return;
+  libraryBooks[clsKey] = (libraryBooks[clsKey]||[]).filter(function(b){return b.id!==id;});
+  libraryBooks[clsKey].forEach(function(b,i){b.n=i+1;});
+  if (window.fbSaveLibraryBooks) window.fbSaveLibraryBooks(clsKey);
+  libEditId = null;
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
 function renderNoticePanel(who,el){
   noticeRecipients=new Set(); expandedClasses=new Set();
   var myNotices=notices.filter(function(n){return n.who===who;}).sort(function(a,b){return b.id-a.id;});
@@ -8412,6 +8565,12 @@ window.fbSaveReport = async function(who, dateKey, name) {
 window.fbSaveReportSendLog = async function(who) {
   var logs = (window.reportSendLog||{})[who]||[];
   await fbSet('reportSendLog/' + who, { logs: JSON.stringify(logs) });
+};
+
+window.fbSaveLibraryBooks = async function(clsKey) {
+  var books = window.libraryBooks[clsKey] || [];
+  var safeKey = clsKey.replace(/\//g,'_');
+  await fbSet('libraryBooks/' + safeKey, { clsKey: clsKey, books: JSON.stringify(books) });
 };
 
 window.fbSaveNotices = async function(who) {
@@ -8818,6 +8977,16 @@ async function loadAllData() {
       if(logDoc && logDoc.logs) {
         try { window.reportSendLog[who] = JSON.parse(logDoc.logs); } catch(e){}
       }
+    });
+  } catch(e){}
+
+  // 도서 라이브러리 불러오기
+  try {
+    var libSnap = await fbGetCol('libraryBooks');
+    Object.keys(libSnap).forEach(function(key){
+      var d = libSnap[key];
+      if(!d.clsKey) return;
+      try { window.libraryBooks[d.clsKey] = JSON.parse(d.books||'[]'); } catch(e){}
     });
   } catch(e){}
 

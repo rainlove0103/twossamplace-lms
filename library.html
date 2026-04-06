@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>투쌤플레이스 라이브러리 📚</title>
 <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <style>
 :root{
   --cream:#fff9fb;
@@ -252,7 +254,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 
     <!-- 도서 목록 영역 -->
     <div id="bookSection" style="display:none;">
-      <div class="section-title" id="bookSectionTitle">📣 파닉스 리더스 도서 목록</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="section-title" id="bookSectionTitle" style="margin-bottom:0">📣 파닉스 리더스 도서 목록</div>
+        <button onclick="downloadBookListPDF()" style="background:linear-gradient(135deg,var(--pink-lt),var(--pink-deep));border:none;border-radius:100px;padding:7px 18px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(232,84,122,.3);display:flex;align-items:center;gap:6px;flex-shrink:0">
+          📄 PDF 다운로드
+        </button>
+      </div>
 
       <div class="search-bar">
         <div class="search-wrap">
@@ -1178,6 +1185,58 @@ let filterType = 'all';
 let page = 1;
 const PER = 20;
 
+// ── Firebase 초기화 및 실시간 동기화 ──────────────────────────────
+var _db = null;
+(function initFirebase(){
+  if(typeof firebase === 'undefined'){ setTimeout(initFirebase, 100); return; }
+  firebase.initializeApp({
+    apiKey: "AIzaSyD46HrOovYxZ95VsgDfhJyvUSFpGYmcmWE",
+    authDomain: "twossamplace-lms.firebaseapp.com",
+    projectId: "twossamplace-lms",
+    storageBucket: "twossamplace-lms.firebasestorage.app",
+    messagingSenderId: "115444457876",
+    appId: "1:115444457876:web:3cc4e437d2aae757edef81"
+  });
+  _db = firebase.firestore();
+
+  // libraryBooks 실시간 구독
+  _db.collection('libraryBooks').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var d = change.doc.data();
+      if (!d.clsKey) return;
+      if (change.type === 'removed') {
+        // Firebase에서 삭제되면 기본 BOOKS로 복원
+        BOOKS[d.clsKey] = DEFAULT_BOOKS[d.clsKey] || [];
+      } else {
+        try {
+          var books = JSON.parse(d.books || '[]');
+          if (books.length > 0) {
+            BOOKS[d.clsKey] = books;
+          }
+        } catch(e) {}
+      }
+      // 현재 보고 있는 클래스면 즉시 갱신
+      if (currentClass === d.clsKey) {
+        page = 1;
+        render();
+      }
+      // 카운트 업데이트
+      updateCounts();
+    });
+  });
+})();
+
+// 기본 BOOKS를 DEFAULT_BOOKS로 백업
+var DEFAULT_BOOKS = {};
+Object.keys(BOOKS).forEach(function(k){ DEFAULT_BOOKS[k] = BOOKS[k].slice(); });
+
+function updateCounts() {
+  Object.keys(BOOKS).forEach(function(cls) {
+    var el = document.getElementById('cnt-' + cls);
+    if (el) el.textContent = BOOKS[cls].length + '권';
+  });
+}
+
 // ── 탭 전환 ──────────────────────────────────────────────────────
 function switchTab(id, btn) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -1298,12 +1357,115 @@ function render() {
 
 // ── 카운트 표시 ──────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
-  Object.keys(BOOKS).forEach(function(cls) {
-    const cnt = BOOKS[cls].length;
-    const el = document.getElementById('cnt-' + cls);
-    if (el && cnt > 0) el.textContent = cnt + '권';
-  });
+  updateCounts();
 });
+
+// ── PDF 다운로드 ──────────────────────────────────────────────────
+function downloadBookListPDF() {
+  if (!currentClass) return;
+
+  const btn = document.querySelector('[onclick="downloadBookListPDF()"]');
+  if (btn) { btn.textContent = '⏳ 생성 중...'; btn.disabled = true; }
+
+  const loadScript = (src, cb) => {
+    if (document.querySelector(`script[src="${src}"]`)) { cb(); return; }
+    const s = document.createElement('script'); s.src = src;
+    s.onload = cb; document.head.appendChild(s);
+  };
+
+  loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
+    loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js', () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+      const classNames = {
+        picturebook: '파닉스 리더스', readers: '리더스북', chapter: '챕터북',
+        novel_basic: '노블 베이직', novel_plus: '노블 플러스', beyond: '비욘드'
+      };
+      const arRanges = {
+        picturebook: 'AR 0~2.5', readers: 'AR 0~3.5', chapter: 'AR 2.5~4.5',
+        novel_basic: 'AR 3.5~5.5', novel_plus: 'AR 4.5~6.5', beyond: 'AR 6.0~10.0'
+      };
+
+      const clsName = classNames[currentClass] || currentClass;
+      const arRange = arRanges[currentClass] || '';
+      const allBooks = BOOKS[currentClass] || [];
+      const today = new Date();
+      const dateStr = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0');
+
+      // ── 헤더 ──
+      doc.setFillColor(232, 84, 122);
+      doc.rect(0, 0, 210, 28, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Twossam Place Library', 14, 12);
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(clsName + ' Book List  |  ' + arRange + '  |  ' + allBooks.length + ' books', 14, 21);
+
+      // 날짜
+      doc.setFontSize(8);
+      doc.setTextColor(255, 220, 230);
+      doc.text('Generated: ' + dateStr, 196, 8, { align: 'right' });
+
+      // ── 테이블 ──
+      const rows = allBooks.map((b, i) => [
+        i + 1,
+        b.t,
+        b.a,
+        b.ar.toFixed(1),
+        b.type === 'Fiction' ? 'F' : 'NF',
+        b.topic,
+        b.note
+      ]);
+
+      doc.autoTable({
+        startY: 32,
+        head: [['#', 'Title', 'Author', 'AR', 'Type', 'Topic', 'Note']],
+        body: rows,
+        styles: {
+          fontSize: 7.5,
+          cellPadding: 2.5,
+          font: 'helvetica',
+          textColor: [74, 26, 44],
+          lineColor: [255, 214, 231],
+          lineWidth: 0.3,
+        },
+        headStyles: {
+          fillColor: [253, 228, 236],
+          textColor: [232, 84, 122],
+          fontStyle: 'bold',
+          fontSize: 8,
+        },
+        alternateRowStyles: { fillColor: [255, 249, 251] },
+        columnStyles: {
+          0: { cellWidth: 8, halign: 'center' },
+          1: { cellWidth: 62 },
+          2: { cellWidth: 38 },
+          3: { cellWidth: 12, halign: 'center' },
+          4: { cellWidth: 10, halign: 'center' },
+          5: { cellWidth: 28 },
+          6: { cellWidth: 32 },
+        },
+        didDrawPage: (data) => {
+          // 푸터
+          doc.setFontSize(7);
+          doc.setTextColor(196, 138, 170);
+          doc.text(
+            '투쌤플레이스 라이브러리  |  Page ' + data.pageNumber,
+            105, 292, { align: 'center' }
+          );
+        }
+      });
+
+      const fileName = '투쌤플레이스_' + clsName + '_도서목록_' + dateStr + '.pdf';
+      doc.save(fileName);
+
+      if (btn) { btn.textContent = '📄 PDF 다운로드'; btn.disabled = false; }
+    });
+  });
+}
 </script>
 </body>
 </html>
