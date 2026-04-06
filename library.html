@@ -129,6 +129,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .b-fi{background:#e8f3fb;color:#1a5a9a;}
 .b-nf{background:#e8f5ee;color:#1a6a3a;}
 .b-ar{background:var(--rose);color:var(--pink-deep);}
+.b-lex{background:#e8f5ee;color:#1a6a3a;}
 .b-sr{background:#fef9e8;color:#8a6a00;}
 .b-topic{background:#f3eeff;color:#6a30c8;}
 
@@ -1341,6 +1342,7 @@ function render() {
         <div class="card-meta">
           <span class="badge ${b.type === 'Fiction' ? 'b-fi' : 'b-nf'}">${b.type === 'Fiction' ? '픽션' : '논픽션'}</span>
           <span class="badge b-ar">AR ${b.ar.toFixed(1)}</span>
+          ${b.lex ? `<span class="badge b-lex">L ${b.lex}</span>` : ''}
           <span class="badge b-topic">${b.topic}</span>
           ${b.s ? '<span class="badge b-sr">시리즈</span>' : ''}
         </div>
