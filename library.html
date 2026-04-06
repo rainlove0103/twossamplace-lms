@@ -257,9 +257,22 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
     <div id="bookSection" style="display:none;">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
         <div class="section-title" id="bookSectionTitle" style="margin-bottom:0">📣 파닉스 리더스 도서 목록</div>
-        <button onclick="downloadBookListPDF()" style="background:linear-gradient(135deg,var(--pink-lt),var(--pink-deep));border:none;border-radius:100px;padding:7px 18px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(232,84,122,.3);display:flex;align-items:center;gap:6px;flex-shrink:0">
-          📄 PDF 다운로드
-        </button>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <button onclick="downloadBookListPDF('all')" style="background:linear-gradient(135deg,var(--pink-lt),var(--pink-deep));border:none;border-radius:100px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit;box-shadow:0 3px 12px rgba(232,84,122,.3);display:flex;align-items:center;gap:5px;flex-shrink:0">
+            📄 전체 저장
+          </button>
+          <button id="selectModeBtn" onclick="toggleSelectMode()" style="background:white;border:2px solid var(--pink-lt);border-radius:100px;padding:6px 16px;font-size:.78rem;font-weight:700;color:var(--pink-deep);cursor:pointer;font-family:inherit;display:flex;align-items:center;gap:5px;flex-shrink:0">
+            ☑️ 선택 저장
+          </button>
+        </div>
+      </div>
+      <!-- 선택 저장 액션바 -->
+      <div id="selectActionBar" style="display:none;background:var(--pink-bg);border:1.5px solid var(--pink-lt);border-radius:14px;padding:10px 16px;margin-bottom:12px;display:none;align-items:center;gap:10px;flex-wrap:wrap">
+        <span id="selectCount" style="font-size:.82rem;font-weight:700;color:var(--pink-deep)">0권 선택됨</span>
+        <button onclick="selectAllBooks()" style="background:white;border:1.5px solid var(--pink-lt);border-radius:8px;padding:4px 12px;font-size:.75rem;font-weight:700;color:var(--pink-deep);cursor:pointer;font-family:inherit">전체 선택</button>
+        <button onclick="deselectAllBooks()" style="background:white;border:1.5px solid var(--pink-lt);border-radius:8px;padding:4px 12px;font-size:.75rem;font-weight:700;color:var(--text-soft);cursor:pointer;font-family:inherit">선택 해제</button>
+        <button onclick="downloadBookListPDF('selected')" style="margin-left:auto;background:var(--pink-deep);border:none;border-radius:8px;padding:6px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📄 선택 PDF 저장</button>
+        <button onclick="toggleSelectMode()" style="background:none;border:none;font-size:.78rem;color:var(--text-soft);cursor:pointer;font-family:inherit">취소</button>
       </div>
 
       <div class="search-bar">
@@ -1185,6 +1198,8 @@ let currentClass = null;
 let filterType = 'all';
 let page = 1;
 const PER = 21; // 3열 × 7행
+let selectMode = false;
+let selectedBooks = new Set(); // 선택된 책 n값 저장
 
 // ── Firebase 초기화 및 실시간 동기화 ──────────────────────────────
 var _db = null;
@@ -1251,6 +1266,9 @@ function selectClass(cls) {
   currentClass = cls;
   filterType = 'all';
   page = 1;
+  selectMode = false;
+  selectedBooks = new Set();
+  updateSelectUI();
   document.getElementById('q').value = '';
   document.getElementById('topicSel').value = '';
   document.getElementById('arSel').value = '';
@@ -1304,6 +1322,64 @@ function getFiltered() {
   return filtered.sort((a, b) => a.ar - b.ar || a.t.localeCompare(b.t));
 }
 
+// ── 선택 모드 ──────────────────────────────────────────────────────
+function toggleSelectMode() {
+  selectMode = !selectMode;
+  if (!selectMode) selectedBooks = new Set();
+  updateSelectUI();
+  render();
+}
+
+function updateSelectUI() {
+  const bar = document.getElementById('selectActionBar');
+  const btn = document.getElementById('selectModeBtn');
+  if (!bar || !btn) return;
+  if (selectMode) {
+    bar.style.display = 'flex';
+    btn.style.background = 'var(--pink-deep)';
+    btn.style.color = 'white';
+    btn.style.borderColor = 'var(--pink-deep)';
+  } else {
+    bar.style.display = 'none';
+    btn.style.background = 'white';
+    btn.style.color = 'var(--pink-deep)';
+    btn.style.borderColor = 'var(--pink-lt)';
+  }
+  updateSelectCount();
+}
+
+function updateSelectCount() {
+  const el = document.getElementById('selectCount');
+  if (el) el.textContent = selectedBooks.size + '권 선택됨';
+}
+
+function toggleBookSelect(n) {
+  if (selectedBooks.has(n)) selectedBooks.delete(n);
+  else selectedBooks.add(n);
+  updateSelectCount();
+  // 카드 테두리만 업데이트 (전체 재렌더 없이)
+  const card = document.getElementById('book-card-' + n);
+  if (card) {
+    card.style.borderColor = selectedBooks.has(n) ? 'var(--pink-deep)' : 'var(--rose-lt)';
+    card.style.background = selectedBooks.has(n) ? 'var(--pink-bg)' : 'white';
+    const cb = card.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = selectedBooks.has(n);
+  }
+}
+
+function selectAllBooks() {
+  const data = getFiltered();
+  data.forEach(b => selectedBooks.add(b.n));
+  updateSelectCount();
+  render();
+}
+
+function deselectAllBooks() {
+  selectedBooks = new Set();
+  updateSelectCount();
+  render();
+}
+
 // ── 렌더 ─────────────────────────────────────────────────────────
 function render() {
   const data = getFiltered();
@@ -1329,12 +1405,24 @@ function render() {
     return;
   }
 
-  grid.innerHTML = slice.map(b => `
-    <div class="book-card" id="card-${b.n}">
+  grid.innerHTML = slice.map(b => {
+    const isSelected = selectedBooks.has(b.n);
+    const cardStyle = selectMode && isSelected
+      ? 'border-color:var(--pink-deep);background:var(--pink-bg)'
+      : '';
+    const checkboxHtml = selectMode ? `
+      <div style="position:absolute;top:10px;right:10px">
+        <input type="checkbox" ${isSelected ? 'checked' : ''}
+          onclick="toggleBookSelect(${b.n})"
+          style="width:16px;height:16px;accent-color:var(--pink-deep);cursor:pointer">
+      </div>` : '';
+    return `
+    <div class="book-card" id="book-card-${b.n}" style="${cardStyle}" ${selectMode ? `onclick="toggleBookSelect(${b.n})" style="cursor:pointer;${cardStyle}"` : ''}>
+      ${checkboxHtml}
       <div class="card-body">
         <div class="card-top">
           <span class="card-num">${b.n}</span>
-          <span class="card-title">${b.t}</span>
+          <span class="card-title" style="padding-right:${selectMode?'20px':'0'}">${b.t}</span>
         </div>
         <div class="card-row2">
           <span class="card-author">✍️ ${b.a}</span>
@@ -1348,8 +1436,8 @@ function render() {
         </div>
         <div class="card-note">💬 ${b.note}</div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('');
 
 
   const pages = Math.ceil(data.length / PER);
@@ -1366,10 +1454,23 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── PDF 다운로드 ──────────────────────────────────────────────────
-function downloadBookListPDF() {
+function downloadBookListPDF(mode) {
   if (!currentClass) return;
+  mode = mode || 'all';
 
-  const btn = document.querySelector('[onclick="downloadBookListPDF()"]');
+  // 선택 모드일 때 선택된 책 확인
+  let targetBooks;
+  if (mode === 'selected') {
+    if (selectedBooks.size === 0) { alert('선택된 책이 없어요!'); return; }
+    const all = (BOOKS[currentClass] || []).slice().sort((a,b) => a.ar - b.ar || a.t.localeCompare(b.t));
+    targetBooks = all.filter(b => selectedBooks.has(b.n));
+  } else {
+    targetBooks = (BOOKS[currentClass] || []).slice().sort((a,b) => a.ar - b.ar || a.t.localeCompare(b.t));
+  }
+
+  const btn = mode === 'selected'
+    ? document.querySelector('[onclick="downloadBookListPDF(\'selected\')"]')
+    : document.querySelector('[onclick="downloadBookListPDF(\'all\')"]');
   if (btn) { btn.textContent = '⏳ 생성 중...'; btn.disabled = true; }
 
   const classNames = {
@@ -1383,13 +1484,14 @@ function downloadBookListPDF() {
 
   const clsName = classNames[currentClass] || currentClass;
   const arRange = arRanges[currentClass] || '';
-  const allBooks = (BOOKS[currentClass] || []).slice().sort((a,b) => a.ar - b.ar || a.t.localeCompare(b.t));
+  const allBooks = targetBooks;
   const today = new Date();
   const dateStr = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0');
+  const yearMonthStr = today.getFullYear() + '년 ' + (today.getMonth()+1) + '월';
   const fi = allBooks.filter(b => b.type==='Fiction').length;
   const nf = allBooks.filter(b => b.type==='Nonfiction').length;
 
-  const PER_PAGE = 30;
+  const PER_PAGE = 25;
   const totalPages = Math.ceil(allBooks.length / PER_PAGE);
 
   // 공통 스타일
@@ -1445,7 +1547,7 @@ function downloadBookListPDF() {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const A4_W = 210, A4_H = 297;
-        const MARGIN = 10; // mm 여백
+        const MARGIN = 12; // mm 여백
         const contentW = A4_W - MARGIN * 2;
 
         const captureEl = (html) => {
@@ -1472,8 +1574,8 @@ function downloadBookListPDF() {
             <div style="${commonStyle}padding-bottom:0">
               <div style="background:#e8547a;border-radius:10px;padding:16px 20px 12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
-                  <div style="font-size:8px;color:rgba(255,255,255,.7);letter-spacing:.12em;margin-bottom:3px">투쌤플레이스</div>
-                  <div style="font-size:19px;font-weight:700;color:white;line-height:1.1">${clsName} 도서 목록</div>
+                  <div style="font-size:8px;color:rgba(255,255,255,.7);letter-spacing:.06em;margin-bottom:3px">아이들과 꿈을 만드는 공간, 투쌤플레이스</div>
+                  <div style="font-size:19px;font-weight:700;color:white;line-height:1.2">${yearMonthStr} ${clsName} 도서 목록</div>
                   <div style="font-size:9.5px;color:rgba(255,255,255,.85);margin-top:4px">${arRange} &nbsp;·&nbsp; 총 ${allBooks.length}권 &nbsp;·&nbsp; 픽션 ${fi}권 &nbsp;·&nbsp; 논픽션 ${nf}권</div>
                 </div>
                 <div style="text-align:right">
@@ -1485,7 +1587,7 @@ function downloadBookListPDF() {
             </div>` : `
             <div style="${commonStyle}padding-bottom:0">
               <div style="font-size:9px;font-weight:700;color:#993556;padding-bottom:6px;border-bottom:1.5px solid #ffd6e7;margin-bottom:0">
-                투쌤플레이스 &nbsp;·&nbsp; ${clsName} 도서 목록 &nbsp;·&nbsp; ${startIdx+1}~${Math.min(startIdx+PER_PAGE, allBooks.length)}번
+                투쌤플레이스 &nbsp;·&nbsp; ${yearMonthStr} ${clsName} 도서 목록 &nbsp;·&nbsp; ${startIdx+1}~${Math.min(startIdx+PER_PAGE, allBooks.length)}번
               </div>
               ${tableHead}${makeRows(pageBooks, startIdx)}</tbody></table>
             </div>`;
@@ -1514,7 +1616,7 @@ function downloadBookListPDF() {
 
         const fileName = '투쌤플레이스_' + clsName + '_도서목록_' + dateStr + '.pdf';
         doc.save(fileName);
-        if (btn) { btn.textContent = '📄 PDF 다운로드'; btn.disabled = false; }
+        if (btn) { btn.textContent = mode === 'selected' ? '📄 선택 PDF 저장' : '📄 전체 저장'; btn.disabled = false; }
       });
     });
   });

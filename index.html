@@ -8972,7 +8972,7 @@ async function libUploadDefaultBooks(who) {
   for (var i = 0; i < clsKeys.length; i++) {
     var clsKey = clsKeys[i];
     var books = LIBRARY_DEFAULT_BOOKS[clsKey].map(function(b, idx) {
-      return {id: 'lib_'+clsKey+'_'+idx, n:b.n, t:b.t, a:b.a, ar:b.ar, type:b.type, topic:b.topic, note:b.note};
+      return {id: 'lib_'+clsKey+'_'+idx, n:b.n, t:b.t, a:b.a, ar:b.ar, lex:b.lex||null, type:b.type, topic:b.topic, note:b.note};
     });
     window.libraryBooks[clsKey] = books;
     if (window.fbSaveLibraryBooks) await window.fbSaveLibraryBooks(clsKey);
