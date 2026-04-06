@@ -839,12 +839,12 @@ var makeupTime = '15:00';
 
 /* ====== CONSTANTS ====== */
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
-var CLASSES = ['픽처북','리더스북','챕터북','노블','비욘드A','비욘드B'];
+var CLASSES = ['파닉스','리더스북','챕터북','노블','비욘드A','비욘드B'];
 var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
-var CLASS_FEE = {'픽처북':400000,'리더스북':430000,'챕터북':480000,'노블':550000,'비욘드A':650000,'비욘드B':650000};
+var CLASS_FEE = {'파닉스':400000,'리더스북':430000,'챕터북':480000,'노블':550000,'비욘드A':650000,'비욘드B':650000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -866,7 +866,7 @@ var textbookLogs = [];
 var tbIdSeq = 1;
 
 var classStudents = {
-  '픽처북-월/수':[],'픽처북-화/목':[],
+  '파닉스-월/수':[],'파닉스-화/목':[],
   '리더스북-월/수':[],'리더스북-화/목':[],
   '챕터북-월/수':[],'챕터북-화/목':[],
   '노블-월/수':[],'노블-화/목':[],
@@ -1949,7 +1949,7 @@ function renderStudentSched(name){
   var mPrefix=y+'-'+String(m+1).padStart(2,'0');
   var clsStr=d.cls||'';
 
-  // 클래스 키 찾기 (예: '픽처북 · 월/수' → '픽처북-월/수')
+  // 클래스 키 찾기 (예: '파닉스 · 월/수' → '파닉스-월/수')
   var clsKey = null;
   Object.keys(classStudents).forEach(function(k){
     if(classStudents[k].indexOf(name)>-1) clsKey=k;
