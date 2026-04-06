@@ -3015,7 +3015,7 @@ function renderTeacherDash(who){
     {ico:'📊',lbl:'리포트 관리',key:'report'},
     {ico:'📋',lbl:'출결 관리',key:'att'},
     {ico:'📚',lbl:'클래스 관리',key:'class'},
-    {ico:'📗',lbl:'도서 라이브러리',key:'library'},
+    {ico:'📗',lbl:'라이브러리',key:'library'},
     {ico:'⭐',lbl:'포인트 관리',key:'point'},
     {ico:'👩‍🎓',lbl:'원생 관리',key:'student'},
     {ico:'💰',lbl:'원비 관리',key:'tuition'},
@@ -8803,7 +8803,7 @@ var libSelectDeleteMode = false;
 var libSelectedForDelete = new Set();
 
 function renderLibraryMgmt(who, el) {
-  var html = '<div class="t-section-title">📗 도서 라이브러리 관리</div>';
+  var html = '<div class="t-section-title">📗 라이브러리 관리</div>';
 
   // 일괄 업로드 버튼 (항상 표시)
   var totalInFirebase = Object.keys(libraryBooks).reduce(function(acc,k){return acc+(libraryBooks[k]||[]).length;},0);
@@ -8836,7 +8836,7 @@ function renderLibraryMgmt(who, el) {
   var books = (libraryBooks[libSelClass]||[]).slice();
 
   // 검색/필터 박스 (한 줄)
-  html += '<div style="background:white;border-radius:16px;padding:12px 18px;box-shadow:0 2px 12px rgba(180,120,40,.08);border:1.5px solid #f0e8dc;margin-bottom:14px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+  html += '<div style="background:white;border-radius:16px;padding:12px 18px;box-shadow:0 2px 12px rgba(180,120,40,.08);border:1.5px solid #f0e8dc;margin-bottom:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
     '<div style="position:relative;flex:1;min-width:160px">' +
       '<span style="position:absolute;left:.7rem;top:50%;transform:translateY(-50%);color:var(--text-soft);font-size:.85rem">🔍</span>' +
       '<input id="lib-search" value="'+libSearchQ+'" oninput="libSearchQ=this.value;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" placeholder="제목, 저자 검색..." style="width:100%;padding:.5rem .75rem .5rem 2.1rem;border:2px solid #f0e8dc;border-radius:12px;font-size:.82rem;font-family:inherit;outline:none;background:#fffbf5;color:var(--brown);transition:border-color .2s" onfocus="this.style.borderColor=\'var(--cookie-lt)\'" onblur="this.style.borderColor=\'#f0e8dc\'">' +
@@ -8857,9 +8857,15 @@ function renderLibraryMgmt(who, el) {
       var isOn = libFilterType===f[0];
       return '<button onclick="libFilterType=\''+f[0]+'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:5px 13px;border-radius:100px;border:2px solid '+(isOn?'var(--cookie)':'#f0e8dc')+';background:'+(isOn?'var(--cookie)':'transparent')+';color:'+(isOn?'white':'var(--text-soft)')+';font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s">'+f[1]+'</button>';
     }).join('') +
-    '<button onclick="libEditId=\'new\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:6px 14px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:auto">+ 책 추가</button>' +
-    '<button onclick="libToggleSelectDelete(\''+who+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid '+(libSelectDeleteMode?'#ef5350':'#f0e8dc')+';background:'+(libSelectDeleteMode?'#ffebee':'white')+';color:'+(libSelectDeleteMode?'#ef5350':'var(--text-soft)')+';font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+(libSelectDeleteMode?'✕ 취소':'☑️ 선택 삭제')+'</button>' +
-    '<button onclick="libDeleteAllBooks(\''+who+'\',\''+libSelClass+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid #f0e8dc;background:white;color:#ef5350;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">🗑️ 전체 삭제</button>' +
+  '</div>';
+
+  // 책 추가 + 삭제 버튼 줄
+  html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:14px;flex-wrap:wrap">' +
+    '<button onclick="libEditId=\'new\';libSelectDeleteMode=false;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:6px 16px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">+ 책 추가</button>' +
+    '<div style="margin-left:auto;display:flex;gap:6px">' +
+      '<button onclick="libToggleSelectDelete(\''+who+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid '+(libSelectDeleteMode?'#ef5350':'#f0e8dc')+';background:'+(libSelectDeleteMode?'#ffebee':'white')+';color:'+(libSelectDeleteMode?'#ef5350':'var(--text-soft)')+';font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+(libSelectDeleteMode?'✕ 취소':'☑️ 선택 삭제')+'</button>' +
+      '<button onclick="libDeleteAllBooks(\''+who+'\',\''+libSelClass+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid #ffcdd2;background:white;color:#ef5350;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">🗑️ 전체 삭제</button>' +
+    '</div>' +
   '</div>';
   if (libEditId !== null) {
     var editing = libEditId !== 'new' ? books.find(function(b){return b.id===libEditId;}) : null;
