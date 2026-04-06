@@ -8801,6 +8801,7 @@ var libPage = 1;
 var LIB_PER = 21;
 var libSelectDeleteMode = false;
 var libSelectedForDelete = new Set();
+var libSeriesFilter = null; // 선택된 시리즈명 (null이면 시리즈 목록 표시)
 
 function renderLibraryMgmt(who, el) {
   var html = '<div class="t-section-title">📗 라이브러리 관리</div>';
@@ -8820,7 +8821,7 @@ function renderLibraryMgmt(who, el) {
   LIB_CLASSES.forEach(function(c) {
     var cnt = (libraryBooks[c.key]||[]).length;
     var isActive = libSelClass === c.key;
-    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';libFilterType=\'all\';libTopicFilter=\'\';libArFilter=\'\';libPage=1;libSelectDeleteMode=false;libSelectedForDelete=new Set();renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';libFilterType=\'all\';libTopicFilter=\'\';libArFilter=\'\';libPage=1;libSelectDeleteMode=false;libSelectedForDelete=new Set();libSeriesFilter=null;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
       'style="padding:7px 14px;border-radius:10px;border:2px solid '+(isActive?'var(--cookie)':'#f0e8dc')+';background:'+(isActive?'var(--cookie-bg)':'white')+';font-size:.78rem;font-weight:700;color:'+(isActive?'var(--brown)':'var(--text-soft)')+';cursor:pointer;font-family:inherit">'+
       c.emoji+' '+c.label+' <span style="font-size:.68rem;opacity:.7">'+cnt+'권</span></button>';
   });
@@ -8853,9 +8854,12 @@ function renderLibraryMgmt(who, el) {
         return '<option value="'+r[0]+'"'+(libArFilter===r[0]?' selected':'')+'>'+r[1]+'</option>';
       }).join('') +
     '</select>' +
-    [['all','전체'],['Fiction','픽션'],['Nonfiction','논픽션']].map(function(f){
+    [['all','전체'],['Fiction','픽션'],['Nonfiction','논픽션'],['Series','시리즈']].map(function(f){
       var isOn = libFilterType===f[0];
-      return '<button onclick="libFilterType=\''+f[0]+'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:5px 13px;border-radius:100px;border:2px solid '+(isOn?'var(--cookie)':'#f0e8dc')+';background:'+(isOn?'var(--cookie)':'transparent')+';color:'+(isOn?'white':'var(--text-soft)')+';font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s">'+f[1]+'</button>';
+      var clickAction = f[0]==='Series'
+        ? 'libFilterType=\'Series\';libSeriesFilter=null;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))'
+        : 'libFilterType=\''+f[0]+'\';libSeriesFilter=null;libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content+\'))'.replace('+\')','\')');
+      return '<button onclick="'+clickAction+'" style="padding:5px 13px;border-radius:100px;border:2px solid '+(isOn?'var(--cookie)':'#f0e8dc')+';background:'+(isOn?'var(--cookie)':'transparent')+';color:'+(isOn?'white':'var(--text-soft)')+';font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s">'+f[1]+'</button>';
     }).join('') +
   '</div>';
 
@@ -8883,13 +8887,14 @@ function renderLibraryMgmt(who, el) {
           '<option value="Nonfiction"'+(editing&&editing.type==='Nonfiction'?' selected':'')+'>논픽션</option>' +
         '</select></div>' +
       '</div>' +
-      '<div class="register-row">' +
+      '<div class="register-row" style="grid-template-columns:1fr 1fr auto">' +
         '<div><div class="form-label">주제</div><select class="register-select" id="lib-topic">' +
           ['동물·자연','과학·STEAM','사회·감정','역사·문화','언어·유머','수학·개념','모험·판타지','일상·성장'].map(function(t){
             return '<option value="'+t+'"'+(editing&&editing.topic===t?' selected':'')+'>'+t+'</option>';
           }).join('') +
         '</select></div>' +
         '<div><div class="form-label">설명 (한글)</div><input class="register-input" id="lib-note" value="'+(editing?editing.note.replace(/"/g,'&quot;'):'')+'"></div>' +
+        '<div><div class="form-label">시리즈명</div><input class="register-input" id="lib-series" placeholder="예: Magic Tree House" value="'+(editing&&editing.s&&editing.s!==true?editing.s:'')+'"></div>' +
       '</div>' +
       '<div class="register-form-actions">' +
         '<button class="btn-reg-cancel" onclick="libEditId=null;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))">취소</button>' +
@@ -8899,15 +8904,63 @@ function renderLibraryMgmt(who, el) {
     '</div>';
   }
 
-  // 검색/필터 적용 + 알파벳 정렬
+  // 검색/필터 적용 + AR 정렬
   var filtered = books.slice();
   if (libSearchQ) {
     var q = libSearchQ.toLowerCase();
     filtered = filtered.filter(function(b){return b.t.toLowerCase().includes(q)||b.a.toLowerCase().includes(q);});
   }
-  if (libFilterType !== 'all') {
+
+  // 시리즈 모드
+  if (libFilterType === 'Series') {
+    if (!libSeriesFilter) {
+      // 시리즈 목록 카드 화면
+      var seriesMap = {};
+      books.forEach(function(b){
+        if (b.s && b.s !== true) {
+          if (!seriesMap[b.s]) seriesMap[b.s] = [];
+          seriesMap[b.s].push(b);
+        }
+      });
+      var seriesNames = Object.keys(seriesMap).sort();
+
+      html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
+        '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">시리즈 <b style="color:var(--cookie)">'+seriesNames.length+'</b>종</span>' +
+        '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">시리즈 도서 <b style="color:var(--cookie)">'+books.filter(function(b){return b.s&&b.s!==true;}).length+'</b>권</span>' +
+      '</div>';
+
+      if (seriesNames.length === 0) {
+        html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">등록된 시리즈가 없어요.<br>책 추가 시 시리즈명을 입력해보세요!</div></div>';
+      } else {
+        html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
+        seriesNames.forEach(function(sName) {
+          var sBooks = seriesMap[sName];
+          var minAr = Math.min.apply(null, sBooks.map(function(b){return b.ar;})).toFixed(1);
+          var maxAr = Math.max.apply(null, sBooks.map(function(b){return b.ar;})).toFixed(1);
+          html += '<div onclick="libSeriesFilter=decodeURIComponent(\''+encodeURIComponent(sName)+'\');renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))"' +
+            ' style="background:white;border-radius:16px;border:1.5px solid #f0e8dc;padding:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor=\'var(--cookie-lt)\'" onmouseout="this.style.borderColor=\'#f0e8dc\'">' +
+            '<div style="font-size:.88rem;font-weight:700;color:var(--brown);margin-bottom:6px;line-height:1.4">📚 '+sName+'</div>' +
+            '<div style="font-size:.73rem;color:var(--text-soft)">'+sBooks.length+'권 &nbsp;·&nbsp; AR '+minAr+'~'+maxAr+'</div>' +
+          '</div>';
+        });
+        html += '</div>';
+      }
+      el.innerHTML = html;
+      return;
+    } else {
+      // 특정 시리즈 책 목록
+      var selSeries = libSeriesFilter;
+      filtered = filtered.filter(function(b){return b.s === selSeries;});
+      // 뒤로가기 버튼
+      html += '<div style="margin-bottom:10px">' +
+        '<button onclick="libSeriesFilter=null;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">← 시리즈 목록으로</button>' +
+        '<span style="margin-left:10px;font-size:.82rem;font-weight:700;color:var(--brown)">📚 '+selSeries+'</span>' +
+      '</div>';
+    }
+  } else if (libFilterType !== 'all') {
     filtered = filtered.filter(function(b){return b.type===libFilterType;});
   }
+
   if (libTopicFilter) {
     filtered = filtered.filter(function(b){return b.topic===libTopicFilter;});
   }
@@ -8915,7 +8968,7 @@ function renderLibraryMgmt(who, el) {
     var arParts = libArFilter.split(',').map(Number);
     filtered = filtered.filter(function(b){return b.ar>=arParts[0]&&b.ar<arParts[1];});
   }
-  // 알파벳 순 정렬
+  // AR 순 정렬
   filtered.sort(function(a,b){return a.ar-b.ar||a.t.localeCompare(b.t);});
 
   // 페이지네이션
@@ -8968,6 +9021,7 @@ function renderLibraryMgmt(who, el) {
           '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:'+(b.type==='Fiction'?'#e8f3fb':'#e8f5ee')+';color:'+(b.type==='Fiction'?'#1a5a9a':'#1a6a3a')+'">'+(b.type==='Fiction'?'픽션':'논픽션')+'</span>' +
           '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:var(--cookie-bg);color:var(--cookie)">AR '+b.ar.toFixed(1)+'</span>' +
           (b.lex?'<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:#e8f5ee;color:#1a6a3a">L '+b.lex+'</span>':'') +
+          (b.s&&b.s!==true?'<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:#fef9e8;color:#8a6a00">📚 '+b.s+'</span>':'') +
           '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:#f3eeff;color:#6a30c8">'+b.topic+'</span>' +
         '</div>' +
         '<div style="font-size:.71rem;color:var(--text-soft);padding-left:22px;margin-bottom:8px">💬 '+b.note+'</div>' +
@@ -9017,6 +9071,7 @@ function libSaveBook(who, clsKey, editId) {
   var topic = (document.getElementById('lib-topic')||{value:''}).value;
   var note = (document.getElementById('lib-note')||{value:''}).value.trim();
   var lex = parseInt((document.getElementById('lib-lex')||{value:''}).value) || null;
+  var series = ((document.getElementById('lib-series')||{}).value||'').trim() || null;
 
   if (!t) { alert('제목을 입력해주세요.'); return; }
   if (!a) { alert('저자를 입력해주세요.'); return; }
@@ -9027,12 +9082,12 @@ function libSaveBook(who, clsKey, editId) {
   if (editId) {
     var idx = libraryBooks[clsKey].findIndex(function(b){return b.id===editId;});
     if (idx > -1) {
-      libraryBooks[clsKey][idx] = Object.assign(libraryBooks[clsKey][idx], {t:t,a:a,ar:ar,lex:lex,type:type,topic:topic,note:note});
+      libraryBooks[clsKey][idx] = Object.assign(libraryBooks[clsKey][idx], {t:t,a:a,ar:ar,lex:lex,type:type,topic:topic,note:note,s:series});
     }
   } else {
     var newId = 'lib_'+Date.now();
     var n = libraryBooks[clsKey].length + 1;
-    libraryBooks[clsKey].push({id:newId, n:n, t:t, a:a, ar:ar, lex:lex, type:type, topic:topic, note:note});
+    libraryBooks[clsKey].push({id:newId, n:n, t:t, a:a, ar:ar, lex:lex, type:type, topic:topic, note:note, s:series});
   }
   // 번호 재정렬
   libraryBooks[clsKey].forEach(function(b,i){b.n=i+1;});

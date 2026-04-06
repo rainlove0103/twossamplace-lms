@@ -1199,7 +1199,8 @@ let filterType = 'all';
 let page = 1;
 const PER = 21; // 3열 × 7행
 let selectMode = false;
-let selectedBooks = new Set(); // 선택된 책 n값 저장
+let selectedBooks = new Set();
+let seriesFilter = null; // 선택된 시리즈명
 
 // ── Firebase 초기화 및 실시간 동기화 ──────────────────────────────
 var _db = null;
@@ -1268,6 +1269,7 @@ function selectClass(cls) {
   page = 1;
   selectMode = false;
   selectedBooks = new Set();
+  seriesFilter = null;
   updateSelectUI();
   document.getElementById('q').value = '';
   document.getElementById('topicSel').value = '';
@@ -1291,6 +1293,7 @@ function selectClass(cls) {
 // ── 필터 ─────────────────────────────────────────────────────────
 function setFilter(btn, val) {
   filterType = val;
+  seriesFilter = null;
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('on'));
   btn.classList.add('on');
   page = 1;
@@ -1308,7 +1311,13 @@ function getFiltered() {
   const filtered = data.filter(b => {
     if (filterType === 'Fiction' && b.type !== 'Fiction') return false;
     if (filterType === 'Nonfiction' && b.type !== 'Nonfiction') return false;
-    if (filterType === 'Series' && !b.s) return false;
+    if (filterType === 'Series') {
+      if (seriesFilter) {
+        if (b.s !== seriesFilter) return false;
+      } else {
+        if (!b.s || b.s === true) return false;
+      }
+    }
     if (topic && b.topic !== topic) return false;
     if (arRange) {
       const [lo, hi] = arRange.split(',').map(Number);
@@ -1318,7 +1327,6 @@ function getFiltered() {
     return true;
   });
 
-  // 알파벳 순 정렬
   return filtered.sort((a, b) => a.ar - b.ar || a.t.localeCompare(b.t));
 }
 
@@ -1382,26 +1390,67 @@ function deselectAllBooks() {
 
 // ── 렌더 ─────────────────────────────────────────────────────────
 function render() {
-  const data = getFiltered();
   const all = BOOKS[currentClass] || [];
   const fi = all.filter(b => b.type === 'Fiction').length;
   const nf = all.filter(b => b.type === 'Nonfiction').length;
-  const sr = all.filter(b => b.s).length;
-
-  document.getElementById('statsChips').innerHTML = `
-    <div class="chip">전체 <b>${all.length}</b>권</div>
-    <div class="chip">픽션 <b>${fi}</b>권</div>
-    <div class="chip">논픽션 <b>${nf}</b>권</div>
-    <div class="chip">시리즈 <b>${sr}</b>권</div>
-    <div class="chip">표시 중 <b>${data.length}</b>권</div>
-  `;
-
-  const slice = data.slice((page - 1) * PER, page * PER);
+  const srBooks = all.filter(b => b.s && b.s !== true);
   const grid = document.getElementById('bookGrid');
+  const pager = document.getElementById('pager');
+
+  // 시리즈 목록 뷰
+  if (filterType === 'Series' && !seriesFilter) {
+    const seriesMap = {};
+    srBooks.forEach(b => {
+      if (!seriesMap[b.s]) seriesMap[b.s] = [];
+      seriesMap[b.s].push(b);
+    });
+    const seriesNames = Object.keys(seriesMap).sort();
+
+    document.getElementById('statsChips').innerHTML = `
+      <div class="chip">시리즈 <b>${seriesNames.length}</b>종</div>
+      <div class="chip">시리즈 도서 <b>${srBooks.length}</b>권</div>
+    `;
+
+    if (!seriesNames.length) {
+      grid.innerHTML = `<div class="no-result"><span class="nr-emoji">📚</span>등록된 시리즈가 없어요.</div>`;
+      pager.innerHTML = '';
+      return;
+    }
+    grid.innerHTML = seriesNames.map(sName => {
+      const sb = seriesMap[sName];
+      const minAr = Math.min(...sb.map(b=>b.ar)).toFixed(1);
+      const maxAr = Math.max(...sb.map(b=>b.ar)).toFixed(1);
+      return `<div class="book-card" style="cursor:pointer;flex-direction:column;gap:6px" onclick="seriesFilter=decodeURIComponent('${encodeURIComponent(sName)}');render()">
+        <div style="font-size:.9rem;font-weight:700;color:var(--brown);line-height:1.4">📚 ${sName}</div>
+        <div style="font-size:.73rem;color:var(--text-soft)">${sb.length}권 &nbsp;·&nbsp; AR ${minAr}~${maxAr}</div>
+      </div>`;
+    }).join('');
+    pager.innerHTML = '';
+    return;
+  }
+
+  // 특정 시리즈 선택 시 뒤로가기 버튼
+  if (filterType === 'Series' && seriesFilter) {
+    document.getElementById('statsChips').innerHTML = `
+      <button onclick="seriesFilter=null;render()" style="background:var(--rose);border:none;border-radius:8px;padding:4px 12px;font-size:.76rem;font-weight:700;color:var(--pink-deep);cursor:pointer;font-family:inherit">← 시리즈 목록</button>
+      <div class="chip">📚 <b>${seriesFilter}</b></div>
+    `;
+  } else {
+    document.getElementById('statsChips').innerHTML = `
+      <div class="chip">전체 <b>${all.length}</b>권</div>
+      <div class="chip">픽션 <b>${fi}</b>권</div>
+      <div class="chip">논픽션 <b>${nf}</b>권</div>
+      <div class="chip">시리즈 <b>${srBooks.length}</b>권</div>
+      <div class="chip">표시 중 <b>${getFiltered().length}</b>권</div>
+    `;
+  }
+
+  const data = getFiltered();
+  const slice = data.slice((page - 1) * PER, page * PER);
 
   if (!slice.length) {
     grid.innerHTML = `<div class="no-result"><span class="nr-emoji">🔍</span>검색 결과가 없어요.</div>`;
-    document.getElementById('pager').innerHTML = '';
+    pager.innerHTML = '';
     return;
   }
 
@@ -1432,7 +1481,7 @@ function render() {
           <span class="badge b-ar">AR ${b.ar.toFixed(1)}</span>
           ${b.lex ? `<span class="badge b-lex">L ${b.lex}</span>` : ''}
           <span class="badge b-topic">${b.topic}</span>
-          ${b.s ? '<span class="badge b-sr">시리즈</span>' : ''}
+          ${b.s ? `<span class="badge b-sr">${b.s === true ? '시리즈' : '📚 '+b.s}</span>` : ''}
         </div>
         <div class="card-note">💬 ${b.note}</div>
       </div>
@@ -1444,7 +1493,7 @@ function render() {
   let pg = `<span>${data.length}권 · ${page}/${pages} 페이지</span>`;
   if (page > 1) pg += `<button onclick="page--;render()">◀ 이전</button>`;
   if (page < pages) pg += `<button onclick="page++;render()">다음 ▶</button>`;
-  document.getElementById('pager').innerHTML = pg;
+  pager.innerHTML = pg;
 }
 
 
