@@ -1491,46 +1491,69 @@ function downloadBookListPDF(mode) {
   const fi = allBooks.filter(b => b.type==='Fiction').length;
   const nf = allBooks.filter(b => b.type==='Nonfiction').length;
 
-  const PER_PAGE = 25;
-  const totalPages = Math.ceil(allBooks.length / PER_PAGE);
+  // ── 페이지 구성 계산 ──
+  // A4 296dpi 기준: 754px 너비, 픽셀↔mm 변환 scale=2 적용
+  // 가용 높이(mm): 297 - 12*2 = 273mm
+  // 푸터: ~9mm, 헤더박스(1p): ~52mm, 미니헤더(2p~): ~8mm
+  // 1페이지 테이블 가용: 273 - 52 - 9 = 212mm
+  // 2페이지~ 테이블 가용: 273 - 8 - 9 = 256mm
+  // 1행 높이(mm) = 가용mm / 권수
+  // → 1페이지 20권 기준: 212/20=10.6mm/행
+  // → 2페이지 24권 기준: 256/24=10.7mm/행
+  // px 환경(96dpi): 1mm ≈ 3.78px → 행padding = (행높이px - 폰트14px) / 2
+
+  const PER_P1 = 20;   // 1페이지 (헤더 있음)
+  const PER_PN = 24;   // 2페이지~
+
+  // 행 패딩 계산 (px)
+  // 1p: 212mm / 20행 = 10.6mm/행 → 10.6*3.78=40px/행, font~14px → padding (40-14)/2 = 13px
+  // np: 256mm / 24행 = 10.67mm/행 → 10.67*3.78=40.3px/행, padding ≈ 13px
+  const ROW_PAD_P1 = 13;
+  const ROW_PAD_PN = 13;
+
+  // 페이지 슬라이스
+  const pageSlices = [];
+  let rem = allBooks.slice();
+  pageSlices.push(rem.splice(0, PER_P1));
+  while (rem.length > 0) pageSlices.push(rem.splice(0, PER_PN));
+  const totalPages = pageSlices.length;
 
   // 공통 스타일
-  const commonStyle = `
-    font-family:'Noto Sans KR',sans-serif;
-    background:white;
-    width:754px;
-    padding:20px 28px;
-    box-sizing:border-box;
-  `;
+  const W = 754;
+  const commonStyle = `font-family:'Noto Sans KR',sans-serif;background:white;width:${W}px;padding:0 28px;box-sizing:border-box;`;
 
-  // 테이블 헤더 HTML
-  const tableHead = `
-    <table style="width:100%;border-collapse:collapse;margin:0">
+  const makeTableHead = (pad) => `
+    <table style="width:100%;border-collapse:collapse;margin:0;table-layout:fixed">
+      <colgroup>
+        <col style="width:26px"><col><col style="width:130px">
+        <col style="width:48px"><col style="width:52px">
+        <col style="width:50px"><col style="width:80px"><col style="width:108px">
+      </colgroup>
       <thead>
         <tr style="background:#fce4ec">
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7;width:26px">#</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">제목</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7;width:120px">저자</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7;width:46px">AR</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7;width:52px">렉사일</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7;width:50px">유형</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7;width:78px">주제</th>
-          <th style="padding:6px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">설명</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7">#</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">제목</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">저자</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7">AR</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7">렉사일</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:center;border-bottom:2px solid #ffd6e7">유형</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">주제</th>
+          <th style="padding:${pad}px 6px;font-size:10px;color:#e8547a;font-weight:700;text-align:left;border-bottom:2px solid #ffd6e7">설명</th>
         </tr>
       </thead><tbody>`;
 
-  const makeRows = (books, startIdx) => books.map((b, i) => `
+  const makeRows = (books, startIdx, pad) => books.map((b, i) => `
     <tr style="background:${(startIdx+i)%2===0?'#fff9fb':'white'}">
-      <td style="padding:5px 6px;text-align:center;color:#c48aaa;font-size:10px;border-bottom:1px solid #ffd6e7">${startIdx+i+1}</td>
-      <td style="padding:5px 6px;font-size:10.5px;font-weight:600;color:#4a1a2c;border-bottom:1px solid #ffd6e7;line-height:1.4">${b.t}</td>
-      <td style="padding:5px 6px;font-size:9.5px;color:#8b3a5a;border-bottom:1px solid #ffd6e7">${b.a}</td>
-      <td style="padding:5px 6px;text-align:center;font-size:9.5px;font-weight:700;color:#e8547a;border-bottom:1px solid #ffd6e7">AR ${b.ar.toFixed(1)}</td>
-      <td style="padding:5px 6px;text-align:center;font-size:9.5px;font-weight:700;color:#1a6a3a;border-bottom:1px solid #ffd6e7">${b.lex ? 'L '+b.lex : '—'}</td>
-      <td style="padding:5px 6px;text-align:center;font-size:9px;border-bottom:1px solid #ffd6e7">
-        <span style="background:${b.type==='Fiction'?'#e8f3fb':'#e8f5ee'};color:${b.type==='Fiction'?'#1a5a9a':'#1a6a3a'};padding:2px 6px;border-radius:5px;font-size:8.5px;font-weight:700">${b.type==='Fiction'?'픽션':'논픽션'}</span>
+      <td style="padding:${pad}px 6px;text-align:center;color:#c48aaa;font-size:10px;border-bottom:1px solid #ffd6e7">${startIdx+i+1}</td>
+      <td style="padding:${pad}px 6px;font-size:10.5px;font-weight:600;color:#4a1a2c;border-bottom:1px solid #ffd6e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.t}</td>
+      <td style="padding:${pad}px 6px;font-size:9.5px;color:#8b3a5a;border-bottom:1px solid #ffd6e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.a}</td>
+      <td style="padding:${pad}px 6px;text-align:center;font-size:9.5px;font-weight:700;color:#e8547a;border-bottom:1px solid #ffd6e7">AR ${b.ar.toFixed(1)}</td>
+      <td style="padding:${pad}px 6px;text-align:center;font-size:9.5px;font-weight:700;color:#1a6a3a;border-bottom:1px solid #ffd6e7">${b.lex ? 'L '+b.lex : '—'}</td>
+      <td style="padding:${pad}px 6px;text-align:center;font-size:9px;border-bottom:1px solid #ffd6e7">
+        <span style="background:${b.type==='Fiction'?'#e8f3fb':'#e8f5ee'};color:${b.type==='Fiction'?'#1a5a9a':'#1a6a3a'};padding:2px 7px;border-radius:5px;font-size:8.5px;font-weight:700">${b.type==='Fiction'?'픽션':'논픽션'}</span>
       </td>
-      <td style="padding:5px 6px;font-size:9.5px;color:#6a30c8;border-bottom:1px solid #ffd6e7">${b.topic}</td>
-      <td style="padding:5px 6px;font-size:9.5px;color:#8b3a5a;border-bottom:1px solid #ffd6e7">${b.note}</td>
+      <td style="padding:${pad}px 6px;font-size:9.5px;color:#6a30c8;border-bottom:1px solid #ffd6e7">${b.topic}</td>
+      <td style="padding:${pad}px 6px;font-size:9.5px;color:#8b3a5a;border-bottom:1px solid #ffd6e7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${b.note}</td>
     </tr>`).join('');
 
   const loadScript = (src, cb) => {
@@ -1542,12 +1565,11 @@ function downloadBookListPDF(mode) {
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', () => {
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', () => {
       document.fonts.ready.then(async () => {
-        // 폰트 완전 로딩 대기
         await new Promise(r => setTimeout(r, 800));
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const A4_W = 210, A4_H = 297;
-        const MARGIN = 12; // mm 여백
+        const MARGIN = 12;
         const contentW = A4_W - MARGIN * 2;
 
         const captureEl = (html) => {
@@ -1556,23 +1578,20 @@ function downloadBookListPDF(mode) {
           el.innerHTML = '<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">' + html;
           document.body.appendChild(el);
           return html2canvas(el, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff',
-            logging: false,
-            onclone: (doc) => { doc.fonts && doc.fonts.ready; }
+            scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false,
           }).then(c => { document.body.removeChild(el); return c; });
         };
 
-        // 1페이지: 헤더 + 첫 30권
-        for (let p = 0; p < totalPages; p++) {
-          const pageBooks = allBooks.slice(p * PER_PAGE, (p+1) * PER_PAGE);
-          const startIdx = p * PER_PAGE;
+        for (let p = 0; p < pageSlices.length; p++) {
+          const pageBooks = pageSlices[p];
+          const startIdx = p === 0 ? 0 : PER_P1 + (p-1) * PER_PN;
           const isFirst = p === 0;
+          const pad = isFirst ? ROW_PAD_P1 : ROW_PAD_PN;
+          const tableHead = makeTableHead(pad);
 
-          const headerHtml = isFirst ? `
-            <div style="${commonStyle}padding-bottom:0">
-              <div style="background:#e8547a;border-radius:10px;padding:16px 20px 12px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;">
+          const contentHtml = isFirst ? `
+            <div style="${commonStyle}padding-top:20px;padding-bottom:0">
+              <div style="background:#e8547a;border-radius:10px;padding:16px 20px 13px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:flex-start;">
                 <div>
                   <div style="font-size:8px;color:rgba(255,255,255,.7);letter-spacing:.06em;margin-bottom:3px">아이들과 꿈을 만드는 공간, 투쌤플레이스</div>
                   <div style="font-size:19px;font-weight:700;color:white;line-height:1.2">${yearMonthStr} ${clsName} 도서 목록</div>
@@ -1583,34 +1602,34 @@ function downloadBookListPDF(mode) {
                   <div style="font-size:22px;margin-top:3px">📚</div>
                 </div>
               </div>
-              ${tableHead}${makeRows(pageBooks, startIdx)}</tbody></table>
+              ${tableHead}${makeRows(pageBooks, startIdx, pad)}</tbody></table>
             </div>` : `
-            <div style="${commonStyle}padding-bottom:0">
-              <div style="font-size:9px;font-weight:700;color:#993556;padding-bottom:6px;border-bottom:1.5px solid #ffd6e7;margin-bottom:0">
-                투쌤플레이스 &nbsp;·&nbsp; ${yearMonthStr} ${clsName} 도서 목록 &nbsp;·&nbsp; ${startIdx+1}~${Math.min(startIdx+PER_PAGE, allBooks.length)}번
+            <div style="${commonStyle}padding-top:20px;padding-bottom:0">
+              <div style="font-size:9px;font-weight:700;color:#993556;padding-bottom:7px;border-bottom:1.5px solid #ffd6e7;margin-bottom:0">
+                투쌤플레이스 &nbsp;·&nbsp; ${yearMonthStr} ${clsName} 도서 목록 &nbsp;·&nbsp; ${startIdx+1}~${startIdx+pageBooks.length}번
               </div>
-              ${tableHead}${makeRows(pageBooks, startIdx)}</tbody></table>
+              ${tableHead}${makeRows(pageBooks, startIdx, pad)}</tbody></table>
             </div>`;
 
           const footerHtml = `
-            <div style="${commonStyle}padding-top:0;padding-bottom:0">
-              <div style="padding:8px 0;text-align:center;font-size:8.5px;color:#c48aaa;border-top:1px solid #ffd6e7">
+            <div style="${commonStyle}padding-top:0;padding-bottom:20px">
+              <div style="padding:9px 0;text-align:center;font-size:8.5px;color:#c48aaa;border-top:1px solid #ffd6e7">
                 투쌤플레이스 라이브러리 &nbsp;·&nbsp; ${clsName} &nbsp;·&nbsp; ${dateStr} &nbsp;·&nbsp; ${p+1} / ${totalPages}
               </div>
             </div>`;
 
           if (p > 0) doc.addPage();
 
-          const [headerCanvas, footerCanvas] = await Promise.all([
-            captureEl(headerHtml),
+          const [contentCanvas, footerCanvas] = await Promise.all([
+            captureEl(contentHtml),
             captureEl(footerHtml),
           ]);
 
           const footerH = footerCanvas.height * contentW / footerCanvas.width;
           const footerY = A4_H - MARGIN - footerH;
-          const headerH = headerCanvas.height * contentW / headerCanvas.width;
+          const contentH = contentCanvas.height * contentW / contentCanvas.width;
 
-          doc.addImage(headerCanvas.toDataURL('image/png'), 'PNG', MARGIN, MARGIN, contentW, headerH);
+          doc.addImage(contentCanvas.toDataURL('image/png'), 'PNG', MARGIN, MARGIN, contentW, contentH);
           doc.addImage(footerCanvas.toDataURL('image/png'), 'PNG', MARGIN, footerY, contentW, footerH);
         }
 
