@@ -8992,7 +8992,8 @@ function renderLibraryMgmt(who, el) {
     '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">전체 <b style="color:var(--cookie)">'+books.length+'</b>권</span>' +
     '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">픽션 <b style="color:var(--cookie)">'+books.filter(function(b){return b.type==='Fiction';}).length+'</b>권</span>' +
     '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">논픽션 <b style="color:var(--cookie)">'+books.filter(function(b){return b.type==='Nonfiction';}).length+'</b>권</span>' +
-    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">표시 <b style="color:var(--cookie)">'+filtered.length+'</b>권</span>' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">시리즈 <b style="color:var(--cookie)">'+books.filter(function(b){return b.s&&b.s!==true;}).length+'</b>권</span>' +
+    '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">표시 중 <b style="color:var(--cookie)">'+filtered.length+'</b>권</span>' +
   '</div>';
   if (filtered.length === 0) {
     html += '<div class="t-placeholder"><span class="ph-ico">📚</span><div class="ph-desc">검색 결과가 없어요.</div></div>';
