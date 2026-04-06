@@ -8798,7 +8798,9 @@ var libFilterType = 'all';
 var libTopicFilter = '';
 var libArFilter = '';
 var libPage = 1;
-var LIB_PER = 21; // 3열 × 7행
+var LIB_PER = 21;
+var libSelectDeleteMode = false;
+var libSelectedForDelete = new Set();
 
 function renderLibraryMgmt(who, el) {
   var html = '<div class="t-section-title">📗 도서 라이브러리 관리</div>';
@@ -8818,7 +8820,7 @@ function renderLibraryMgmt(who, el) {
   LIB_CLASSES.forEach(function(c) {
     var cnt = (libraryBooks[c.key]||[]).length;
     var isActive = libSelClass === c.key;
-    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';libFilterType=\'all\';libTopicFilter=\'\';libArFilter=\'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
+    html += '<button onclick="libSelClass=\''+c.key+'\';libEditId=null;libSearchQ=\'\';libFilterType=\'all\';libTopicFilter=\'\';libArFilter=\'\';libPage=1;libSelectDeleteMode=false;libSelectedForDelete=new Set();renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" ' +
       'style="padding:7px 14px;border-radius:10px;border:2px solid '+(isActive?'var(--cookie)':'#f0e8dc')+';background:'+(isActive?'var(--cookie-bg)':'white')+';font-size:.78rem;font-weight:700;color:'+(isActive?'var(--brown)':'var(--text-soft)')+';cursor:pointer;font-family:inherit">'+
       c.emoji+' '+c.label+' <span style="font-size:.68rem;opacity:.7">'+cnt+'권</span></button>';
   });
@@ -8856,6 +8858,8 @@ function renderLibraryMgmt(who, el) {
       return '<button onclick="libFilterType=\''+f[0]+'\';libPage=1;renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:5px 13px;border-radius:100px;border:2px solid '+(isOn?'var(--cookie)':'#f0e8dc')+';background:'+(isOn?'var(--cookie)':'transparent')+';color:'+(isOn?'white':'var(--text-soft)')+';font-size:.75rem;font-weight:600;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s">'+f[1]+'</button>';
     }).join('') +
     '<button onclick="libEditId=\'new\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="padding:6px 14px;border-radius:10px;border:none;background:var(--cookie);color:white;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;margin-left:auto">+ 책 추가</button>' +
+    '<button onclick="libToggleSelectDelete(\''+who+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid '+(libSelectDeleteMode?'#ef5350':'#f0e8dc')+';background:'+(libSelectDeleteMode?'#ffebee':'white')+';color:'+(libSelectDeleteMode?'#ef5350':'var(--text-soft)')+';font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">'+(libSelectDeleteMode?'✕ 취소':'☑️ 선택 삭제')+'</button>' +
+    '<button onclick="libDeleteAllBooks(\''+who+'\',\''+libSelClass+'\')" style="padding:6px 14px;border-radius:10px;border:2px solid #f0e8dc;background:white;color:#ef5350;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap">🗑️ 전체 삭제</button>' +
   '</div>';
   if (libEditId !== null) {
     var editing = libEditId !== 'new' ? books.find(function(b){return b.id===libEditId;}) : null;
@@ -8914,6 +8918,16 @@ function renderLibraryMgmt(who, el) {
   var pageStart = (libPage - 1) * LIB_PER;
   var pageBooks = filtered.slice(pageStart, pageStart + LIB_PER);
 
+  // 선택 삭제 액션바
+  if (libSelectDeleteMode) {
+    html += '<div style="background:#ffebee;border:1.5px solid #ffcdd2;border-radius:14px;padding:10px 16px;margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">' +
+      '<span style="font-size:.82rem;font-weight:700;color:#ef5350" id="lib-del-count">0권 선택됨</span>' +
+      '<button onclick="libSelectAllForDelete(\''+who+'\')" style="background:white;border:1.5px solid #ffcdd2;border-radius:8px;padding:4px 12px;font-size:.75rem;font-weight:700;color:#ef5350;cursor:pointer;font-family:inherit">전체 선택</button>' +
+      '<button onclick="libDeselectAllForDelete(\''+who+'\')" style="background:white;border:1.5px solid #f0e8dc;border-radius:8px;padding:4px 12px;font-size:.75rem;font-weight:700;color:var(--text-soft);cursor:pointer;font-family:inherit">선택 해제</button>' +
+      '<button onclick="libDeleteSelected(\''+who+'\',\''+libSelClass+'\')" style="margin-left:auto;background:#ef5350;border:none;border-radius:8px;padding:6px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">🗑️ 선택 삭제</button>' +
+    '</div>';
+  }
+
   // 통계 칩
   html += '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">' +
     '<span style="background:white;border:1.5px solid #f0e8dc;border-radius:100px;padding:3px 12px;font-size:.72rem;color:var(--text-soft)">전체 <b style="color:var(--cookie)">'+books.length+'</b>권</span>' +
@@ -8927,10 +8941,19 @@ function renderLibraryMgmt(who, el) {
     html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">';
     pageBooks.forEach(function(b) {
       var isEditing = libEditId === b.id;
-      html += '<div style="background:white;border-radius:16px;border:1.5px solid '+(isEditing?'var(--cookie)':'#f0e8dc')+';padding:14px 16px;display:flex;flex-direction:column;gap:0;transition:box-shadow .2s;position:relative">' +
+      var isSelDel = libSelectDeleteMode && libSelectedForDelete.has(b.id);
+      var cardBorder = isEditing ? 'var(--cookie)' : (isSelDel ? '#ef5350' : '#f0e8dc');
+      var cardBg = isSelDel ? '#ffebee' : 'white';
+      var checkboxHtml = libSelectDeleteMode
+        ? '<input type="checkbox" '+(isSelDel?'checked':'')+' onclick="event.stopPropagation();libToggleBookForDelete(\''+b.id+'\',\''+who+'\')" style="position:absolute;top:10px;right:10px;width:15px;height:15px;accent-color:#ef5350;cursor:pointer">'
+        : '';
+      var cardClick = libSelectDeleteMode ? 'onclick="libToggleBookForDelete(\''+b.id+'\',\''+who+'\')" style="cursor:pointer;background:'+cardBg+';border-radius:16px;border:1.5px solid '+cardBorder+';padding:14px 16px;display:flex;flex-direction:column;gap:0;position:relative"'
+        : 'style="background:'+cardBg+';border-radius:16px;border:1.5px solid '+cardBorder+';padding:14px 16px;display:flex;flex-direction:column;gap:0;position:relative"';
+      html += '<div id="lib-card-'+b.id+'" '+cardClick+'>' +
+        checkboxHtml +
         '<div style="display:flex;align-items:baseline;gap:0;margin-bottom:4px">' +
           '<span style="font-size:.68rem;color:var(--text-soft);min-width:22px;flex-shrink:0;line-height:1.4">'+b.n+'</span>' +
-          '<span style="font-size:.88rem;font-weight:700;line-height:1.4;flex:1;color:var(--brown);word-break:break-word">'+b.t+'</span>' +
+          '<span style="font-size:.88rem;font-weight:700;line-height:1.4;flex:1;color:var(--brown);word-break:break-word;padding-right:'+(libSelectDeleteMode?'20px':'0')+'">'+b.t+'</span>' +
         '</div>' +
         '<div style="padding-left:22px;margin-bottom:6px">' +
           '<span style="font-size:.76rem;color:var(--text-mid)">✍️ '+b.a+'</span>' +
@@ -8942,9 +8965,7 @@ function renderLibraryMgmt(who, el) {
           '<span style="display:inline-block;font-size:.66rem;font-weight:700;padding:2px 8px;border-radius:8px;background:#f3eeff;color:#6a30c8">'+b.topic+'</span>' +
         '</div>' +
         '<div style="font-size:.71rem;color:var(--text-soft);padding-left:22px;margin-bottom:8px">💬 '+b.note+'</div>' +
-        '<div style="padding-left:22px">' +
-          '<button onclick="libEditId=\''+b.id+'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.68rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 수정</button>' +
-        '</div>' +
+        (!libSelectDeleteMode ? '<div style="padding-left:22px"><button onclick="libEditId=\''+b.id+'\';renderLibraryMgmt(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.68rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✏️ 수정</button></div>' : '') +
       '</div>';
     });
     html += '</div>';
@@ -9012,6 +9033,60 @@ function libSaveBook(who, clsKey, editId) {
 
   if (window.fbSaveLibraryBooks) window.fbSaveLibraryBooks(clsKey);
   libEditId = null;
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libToggleSelectDelete(who) {
+  libSelectDeleteMode = !libSelectDeleteMode;
+  libSelectedForDelete = new Set();
+  libEditId = null;
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libToggleBookForDelete(id, who) {
+  if (libSelectedForDelete.has(id)) libSelectedForDelete.delete(id);
+  else libSelectedForDelete.add(id);
+  // 카드 스타일만 업데이트
+  var card = document.getElementById('lib-card-'+id);
+  if (card) {
+    var sel = libSelectedForDelete.has(id);
+    card.style.borderColor = sel ? '#ef5350' : '#f0e8dc';
+    card.style.background = sel ? '#ffebee' : 'white';
+    var cb = card.querySelector('input[type=checkbox]');
+    if (cb) cb.checked = sel;
+  }
+  // 카운트 업데이트
+  var countEl = document.getElementById('lib-del-count');
+  if (countEl) countEl.textContent = libSelectedForDelete.size + '권 선택됨';
+}
+
+function libSelectAllForDelete(who) {
+  (libraryBooks[libSelClass]||[]).forEach(function(b){ libSelectedForDelete.add(b.id); });
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libDeselectAllForDelete(who) {
+  libSelectedForDelete = new Set();
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libDeleteSelected(who, clsKey) {
+  if (libSelectedForDelete.size === 0) { alert('삭제할 책을 선택해주세요.'); return; }
+  if (!confirm('선택한 '+libSelectedForDelete.size+'권을 삭제할까요?\nFirebase에서도 완전히 삭제되며 복구할 수 없어요.')) return;
+  libraryBooks[clsKey] = (libraryBooks[clsKey]||[]).filter(function(b){ return !libSelectedForDelete.has(b.id); });
+  libraryBooks[clsKey].forEach(function(b,i){b.n=i+1;});
+  if (window.fbSaveLibraryBooks) window.fbSaveLibraryBooks(clsKey);
+  libSelectedForDelete = new Set();
+  libSelectDeleteMode = false;
+  renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
+}
+
+function libDeleteAllBooks(who, clsKey) {
+  var cnt = (libraryBooks[clsKey]||[]).length;
+  if (cnt === 0) { alert('삭제할 책이 없어요.'); return; }
+  if (!confirm('⚠️ ['+LIB_CLASSES.find(function(c){return c.key===clsKey;}).label+'] 전체 '+cnt+'권을 삭제할까요?\nFirebase에서도 완전히 삭제되며 복구할 수 없어요.')) return;
+  libraryBooks[clsKey] = [];
+  if (window.fbSaveLibraryBooks) window.fbSaveLibraryBooks(clsKey);
   renderLibraryMgmt(who, document.getElementById(who+'-main-content'));
 }
 
