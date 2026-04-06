@@ -1407,17 +1407,17 @@ function render() {
 
   grid.innerHTML = slice.map(b => {
     const isSelected = selectedBooks.has(b.n);
-    const cardStyle = selectMode && isSelected
-      ? 'border-color:var(--pink-deep);background:var(--pink-bg)'
-      : '';
+    const cardBorder = selectMode && isSelected ? 'border-color:var(--pink-deep);background:var(--pink-bg);' : '';
+    const cardCursor = selectMode ? 'cursor:pointer;' : '';
+    const cardClick = selectMode ? `onclick="toggleBookSelect(${b.n})"` : '';
     const checkboxHtml = selectMode ? `
       <div style="position:absolute;top:10px;right:10px">
         <input type="checkbox" ${isSelected ? 'checked' : ''}
-          onclick="toggleBookSelect(${b.n})"
+          onclick="event.stopPropagation();toggleBookSelect(${b.n})"
           style="width:16px;height:16px;accent-color:var(--pink-deep);cursor:pointer">
       </div>` : '';
     return `
-    <div class="book-card" id="book-card-${b.n}" style="${cardStyle}" ${selectMode ? `onclick="toggleBookSelect(${b.n})" style="cursor:pointer;${cardStyle}"` : ''}>
+    <div class="book-card" id="book-card-${b.n}" style="${cardBorder}${cardCursor}" ${cardClick}>
       ${checkboxHtml}
       <div class="card-body">
         <div class="card-top">
