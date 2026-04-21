@@ -217,19 +217,11 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
   .report-card-body{padding:11px 14px;}
 }
 </style>
-<script>
-// 새로고침 시 로그인 화면 노출 방지 — head에서 즉시 실행
-try {
-  if(localStorage.getItem('parentLogin')) {
-    document.write('<style>#landing{display:none!important}</style>');
-  }
-} catch(e){}
-</script>
 </head>
 <body>
 
 <!-- LANDING / LOGIN -->
-<div id="landing" class="page active">
+<div id="landing" class="page">
   <div class="landing-inner">
     <span class="logo-emoji">💌</span>
     <div class="brand-name">투쌤플레이스</div>
@@ -592,13 +584,19 @@ function populateStudentSelect() {
 
 function autoLogin() {
   var saved = localStorage.getItem('parentLogin');
-  if(!saved) return;
+  if(!saved) {
+    showPage('landing');
+    return;
+  }
   try {
     var info = JSON.parse(saved);
     currentParent = info;
     renderDashboard();
     showPage('dashboard');
-  } catch(e){}
+  } catch(e){
+    localStorage.removeItem('parentLogin');
+    showPage('landing');
+  }
 }
 
 
