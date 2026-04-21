@@ -216,12 +216,21 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
   .report-card-header{padding:11px 14px;}
   .report-card-body{padding:11px 14px;}
 }
+#landing.hide-for-reload { opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body>
+<script>
+if(localStorage.getItem('parentLogin')) {
+  document.addEventListener('DOMContentLoaded', function(){
+    var el = document.getElementById('landing');
+    if(el) el.classList.add('hide-for-reload');
+  });
+}
+</script>
 
 <!-- LANDING / LOGIN -->
-<div id="landing" class="page">
+<div id="landing" class="page active">
   <div class="landing-inner">
     <span class="logo-emoji">💌</span>
     <div class="brand-name">투쌤플레이스</div>
@@ -585,7 +594,7 @@ function populateStudentSelect() {
 function autoLogin() {
   var saved = localStorage.getItem('parentLogin');
   if(!saved) {
-    showPage('landing');
+    // 로그인 정보 없으면 landing 그대로 보여줌
     return;
   }
   try {
@@ -595,7 +604,6 @@ function autoLogin() {
     showPage('dashboard');
   } catch(e){
     localStorage.removeItem('parentLogin');
-    showPage('landing');
   }
 }
 
