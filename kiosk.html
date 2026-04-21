@@ -285,6 +285,19 @@ async function submitAtt(type) {
       var ex=await window._db.collection('attendance').doc(safeKey).get();
       if(ex.exists){
         var prev=ex.data(), ps=prev.status||'';
+
+        // 등원 버튼 중복 체크
+        if(type==='등원'){
+          if(ps==='등원'||ps==='보강'){
+            showPopup('🙋','이미 등원했어요',s.name+' 학생\n이미 등원 처리가 됐어요!\n하원할 때 하원 버튼을 눌러주세요 😊','','arrive',true);
+            return;
+          }
+          if(ps==='등원+하원'||ps==='보강+하원'||ps==='지각+하원'){
+            showPopup('✅','이미 등하원 완료',s.name+' 학생\n오늘 등하원이 모두 완료됐어요!','','arrive',true);
+            return;
+          }
+        }
+
         // 하원 버튼: 기존 상태와 합산
         if(type==='하원'&&ps==='등원'){
           data.status='등원+하원'; data['등원Time']=prev['등원Time']||''; data['하원Time']=ts;
@@ -292,18 +305,14 @@ async function submitAtt(type) {
           data.status='지각+하원'; data['지각Time']=prev['지각Time']||''; data['하원Time']=ts;
         } else if(type==='하원'&&ps==='보강'){
           data.status='보강+하원'; data['보강Time']=prev['보강Time']||''; data['하원Time']=ts;
-        } else if(type==='하원'&&ps==='등원+하원'){
-          // 이미 등하원 완료
-          showPopup('✅','이미 등하원 완료',s.name+' 학생\n이미 등하원 처리가 완료됐어요!','','arrive',true);
-          return;
-        } else if(type==='하원'&&ps==='보강+하원'){
-          showPopup('✅','이미 보강 등하원 완료',s.name+' 학생\n이미 보강 등하원 처리가 완료됐어요!','','makeup',true);
+        } else if(type==='하원'&&(ps==='등원+하원'||ps==='보강+하원'||ps==='지각+하원')){
+          showPopup('✅','이미 하원했어요',s.name+' 학생\n이미 하원 처리가 완료됐어요!','','leave',true);
           return;
         }
       } else {
-        // 오늘 기록 없는데 하원 버튼
+        // 오늘 기록 없는데 하원 버튼 → 잘못 클릭
         if(type==='하원'){
-          showPopup('🙋','등원 버튼을 먼저 눌러주세요',s.name+' 학생\n아직 등원 기록이 없어요!\n등원 버튼을 먼저 눌러주세요 😊','','',true);
+          showPopup('👆','잘못 클릭하셨나요?',s.name+' 학생\n아직 등원 기록이 없어요!\n등원 버튼을 먼저 눌러주세요 😊','','',true);
           return;
         }
       }
@@ -327,7 +336,8 @@ async function submitAtt(type) {
   };
   var ft=data.status;
   var tc=(ft==='보강'||ft==='보강+하원')?'makeup':type==='등원'?'arrive':type==='하원'?'leave':'late';
-  showPopup(icons[ft]||'✅', ft+' 완료', msgs[ft]||s.name+' '+ft, ts, tc, false);
+  var titleMap={'등원':'등원 완료','하원':'하원 완료','지각':'지각 처리','등원+하원':'하원 완료','지각+하원':'하원 완료','보강':'등원 완료','보강+하원':'하원 완료'};
+  showPopup(icons[ft]||'✅', titleMap[ft]||ft+' 완료', msgs[ft]||s.name+' '+ft, ts, tc, false);
 }
 </script>
 </body>
