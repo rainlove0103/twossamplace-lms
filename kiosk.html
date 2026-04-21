@@ -286,16 +286,14 @@ async function submitAtt(type) {
       if(ex.exists){
         var prev=ex.data(), ps=prev.status||'';
 
-        // 등원 버튼 중복 체크
+        // 등원 버튼 중복 체크 — 오늘 기록이 이미 있으면 무조건 차단
         if(type==='등원'){
-          if(ps==='등원'||ps==='보강'){
-            showPopup('🙋','이미 등원했어요',s.name+' 학생\n이미 등원 처리가 됐어요!\n하원할 때 하원 버튼을 눌러주세요 😊','','arrive',true);
-            return;
-          }
           if(ps==='등원+하원'||ps==='보강+하원'||ps==='지각+하원'){
             showPopup('✅','이미 등하원 완료',s.name+' 학생\n오늘 등하원이 모두 완료됐어요!','','arrive',true);
-            return;
+          } else {
+            showPopup('🙋','이미 등원했어요',s.name+' 학생\n하원할 때 하원 버튼을 눌러주세요 😊','','arrive',true);
           }
+          return;
         }
 
         // 하원 버튼: 기존 상태와 합산
