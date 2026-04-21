@@ -4199,11 +4199,12 @@ function renderDailyReport(who) {
       '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+clsName+' · '+dayName+'</div></div>';
 
     // 클래스 일괄 작성 폼
+    var isBetaCls = (reportSelClass && (reportSelClass.indexOf('초등부')>-1 || reportSelClass.indexOf('중등부')>-1));
     var RFIELDS_CLS = [
       {key:'lesson',   label:'📖 수업 내용',          placeholder:'오늘 수업 내용을 입력해요 (일괄 적용)'},
       {key:'review',   label:'💡 리뷰 / 이해도',      placeholder:'이해도나 참여도 (일괄 적용)'},
       {key:'homework', label:'📝 과제',               placeholder:'공통 과제를 입력해요 (일괄 적용)'},
-      {key:'leddi',    label:'🌐 레디영어 과제 리포트', placeholder:'레디영어 링크 (일괄 적용)'},
+      {key:'leddi',    label:(isBetaCls?'🎓 클래스5 과제 리포트':'🌐 레디영어 과제 리포트'), placeholder:(isBetaCls?'클래스5 링크 (일괄 적용)':'레디영어 링크 (일괄 적용)')},
       {key:'feedback', label:'💬 피드백 / 코멘트',     placeholder:'공통 피드백 (일괄 적용)'},
     ];
     html += '<div class="register-form-box" style="margin-bottom:16px;border-color:var(--cookie-lt)">' +
@@ -4250,7 +4251,7 @@ function renderDailyReport(who) {
       {key:'lesson',   label:'📖 수업 내용',         placeholder:'오늘 배운 내용을 입력해요'},
       {key:'review',   label:'💡 리뷰 / 이해도',     placeholder:'이해도나 참여도를 입력해요'},
       {key:'homework', label:'📝 과제',              placeholder:'다음 수업까지 할 과제를 입력해요'},
-      {key:'leddi',    label:'🌐 레디영어 과제 리포트',placeholder:'레디영어 과제 리포트 링크를 붙여넣어요'},
+      {key:'leddi',    label:(isBetaCls?'🎓 클래스5 과제 리포트':'🌐 레디영어 과제 리포트'),placeholder:(isBetaCls?'클래스5 과제 리포트 링크를 붙여넣어요':'레디영어 과제 리포트 링크를 붙여넣어요')},
       {key:'feedback', label:'💬 피드백 / 코멘트',    placeholder:'학부모에게 전달할 내용을 입력해요'},
     ];
 
@@ -4277,7 +4278,7 @@ function renderDailyReport(who) {
 
       // 레디영어 완료
       '<div style="background:'+(r.leddiDone?'#e8f5e9':'#fafafa')+';border:1.5px solid '+(r.leddiDone?'#a5d6a7':'#e8ddd0')+';border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;justify-content:space-between">' +
-        '<div style="font-size:.72rem;font-weight:700;color:'+(r.leddiDone?'#2e7d32':'#a07040')+';margin-bottom:10px;letter-spacing:.3px">🌐 레디영어 완료</div>' +
+        '<div style="font-size:.72rem;font-weight:700;color:'+(r.leddiDone?'#2e7d32':'#a07040')+';margin-bottom:10px;letter-spacing:.3px">'+(isBetaCls?'🎓 클래스5 완료':'🌐 레디영어 완료')+'</div>' +
         '<button id="leddi-done-btn" onclick="toggleLeddiDone(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" ' +
           'style="width:100%;padding:8px;border-radius:9px;border:none;' +
           'background:'+(r.leddiDone?'#4caf50':'#e0d0c0')+';' +
@@ -4549,6 +4550,10 @@ function openMonthlyDetail(who, name, y, m) {
   var daysInMonth = new Date(y,m+1,0).getDate();
   var monthLabel = y+'년 '+(m+1)+'월';
 
+  // 클래스 확인 (초등부/중등부 = 클래스5)
+  var _stuInfo = (memberRoster[who]||[]).find(function(s){return s.name===name;});
+  var isBetaClsMr = _stuInfo && (_stuInfo.class==='초등부'||_stuInfo.class==='중등부');
+
   // 한 달 데이터 수집
   var allData = {lesson:[], review:[], homework:[], feedback:[], leddi:[]};
   var reviewScores = [], leddiDone = 0, leddiTotal = 0;
@@ -4651,7 +4656,7 @@ function openMonthlyDetail(who, name, y, m) {
   el.innerHTML = html;
 
   // 전역에 현재 데이터 저장 (AI 요약 시 사용)
-  window._mrContext = {who:who, name:name, y:y, m:m, allData:allData, books:books, avgScore:avgScore, leddiPct:leddiPct, attData:attData};
+  window._mrContext = {who:who, name:name, y:y, m:m, allData:allData, books:books, avgScore:avgScore, leddiPct:leddiPct, attData:attData, isBetaClsMr:isBetaClsMr};
 }
 
 async function generateMonthlySummary(who, name, y, m) {
@@ -4675,7 +4680,7 @@ async function generateMonthlySummary(who, name, y, m) {
     '【피드백 기록】\n'+(feedbackTexts||'없음')+'\n\n' +
     '【독서】 '+(bookList||'없음')+'\n' +
     '【리뷰 테스트 평균】 '+(ctx.avgScore!==null?ctx.avgScore+'점':'데이터 없음')+'\n' +
-    '【레디영어 달성률】 '+(ctx.leddiPct!==null?ctx.leddiPct+'%':'데이터 없음')+'\n\n' +
+    '【'+(ctx.isBetaClsMr?'클래스5':'레디영어')+' 달성률】 '+(ctx.leddiPct!==null?ctx.leddiPct+'%':'데이터 없음')+'\n\n' +
     '위 기록을 바탕으로 학부모에게 전달할 먼슬리 리포트 항목을 한국어로 작성해주세요.\n' +
     '각 항목은 2~3문장으로 자연스럽고 따뜻한 톤으로 작성해주세요.\n\n' +
     '반드시 아래 JSON 형식만 반환하세요 (다른 텍스트 없이):\n' +
@@ -4900,7 +4905,7 @@ function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
         '<div style="font-size:11px;font-weight:700;color:#a07040;margin-bottom:14px;">이달의 성장</div>' +
         (hwPct!==null ? bar('과제 달성률', Math.max(0,hwPct-12), hwPct, '%', '#4caf50') : '') +
         (avgScore!==null ? bar('리뷰 테스트', Math.max(0,avgScore-15), avgScore, '%', '#ff9800') : '') +
-        (leddiPct!==null ? bar('레디영어 달성률', Math.max(0,leddiPct-10), leddiPct, '%', '#9c27b0') : '') +
+        (leddiPct!==null ? bar((ctx.isBetaClsMr?'클래스5 달성률':'레디영어 달성률'), Math.max(0,leddiPct-10), leddiPct, '%', '#9c27b0') : '') +
         bar('독서 권수', Math.max(0,books.length-2), books.length, '권', '#2196f3') +
       '</div>' +
       '<div style="flex:1;background:#fffbf5;border-radius:9px;padding:16px;border:1px solid #f5ede0;">' +
