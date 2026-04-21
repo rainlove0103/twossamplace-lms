@@ -566,6 +566,7 @@ async function loadAllData() {
 
 function populateStudentSelect() {
   var sel = document.getElementById('p-name');
+  if(!sel) return;
   var all = [];
   ['cookie','butter'].forEach(function(who){
     (memberRoster[who]||[]).forEach(function(s){
