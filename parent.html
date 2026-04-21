@@ -216,18 +216,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
   .report-card-header{padding:11px 14px;}
   .report-card-body{padding:11px 14px;}
 }
-#landing.hide-for-reload { opacity: 0; pointer-events: none; }
 </style>
 </head>
 <body>
-<script>
-if(localStorage.getItem('parentLogin')) {
-  document.addEventListener('DOMContentLoaded', function(){
-    var el = document.getElementById('landing');
-    if(el) el.classList.add('hide-for-reload');
-  });
-}
-</script>
 
 <!-- LANDING / LOGIN -->
 <div id="landing" class="page active">
@@ -593,21 +584,14 @@ function populateStudentSelect() {
 
 function autoLogin() {
   var saved = localStorage.getItem('parentLogin');
-  if(!saved) {
-    // 로그인 정보 없으면 landing 그대로 보여줌
-    return;
-  }
+  if(!saved) return;
   try {
     var info = JSON.parse(saved);
     currentParent = info;
     renderDashboard();
     showPage('dashboard');
-  } catch(e){
-    localStorage.removeItem('parentLogin');
-  }
+  } catch(e){}
 }
-
-
 
 /* ====== 로그인 ====== */
 function parentLogin() {
