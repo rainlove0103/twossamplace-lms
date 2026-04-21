@@ -2541,8 +2541,7 @@ function downloadReceiptsPDF(who, ym) {
   });
   if(paidList.length===0){alert('납부 완료된 학생이 없어요.');return;}
 
-  var btn = document.querySelector('[onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')"]');
-  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
+  var btn = null; // 스탯박스 클릭 시 btn 수정 안 함
 
   var ymLabel = ym.replace('-','년 ')+'월';
   var whoLabel = who==='cookie'?'쿠키쌤':'버터쌤';
@@ -2720,12 +2719,12 @@ function renderAccountMgmt(who, el) {
 
   // 요약 카드
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
-    '<div onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')" style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(76,175,80,.25)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+    '<div onclick="event.stopPropagation();downloadReceiptsPDF(\''+who+'\',\''+ym+'\')" style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(76,175,80,.25)\'" onmouseout="this.style.boxShadow=\'none\'">' +
       '<div style="font-size:.72rem;color:#4caf50;font-weight:700;margin-bottom:4px;">💰 매출</div>' +
       '<div style="font-size:1.2rem;font-weight:900;color:#2e7d32;">'+revenue.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
       '<div style="font-size:.62rem;color:#aaa;margin-top:4px;">📄 원비영수증 PDF</div>' +
     '</div>' +
-    '<div onclick="downloadReceiptMonthPDF(\''+who+'\',\''+ym+'\')" style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(233,30,99,.2)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+    '<div onclick="event.stopPropagation();downloadReceiptMonthPDF(\''+who+'\',\''+ym+'\')" style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(233,30,99,.2)\'" onmouseout="this.style.boxShadow=\'none\'">' +
       '<div style="font-size:.72rem;color:#e91e63;font-weight:700;margin-bottom:4px;">📤 지출</div>' +
       '<div style="font-size:1.2rem;font-weight:900;color:#c2185b;">'+expense.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
       '<div style="font-size:.62rem;color:#aaa;margin-top:4px;">📄 지출영수증 PDF</div>' +
