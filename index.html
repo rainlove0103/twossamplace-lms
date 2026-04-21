@@ -842,15 +842,13 @@ var makeupTime = '15:00';
 
 /* ====== CONSTANTS ====== */
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
-var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B','초등부','중등부'];
+var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B'];
 var CLASS_CAPACITY = 8; // 반별 정원
-// 클래스별 허용 요일 (없으면 DAY_GROUPS 전체)
-var CLASS_DAYS = {'중등부':['화/목']}; // 베타: 중등부는 화/목만
 var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
-var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000,'초등부':185000,'중등부':200000};
+var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -871,14 +869,6 @@ var textbooks = [];
 var textbookLogs = [];
 var tbIdSeq = 1;
 
-// cdKeys 헬퍼: CLASS_DAYS 반영
-function getAllCdKeys() {
-  return CLASSES.reduce(function(acc,c){
-    var days = CLASS_DAYS[c] || DAY_GROUPS;
-    return acc.concat(days.map(function(d){return c+'-'+d;}));
-  }, []);
-}
-
 var classStudents = {
   '픽처북-월/수':[],'픽처북-화/목':[],
   '리더스북-월/수':[],'리더스북-화/목':[],
@@ -886,9 +876,7 @@ var classStudents = {
   '노블 베이직-월/수':[],'노블 베이직-화/목':[],
   '노블 플러스-월/수':[],'노블 플러스-화/목':[],
   '비욘드A-월/수':[],'비욘드A-화/목':[],
-  '비욘드B-월/수':[],'비욘드B-화/목':[],
-  '초등부-월/수':[],'초등부-화/목':[],
-  '중등부-화/목':[]
+  '비욘드B-월/수':[],'비욘드B-화/목':[]
 };
 window.classStudents = classStudents;
 currentClass = CLASSES[0];
@@ -2541,7 +2529,8 @@ function downloadReceiptsPDF(who, ym) {
   });
   if(paidList.length===0){alert('납부 완료된 학생이 없어요.');return;}
 
-  var btn = null; // 스탯박스 클릭 시 btn 수정 안 함
+  var btn = document.querySelector('[onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')"]');
+  if(btn){btn.textContent='⏳ 생성 중...';btn.disabled=true;}
 
   var ymLabel = ym.replace('-','년 ')+'월';
   var whoLabel = who==='cookie'?'쿠키쌤':'버터쌤';
@@ -2719,12 +2708,12 @@ function renderAccountMgmt(who, el) {
 
   // 요약 카드
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">' +
-    '<div onclick="event.stopPropagation();downloadReceiptsPDF(\''+who+'\',\''+ym+'\')" style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(76,175,80,.25)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+    '<div onclick="downloadReceiptsPDF(\''+who+'\',\''+ym+'\')" style="background:#e8f5e9;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(76,175,80,.25)\'" onmouseout="this.style.boxShadow=\'none\'">' +
       '<div style="font-size:.72rem;color:#4caf50;font-weight:700;margin-bottom:4px;">💰 매출</div>' +
       '<div style="font-size:1.2rem;font-weight:900;color:#2e7d32;">'+revenue.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
       '<div style="font-size:.62rem;color:#aaa;margin-top:4px;">📄 원비영수증 PDF</div>' +
     '</div>' +
-    '<div onclick="event.stopPropagation();downloadReceiptMonthPDF(\''+who+'\',\''+ym+'\')" style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(233,30,99,.2)\'" onmouseout="this.style.boxShadow=\'none\'">' +
+    '<div onclick="downloadReceiptMonthPDF(\''+who+'\',\''+ym+'\')" style="background:#fce4ec;border-radius:12px;padding:14px;text-align:center;cursor:pointer;transition:box-shadow .15s" onmouseover="this.style.boxShadow=\'0 4px 16px rgba(233,30,99,.2)\'" onmouseout="this.style.boxShadow=\'none\'">' +
       '<div style="font-size:.72rem;color:#e91e63;font-weight:700;margin-bottom:4px;">📤 지출</div>' +
       '<div style="font-size:1.2rem;font-weight:900;color:#c2185b;">'+expense.toLocaleString()+'<span style="font-size:.65rem;font-weight:400;">원</span></div>' +
       '<div style="font-size:.62rem;color:#aaa;margin-top:4px;">📄 지출영수증 PDF</div>' +
@@ -6868,14 +6857,9 @@ function renderMonthlyAtt(who,el){
           var safeClsKey = encodeURIComponent(r.clsKey);
           var safeName   = encodeURIComponent(r.name);
           var safeDk     = encodeURIComponent(tAttCalSel);
-          var isAbsence = (r.status === '결석');
-          var reason = (window.absenceReasons[r.clsKey]&&window.absenceReasons[r.clsKey][r.name]&&window.absenceReasons[r.clsKey][r.name][tAttCalSel])||'';
           return '<div class="t-att-detail-row" style="gap:8px">' +
             '<div class="t-att-detail-avatar" style="background:'+avatarPalette[i%7]+'">'+r.name[0]+'</div>' +
-            '<div style="flex:1">' +
-              '<div class="t-att-detail-name">'+r.name+'</div>' +
-              '<div class="t-att-detail-cls">'+r.clsKey+(isAbsence&&reason?' · 📋 '+reason:'')+'</div>' +
-            '</div>' +
+            '<div style="flex:1"><div class="t-att-detail-name">'+r.name+'</div><div class="t-att-detail-cls">'+r.clsKey+'</div></div>' +
             '<span class="att-summary-chip chip-'+r.status+'">'+r.status+'</span>' +
             '<button onclick="openAttEditModal(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'))" style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit;flex-shrink:0">✏️ 수정</button>' +
             '<button onclick="deleteMonthlyAtt(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'))" style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">🗑️</button>' +
@@ -6915,17 +6899,6 @@ function renderMonthlyAtt(who,el){
   }
   el.innerHTML='<div class="t-att-cal-wrap"><div class="t-att-cal-header"><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',-1)">◀</button><span class="t-att-cal-label">'+tAttCalYear+'년 '+(tAttCalMonth+1)+'월</span><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',1)">▶</button></div><div class="t-att-cal-grid">'+DOW.map(function(d){return '<div class="t-att-cal-dow">'+d+'</div>';}).join('')+cells+'</div><div class="t-att-cal-detail" id="att-cal-detail-'+who+'">'+detail+'</div></div>'+renderMakeupNeeded(who);
 }
-function saveMonthlyAbsReason(who, clsKey, name, dk, reason) {
-  reason = (reason||'').trim();
-  if(!window.absenceReasons[clsKey]) window.absenceReasons[clsKey]={};
-  if(!window.absenceReasons[clsKey][name]) window.absenceReasons[clsKey][name]={};
-  window.absenceReasons[clsKey][name][dk] = reason;
-  if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk, {clsKey:clsKey,name:name,dateKey:dk,reason:reason});
-  // 저장 피드백
-  var el = document.getElementById('abs-reason-monthly-'+encodeURIComponent(clsKey+'-'+name));
-  if(el) { el.style.borderColor='#a5d6a7'; setTimeout(function(){ el.style.borderColor='#ffcdd2'; }, 1200); }
-}
-
 function toggleAttAddPanel(who, dk) {
   var panel = document.getElementById('att-add-panel');
   var btn = document.getElementById('att-add-toggle-btn');
@@ -7035,9 +7008,6 @@ function openAttEditModal(who, clsKey, name, dk) {
     } else {
       tempStatus = tempStatus===opt ? '' : opt;
     }
-    // 결석 선택 시 사유 입력칸 표시/숨김
-    var reasonWrap = overlay.querySelector('#att-ed-reason-wrap');
-    if(reasonWrap) reasonWrap.style.display = tempStatus==='결석' ? 'block' : 'none';
     // 버튼 스타일 갱신
     ATT_OPTIONS.forEach(function(o){
       var btn = overlay.querySelector('#att-ed-'+o);
@@ -7054,15 +7024,13 @@ function openAttEditModal(who, clsKey, name, dk) {
     });
   }
 
-  var curReason = (window.absenceReasons[clsKey]&&window.absenceReasons[clsKey][name]&&window.absenceReasons[clsKey][name][dk])||'';
-
   var box = document.createElement('div');
   box.style.cssText = 'background:white;border-radius:20px;padding:24px;width:300px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2)';
   box.innerHTML =
     '<div style="font-size:.95rem;font-weight:700;color:var(--brown);margin-bottom:4px">✏️ 출결 수정</div>' +
     '<div style="font-size:.78rem;color:var(--text-soft);margin-bottom:16px">'+name+' · '+lbl+'</div>' +
     '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:10px">출결 상태 선택 <span style="font-size:.68rem;font-weight:400;color:var(--text-soft)">(등원+하원, 지각+하원 동시 선택 가능)</span></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="att-ed-grid">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px" id="att-ed-grid">' +
       ATT_OPTIONS.map(function(opt){
         var sel = curStatus===opt
           || (curStatus==='등원+하원'&&(opt==='등원'||opt==='하원'))
@@ -7070,11 +7038,6 @@ function openAttEditModal(who, clsKey, name, dk) {
           || (curStatus==='보강+하원'&&(opt==='보강'||opt==='하원'));
         return '<button id="att-ed-'+opt+'" style="'+(sel?'background:'+chipColors[opt]:inactiveStyle)+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%">'+opt+'</button>';
       }).join('') +
-    '</div>' +
-    '<div id="att-ed-reason-wrap" style="margin-bottom:16px;display:'+(curStatus==='결석'?'block':'none')+'">' +
-      '<div style="font-size:.75rem;font-weight:700;color:#c2185b;margin-bottom:6px">📋 결석 사유</div>' +
-      '<input id="att-ed-reason" type="text" value="'+curReason.replace(/"/g,'&quot;')+'" placeholder="결석 사유를 입력해요 (선택)" ' +
-        'style="width:100%;padding:8px 12px;border:1.5px solid #ffcdd2;border-radius:10px;font-size:.78rem;font-family:\'Noto Sans KR\',sans-serif;outline:none;color:var(--brown);background:#fff8f8;box-sizing:border-box">' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
       '<button id="att-ed-cancel" style="padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.82rem;font-weight:700;color:#aaa;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">취소</button>' +
@@ -7106,21 +7069,6 @@ function openAttEditModal(who, clsKey, name, dk) {
     else window.classAttendance[clsKey][name][dk] = newVal;
 
     if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
-
-    // 결석 사유 저장
-    var reasonEl = overlay.querySelector('#att-ed-reason');
-    var reason = reasonEl ? reasonEl.value.trim() : '';
-    if(!window.absenceReasons[clsKey]) window.absenceReasons[clsKey]={};
-    if(!window.absenceReasons[clsKey][name]) window.absenceReasons[clsKey][name]={};
-    if(tempStatus==='결석') {
-      window.absenceReasons[clsKey][name][dk] = reason;
-      if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk, {clsKey:clsKey,name:name,dateKey:dk,reason:reason});
-    } else {
-      // 결석 아닌 상태로 바뀌면 사유 삭제
-      delete window.absenceReasons[clsKey][name][dk];
-      if(window.fbDel) window.fbDel('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk);
-    }
-
     overlay.remove();
     renderAttSub(who);
   };
@@ -7633,27 +7581,13 @@ function changeStatus(who,id,newStatus){
   var el=document.getElementById(who+'-main-content'); renderStudentMgmt(who,el);
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
 }
-function updateDayOpts(clsSel, who) {
-  var cls = clsSel.value;
-  var days = CLASS_DAYS[cls] || DAY_GROUPS;
-  var dayEl = document.getElementById('reg-day-'+who);
-  if(!dayEl) return;
-  dayEl.innerHTML = ['', ...days].map(function(d){
-    return '<option value="'+d+'">'+(d||'요일 선택 *')+'</option>';
-  }).join('');
-  // 허용 요일이 1개면 자동 선택
-  if(days.length===1) dayEl.value = days[0];
-}
-
 function openRegisterForm(who){ document.getElementById('register-form-area-'+who).innerHTML=buildRegForm(who,null); }
 function buildRegForm(who,s){
   var isEdit=!!s;
   var currentGrade=s?calcGrade(s):'';
   var gradeOpts=['','1학년','2학년','3학년','4학년','5학년','6학년'].map(function(g){return '<option value="'+g+'"'+(currentGrade===g?' selected':'')+'>'+( g||'학년 선택')+'</option>';}).join('');
   var clsOpts=['',...CLASSES].map(function(c){return '<option value="'+c+'"'+(s&&s.class===c?' selected':'')+'>'+( c||'클래스 선택 *')+'</option>';}).join('');
-  var curCls = s?s.class:'';
-  var availDays = CLASS_DAYS[curCls] || DAY_GROUPS;
-  var dayOpts=['',...availDays].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
+  var dayOpts=['',...DAY_GROUPS].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
   var saveFn=isEdit?'saveEdit(\''+who+'\','+s.id+')':'submitRegister(\''+who+'\')';
   var cancelFn=isEdit?'closeEditForm('+s.id+')':'closeRegisterForm(\''+who+'\')';
   var editHeader=isEdit?(function(){
@@ -7671,13 +7605,7 @@ function buildRegForm(who,s){
     '<div><div class="form-label">보호자 연락처</div><input class="register-input" id="reg-guardian-'+who+'" value="'+(s?s.guardian:'')+'" placeholder="010-0000-0000" oninput="syncAlimtalk(\''+who+'\')"></div></div>'+
     '<div class="register-row"><div><div class="form-label">출결번호 / 비밀번호</div><input class="register-input" id="reg-attcode-'+who+'" value="'+(s?s.attCode||'':'')+'" placeholder="예: 1234"></div>'+
     '<div><div class="form-label">알림톡 번호</div><input class="register-input" id="reg-alimtalk-'+who+'" value="'+(s?s.alimtalk||s.guardian||'':'')+'" placeholder="010-0000-0000 (보호자 번호 자동입력)"></div></div>'+
-    (!isEdit?'<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:12px;margin-bottom:4px">'+
-      '<input type="checkbox" id="reg-privacy-'+who+'" style="width:18px;height:18px;margin-top:2px;accent-color:var(--cookie);flex-shrink:0;cursor:pointer">'+
-      '<label for="reg-privacy-'+who+'" style="font-size:.78rem;color:var(--text-mid);line-height:1.6;cursor:pointer">'+
-        '개인정보 수집 및 이용에 동의합니다.<br>'+
-        '<span style="color:var(--text-soft);font-size:.72rem">수집 항목: 이름, 연락처, 학교, 학년 · 목적: 학원 운영 및 출결 관리 · 보유 기간: 원생 재원 기간</span>'+
-      '</label>'+
-    '</div>':'')+'<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
+    '<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
 }
 function syncAlimtalk(who) {
   var guardian = (document.getElementById('reg-guardian-'+who)||{value:''}).value;
@@ -7710,13 +7638,6 @@ function submitRegister(who){
   if(!v.name){document.getElementById('reg-name-'+who).focus();return;}
   if(!v.cls){document.getElementById('reg-class-'+who).focus();return;}
   if(!v.day){document.getElementById('reg-day-'+who).focus();return;}
-  var privacyCb=document.getElementById('reg-privacy-'+who);
-  if(privacyCb&&!privacyCb.checked){
-    privacyCb.closest('div').style.border='1.5px solid #e8547a';
-    privacyCb.focus();
-    alert('개인정보 수집 및 이용에 동의해주세요.');
-    return;
-  }
   var today=new Date(), date=v.joined||(today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0'));
   if(!memberRoster[who]) memberRoster[who]=[];
   var sy=new Date().getMonth()>=2?new Date().getFullYear():new Date().getFullYear()-1;
