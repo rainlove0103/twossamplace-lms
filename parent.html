@@ -345,7 +345,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 /* ====== FIREBASE ====== */
 var db, storage;
 var memberRoster = {cookie:[], butter:[]};
-var dataReady = false;
 var classStudents = {};
 var classAttendance = {};
 var dailyReports = {};
@@ -561,13 +560,13 @@ async function loadAllData() {
     });
 
     populateStudentSelect();
-    dataReady = true;
     autoLogin();
   } catch(e){ console.error('데이터 로드 오류:', e); }
 }
 
 function populateStudentSelect() {
   var sel = document.getElementById('p-name');
+  if(!sel) return;
   var all = [];
   ['cookie','butter'].forEach(function(who){
     (memberRoster[who]||[]).forEach(function(s){
@@ -599,7 +598,6 @@ function autoLogin() {
 function parentLogin() {
   var pw = document.getElementById('p-pw').value.trim();
   if(!pw){ alert('출결번호를 입력해주세요!'); return; }
-  if(!dataReady){ alert('데이터를 불러오는 중이에요. 잠시 후 다시 시도해주세요 😊'); return; }
 
   var found = null;
   ['cookie','butter'].forEach(function(who){
