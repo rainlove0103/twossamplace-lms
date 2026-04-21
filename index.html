@@ -842,13 +842,15 @@ var makeupTime = '15:00';
 
 /* ====== CONSTANTS ====== */
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
-var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B'];
+var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B','초등부','중등부'];
 var CLASS_CAPACITY = 8; // 반별 정원
+// 클래스별 허용 요일 (없으면 DAY_GROUPS 전체)
+var CLASS_DAYS = {'중등부':['화/목']}; // 베타: 중등부는 화/목만
 var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
-var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000};
+var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000,'초등부':185000,'중등부':200000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -869,6 +871,14 @@ var textbooks = [];
 var textbookLogs = [];
 var tbIdSeq = 1;
 
+// cdKeys 헬퍼: CLASS_DAYS 반영
+function getAllCdKeys() {
+  return CLASSES.reduce(function(acc,c){
+    var days = CLASS_DAYS[c] || DAY_GROUPS;
+    return acc.concat(days.map(function(d){return c+'-'+d;}));
+  }, []);
+}
+
 var classStudents = {
   '픽처북-월/수':[],'픽처북-화/목':[],
   '리더스북-월/수':[],'리더스북-화/목':[],
@@ -876,7 +886,9 @@ var classStudents = {
   '노블 베이직-월/수':[],'노블 베이직-화/목':[],
   '노블 플러스-월/수':[],'노블 플러스-화/목':[],
   '비욘드A-월/수':[],'비욘드A-화/목':[],
-  '비욘드B-월/수':[],'비욘드B-화/목':[]
+  '비욘드B-월/수':[],'비욘드B-화/목':[],
+  '초등부-월/수':[],'초등부-화/목':[],
+  '중등부-화/목':[]
 };
 window.classStudents = classStudents;
 currentClass = CLASSES[0];
@@ -7576,13 +7588,27 @@ function changeStatus(who,id,newStatus){
   var el=document.getElementById(who+'-main-content'); renderStudentMgmt(who,el);
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
 }
+function updateDayOpts(clsSel, who) {
+  var cls = clsSel.value;
+  var days = CLASS_DAYS[cls] || DAY_GROUPS;
+  var dayEl = document.getElementById('reg-day-'+who);
+  if(!dayEl) return;
+  dayEl.innerHTML = ['', ...days].map(function(d){
+    return '<option value="'+d+'">'+(d||'요일 선택 *')+'</option>';
+  }).join('');
+  // 허용 요일이 1개면 자동 선택
+  if(days.length===1) dayEl.value = days[0];
+}
+
 function openRegisterForm(who){ document.getElementById('register-form-area-'+who).innerHTML=buildRegForm(who,null); }
 function buildRegForm(who,s){
   var isEdit=!!s;
   var currentGrade=s?calcGrade(s):'';
   var gradeOpts=['','1학년','2학년','3학년','4학년','5학년','6학년'].map(function(g){return '<option value="'+g+'"'+(currentGrade===g?' selected':'')+'>'+( g||'학년 선택')+'</option>';}).join('');
   var clsOpts=['',...CLASSES].map(function(c){return '<option value="'+c+'"'+(s&&s.class===c?' selected':'')+'>'+( c||'클래스 선택 *')+'</option>';}).join('');
-  var dayOpts=['',...DAY_GROUPS].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
+  var curCls = s?s.class:'';
+  var availDays = CLASS_DAYS[curCls] || DAY_GROUPS;
+  var dayOpts=['',...availDays].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
   var saveFn=isEdit?'saveEdit(\''+who+'\','+s.id+')':'submitRegister(\''+who+'\')';
   var cancelFn=isEdit?'closeEditForm('+s.id+')':'closeRegisterForm(\''+who+'\')';
   var editHeader=isEdit?(function(){
@@ -7600,7 +7626,13 @@ function buildRegForm(who,s){
     '<div><div class="form-label">보호자 연락처</div><input class="register-input" id="reg-guardian-'+who+'" value="'+(s?s.guardian:'')+'" placeholder="010-0000-0000" oninput="syncAlimtalk(\''+who+'\')"></div></div>'+
     '<div class="register-row"><div><div class="form-label">출결번호 / 비밀번호</div><input class="register-input" id="reg-attcode-'+who+'" value="'+(s?s.attCode||'':'')+'" placeholder="예: 1234"></div>'+
     '<div><div class="form-label">알림톡 번호</div><input class="register-input" id="reg-alimtalk-'+who+'" value="'+(s?s.alimtalk||s.guardian||'':'')+'" placeholder="010-0000-0000 (보호자 번호 자동입력)"></div></div>'+
-    '<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
+    (!isEdit?'<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:12px;margin-bottom:4px">'+
+      '<input type="checkbox" id="reg-privacy-'+who+'" style="width:18px;height:18px;margin-top:2px;accent-color:var(--cookie);flex-shrink:0;cursor:pointer">'+
+      '<label for="reg-privacy-'+who+'" style="font-size:.78rem;color:var(--text-mid);line-height:1.6;cursor:pointer">'+
+        '개인정보 수집 및 이용에 동의합니다.<br>'+
+        '<span style="color:var(--text-soft);font-size:.72rem">수집 항목: 이름, 연락처, 학교, 학년 · 목적: 학원 운영 및 출결 관리 · 보유 기간: 원생 재원 기간</span>'+
+      '</label>'+
+    '</div>':'')+'<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
 }
 function syncAlimtalk(who) {
   var guardian = (document.getElementById('reg-guardian-'+who)||{value:''}).value;
@@ -7633,6 +7665,13 @@ function submitRegister(who){
   if(!v.name){document.getElementById('reg-name-'+who).focus();return;}
   if(!v.cls){document.getElementById('reg-class-'+who).focus();return;}
   if(!v.day){document.getElementById('reg-day-'+who).focus();return;}
+  var privacyCb=document.getElementById('reg-privacy-'+who);
+  if(privacyCb&&!privacyCb.checked){
+    privacyCb.closest('div').style.border='1.5px solid #e8547a';
+    privacyCb.focus();
+    alert('개인정보 수집 및 이용에 동의해주세요.');
+    return;
+  }
   var today=new Date(), date=v.joined||(today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0'));
   if(!memberRoster[who]) memberRoster[who]=[];
   var sy=new Date().getMonth()>=2?new Date().getFullYear():new Date().getFullYear()-1;
