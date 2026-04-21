@@ -7038,13 +7038,15 @@ function openAttEditModal(who, clsKey, name, dk) {
     });
   }
 
+  var curReason = (window.absenceReasons[clsKey]&&window.absenceReasons[clsKey][name]&&window.absenceReasons[clsKey][name][dk])||'';
+
   var box = document.createElement('div');
   box.style.cssText = 'background:white;border-radius:20px;padding:24px;width:300px;font-family:\'Noto Sans KR\',sans-serif;box-shadow:0 20px 60px rgba(0,0,0,.2)';
   box.innerHTML =
     '<div style="font-size:.95rem;font-weight:700;color:var(--brown);margin-bottom:4px">✏️ 출결 수정</div>' +
     '<div style="font-size:.78rem;color:var(--text-soft);margin-bottom:16px">'+name+' · '+lbl+'</div>' +
     '<div style="font-size:.78rem;font-weight:700;color:var(--text-mid);margin-bottom:10px">출결 상태 선택 <span style="font-size:.68rem;font-weight:400;color:var(--text-soft)">(등원+하원, 지각+하원 동시 선택 가능)</span></div>' +
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:20px" id="att-ed-grid">' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px" id="att-ed-grid">' +
       ATT_OPTIONS.map(function(opt){
         var sel = curStatus===opt
           || (curStatus==='등원+하원'&&(opt==='등원'||opt==='하원'))
@@ -7052,6 +7054,11 @@ function openAttEditModal(who, clsKey, name, dk) {
           || (curStatus==='보강+하원'&&(opt==='보강'||opt==='하원'));
         return '<button id="att-ed-'+opt+'" style="'+(sel?'background:'+chipColors[opt]:inactiveStyle)+';padding:10px;border-radius:10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif;width:100%">'+opt+'</button>';
       }).join('') +
+    '</div>' +
+    '<div id="att-ed-reason-wrap" style="margin-bottom:16px;display:'+(curStatus==='결석'?'block':'none')+'">' +
+      '<div style="font-size:.75rem;font-weight:700;color:#c2185b;margin-bottom:6px">📋 결석 사유</div>' +
+      '<input id="att-ed-reason" type="text" value="'+curReason.replace(/"/g,'&quot;')+'" placeholder="결석 사유를 입력해요 (선택)" ' +
+        'style="width:100%;padding:8px 12px;border:1.5px solid #ffcdd2;border-radius:10px;font-size:.78rem;font-family:\'Noto Sans KR\',sans-serif;outline:none;color:var(--brown);background:#fff8f8;box-sizing:border-box">' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
       '<button id="att-ed-cancel" style="padding:10px;border-radius:10px;border:1.5px solid #e0d0c0;background:#fafafa;font-size:.82rem;font-weight:700;color:#aaa;cursor:pointer;font-family:\'Noto Sans KR\',sans-serif">취소</button>' +
@@ -7064,7 +7071,12 @@ function openAttEditModal(who, clsKey, name, dk) {
   // 버튼 이벤트
   ATT_OPTIONS.forEach(function(opt){
     var btn = box.querySelector('#att-ed-'+opt);
-    if(btn) btn.onclick = function(){ toggleOpt(opt); };
+    if(btn) btn.onclick = function(){
+      toggleOpt(opt);
+      // 결석 선택 시 사유 입력칸 표시/숨김
+      var rw = overlay.querySelector('#att-ed-reason-wrap');
+      if(rw) rw.style.display = tempStatus==='결석' ? 'block' : 'none';
+    };
   });
   box.querySelector('#att-ed-cancel').onclick = function(){ overlay.remove(); };
   box.querySelector('#att-ed-ok').onclick = function(){
@@ -7083,6 +7095,20 @@ function openAttEditModal(who, clsKey, name, dk) {
     else window.classAttendance[clsKey][name][dk] = newVal;
 
     if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+
+    // 결석 사유 저장
+    var reasonEl = overlay.querySelector('#att-ed-reason');
+    var reason = reasonEl ? reasonEl.value.trim() : '';
+    if(!window.absenceReasons[clsKey]) window.absenceReasons[clsKey]={};
+    if(!window.absenceReasons[clsKey][name]) window.absenceReasons[clsKey][name]={};
+    if(tempStatus==='결석') {
+      window.absenceReasons[clsKey][name][dk] = reason;
+      if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk, {clsKey:clsKey,name:name,dateKey:dk,reason:reason});
+    } else {
+      delete window.absenceReasons[clsKey][name][dk];
+      if(window.fbDel) window.fbDel('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk);
+    }
+
     overlay.remove();
     renderAttSub(who);
   };
@@ -7290,11 +7316,14 @@ function saveMakeupDates(){
     if(!makeupSchedules[makeupStudent].find(function(s){return s.date===dk;}))
       makeupSchedules[makeupStudent].push({date:dk,time:makeupTime,note:'보강 수업'});
   });
-  makeupSelectedDates=new Set(); renderMakeupCal(); renderAttSub(makeupWho);
+  makeupSelectedDates=new Set();
+  if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(makeupStudent);
+  renderMakeupCal(); renderAttSub(makeupWho);
 }
 function removeMakeup(name,dk){
   if(!makeupSchedules[name]) return;
   makeupSchedules[name]=makeupSchedules[name].filter(function(s){return s.date!==dk;});
+  if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(name);
   renderMakeupCal(); renderAttSub(makeupWho);
 }
 
@@ -8112,6 +8141,11 @@ window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
 window.fbSaveMemberRoster = async function(who) {
   var roster = window.memberRoster[who] || [];
   await fbSet('memberRoster/' + who, { roster: JSON.stringify(roster) });
+};
+
+window.fbSaveMakeupSchedules = async function(name) {
+  var dates = window.makeupSchedules[name] || [];
+  await fbSet('makeupSchedules/' + name, { name: name, dates: JSON.stringify(dates) });
 };
 
 window.fbSaveHwAssigned = async function(name) {

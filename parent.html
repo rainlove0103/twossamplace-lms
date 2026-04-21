@@ -104,6 +104,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .p-cal-day-num{font-size:.72rem;font-weight:700;color:var(--brown);width:22px;height:22px;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;}
 .p-cal-cell.cal-today .p-cal-day-num{background:var(--parent);color:white;border-radius:50%;}
 .p-cal-cell.cal-other .p-cal-day-num{color:#ccc;}
+.p-cal-cell.cal-selected{background:#f3f0ff;}
+.p-cal-cell.cal-selected .p-cal-day-num{background:var(--parent-lt);border-radius:50%;}
+.p-cal-cell{cursor:pointer;}
 .att-chip{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:100px;display:inline-block;margin:1px;}
 .chip-등원{background:#e8f5e9;color:#2e7d32;}.chip-하원{background:#e3f2fd;color:#1565c0;}
 .chip-지각{background:#fff8e1;color:#e65100;}.chip-결석{background:#fce4ec;color:#b71c1c;}
@@ -288,6 +291,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
           </div>
           <div class="p-cal-grid" id="p-cal-cells"></div>
         </div>
+        <div id="p-att-detail" style="margin-top:10px;min-height:32px"></div>
       </div>
 
       <!-- RIGHT: 공지 + 수업 일정 -->
@@ -347,6 +351,7 @@ var db, storage;
 var memberRoster = {cookie:[], butter:[]};
 var classStudents = {};
 var classAttendance = {};
+var absenceReasons = {};
 var dailyReports = {};
 var parentReports = {};
 var notices = {cookie:[], butter:[]};
@@ -456,6 +461,43 @@ var reportDate = new Date(); // 데일리 탭용 선택 날짜
     });
   });
 
+  // 데일리 리포트 실시간 동기화
+  db.collection('reports').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var r = change.doc.data();
+      if(!r.who||!r.dateKey||!r.name) return;
+      if(change.type === 'removed') {
+        if(dailyReports[r.who]&&dailyReports[r.who][r.dateKey])
+          delete dailyReports[r.who][r.dateKey][r.name];
+      } else {
+        if(!dailyReports[r.who]) dailyReports[r.who]={};
+        if(!dailyReports[r.who][r.dateKey]) dailyReports[r.who][r.dateKey]={};
+        dailyReports[r.who][r.dateKey][r.name] = r;
+      }
+      // 현재 로그인한 학부모 학생 리포트면 즉시 갱신
+      if(currentParent && r.name === currentParent.name) {
+        renderAttStats();
+      }
+    });
+  });
+
+  // 보강 일정 실시간 동기화
+  db.collection('makeupSchedules').onSnapshot(function(snapshot) {
+    snapshot.docChanges().forEach(function(change) {
+      var d = change.doc.data();
+      if(!d.name) return;
+      if(change.type === 'removed') {
+        delete makeupSchedules[d.name];
+      } else {
+        try { makeupSchedules[d.name] = typeof d.dates==='string' ? JSON.parse(d.dates) : (d.dates||[]); } catch(e){}
+      }
+      // 현재 로그인한 학부모 학생이면 즉시 갱신
+      if(currentParent && d.name === currentParent.name) {
+        renderParentSched();
+      }
+    });
+  });
+
   loadAllData();
 })();
 
@@ -504,6 +546,16 @@ async function loadAllData() {
       }
     });
 
+    // 결석 사유
+    var sAbs = await db.collection('absenceReasons').get();
+    sAbs.forEach(function(doc){
+      var a = doc.data();
+      if(!a.clsKey||!a.name||!a.dateKey) return;
+      if(!absenceReasons[a.clsKey]) absenceReasons[a.clsKey]={};
+      if(!absenceReasons[a.clsKey][a.name]) absenceReasons[a.clsKey][a.name]={};
+      absenceReasons[a.clsKey][a.name][a.dateKey] = a.reason||'';
+    });
+
     // 데일리 리포트 (텍스트)
     var s4 = await db.collection('reports').get();
     s4.forEach(function(doc){
@@ -540,7 +592,8 @@ async function loadAllData() {
     var s8 = await db.collection('makeupSchedules').get();
     s8.forEach(function(doc){
       var d = doc.data();
-      if(d.name && d.dates) makeupSchedules[d.name] = d.dates;
+      if(!d.name) return;
+      try { makeupSchedules[d.name] = typeof d.dates==='string' ? JSON.parse(d.dates) : (d.dates||[]); } catch(e){}
     });
 
     // 과제 (hwAssigned)
@@ -705,15 +758,41 @@ function changeParentCalMonth(dir) {
   renderParentCal();
 }
 
+var parentCalSel = null;
+
+var ATT_DOT_COLOR = {
+  '등원':'#66bb6a','하원':'#42a5f5','지각':'#ffd54f','결석':'#ef5350',
+  '보강':'#ab47bc','등원+하원':'#42a5f5','지각+하원':'#ffd54f','보강+하원':'#ab47bc'
+};
+
+function getAttRec(name, who, dk) {
+  // 모든 clsKey를 순회해서 해당 학생 날짜 출결 찾기
+  var result = null;
+  var clsAtt = classAttendance[who]||{};
+  Object.keys(clsAtt).forEach(function(ck){
+    if(clsAtt[ck][name]&&clsAtt[ck][name][dk]) result = {val:clsAtt[ck][name][dk], clsKey:ck};
+  });
+  return result;
+}
+
+function getAbsReason(name, who, dk) {
+  var clsAtt = classAttendance[who]||{};
+  var reason = '';
+  Object.keys(clsAtt).forEach(function(ck){
+    if(clsAtt[ck][name]&&clsAtt[ck][name][dk]) {
+      var r = absenceReasons[ck]&&absenceReasons[ck][name]&&absenceReasons[ck][name][dk];
+      if(r) reason = r;
+    }
+  });
+  return reason;
+}
+
 function renderParentCal() {
   var y = parentCalYear, m = parentCalMonth;
   document.getElementById('p-cal-label').textContent = y+'년 '+(m+1)+'월';
-  var name   = currentParent.name;
-  var who    = currentParent.who;
-  var clsKey = currentParent.clsKey;
-  var rec    = (classAttendance[who]&&classAttendance[who][clsKey]&&classAttendance[who][clsKey][name])||{};
-  var DOW    = ['일','월','화','수','목','금','토'];
-  var today  = new Date(); var todayKey = fmtDate(today.getFullYear(),today.getMonth(),today.getDate());
+  var name = currentParent.name;
+  var who  = currentParent.who;
+  var today = new Date(); var todayStr = fmtDate(today.getFullYear(),today.getMonth(),today.getDate());
   var firstDay = new Date(y,m,1).getDay();
   var daysInMonth = new Date(y,m+1,0).getDate();
   var prevDays = new Date(y,m,0).getDate();
@@ -725,16 +804,17 @@ function renderParentCal() {
   }
   for(var d=1;d<=daysInMonth;d++){
     var dk = fmtDate(y,m,d);
-    var isToday = dk===todayKey;
-    var cls = 'p-cal-cell'+(isToday?' cal-today':'');
-    var attVal = rec[dk];
-    var st = attVal ? (typeof attVal==='object'?attVal.status:attVal) : '';
-    var chipHtml = '';
+    var isToday = dk===todayStr;
+    var isSel = dk===parentCalSel;
+    var cls = 'p-cal-cell'+(isToday?' cal-today':'')+(isSel?' cal-selected':'');
+    var rec = getAttRec(name, who, dk);
+    var st = rec ? (typeof rec.val==='object'?rec.val.status:rec.val) : '';
+    var dotHtml = '';
     if(st){
-      var chipCls = 'chip-'+(st.replace('+','+'));
-      chipHtml = '<span class="att-chip '+chipCls+'">'+st+'</span>';
+      var dotColor = ATT_DOT_COLOR[st]||'#aaa';
+      dotHtml = '<div style="width:8px;height:8px;border-radius:50%;background:'+dotColor+';margin:2px auto 0"></div>';
     }
-    html += '<div class="'+cls+'"><div class="p-cal-day-num">'+d+'</div>'+chipHtml+'</div>';
+    html += '<div class="'+cls+'" onclick="selectParentCalDate(''+dk+'')" ><div class="p-cal-day-num">'+d+'</div>'+dotHtml+'</div>';
   }
   var totalCells = firstDay + daysInMonth;
   var remaining = totalCells%7===0?0:7-(totalCells%7);
@@ -742,6 +822,47 @@ function renderParentCal() {
     html += '<div class="p-cal-cell cal-other"><div class="p-cal-day-num">'+j+'</div></div>';
   }
   document.getElementById('p-cal-cells').innerHTML = html;
+  renderAttDetail();
+}
+
+function selectParentCalDate(dk) {
+  parentCalSel = (parentCalSel===dk) ? null : dk;
+  renderParentCal();
+}
+
+function renderAttDetail() {
+  var el = document.getElementById('p-att-detail');
+  if(!el) return;
+  if(!parentCalSel){ el.innerHTML=''; return; }
+  var name = currentParent.name;
+  var who  = currentParent.who;
+  var rec = getAttRec(name, who, parentCalSel);
+  if(!rec){ el.innerHTML='<div style="font-size:.78rem;color:var(--text-soft);padding:8px 4px">이 날 출결 기록이 없어요.</div>'; return; }
+  var val = rec.val;
+  var st = typeof val==='object'?val.status:val;
+  var dotColor = ATT_DOT_COLOR[st]||'#aaa';
+  var dt = new Date(parentCalSel+'T00:00:00');
+  var lbl = (dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+  // 시간
+  var times = [];
+  if(typeof val==='object'){
+    if(val.등원Time) times.push('등원 '+val.등원Time);
+    if(val.지각Time) times.push('지각 '+val.지각Time);
+    if(val.보강Time) times.push('보강 '+val.보강Time);
+    if(val.하원Time) times.push('하원 '+val.하원Time);
+  }
+  // 결석 사유
+  var reason = getAbsReason(name, who, parentCalSel);
+  var html = '<div style="background:white;border-radius:14px;border:1.5px solid #ebe7ff;padding:12px 14px">' +
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:'+(reason?'8px':'0')+'">' +
+      '<div style="width:10px;height:10px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></div>' +
+      '<div style="font-size:.82rem;font-weight:700;color:var(--brown)">'+lbl+'</div>' +
+      '<span class="att-chip chip-'+st+'">'+st+'</span>' +
+      (times.length?'<span style="font-size:.72rem;color:var(--text-soft);margin-left:4px">'+times.join(' · ')+'</span>':'') +
+    '</div>' +
+    (reason?'<div style="font-size:.75rem;color:#b71c1c;background:#fff8f8;border-radius:8px;padding:6px 10px;margin-top:6px">📋 결석 사유: '+reason+'</div>':'') +
+  '</div>';
+  el.innerHTML = html;
 }
 
 /* ====== 수업 일정 ====== */
