@@ -6868,12 +6868,26 @@ function renderMonthlyAtt(who,el){
           var safeClsKey = encodeURIComponent(r.clsKey);
           var safeName   = encodeURIComponent(r.name);
           var safeDk     = encodeURIComponent(tAttCalSel);
-          return '<div class="t-att-detail-row" style="gap:8px">' +
+          var isAbsence = (r.status === '결석');
+          var reason = (window.absenceReasons[r.clsKey]&&window.absenceReasons[r.clsKey][r.name]&&window.absenceReasons[r.clsKey][r.name][tAttCalSel])||'';
+          var reasonId = 'abs-reason-monthly-'+encodeURIComponent(r.clsKey+'-'+r.name);
+          return '<div class="t-att-detail-row" style="gap:8px;flex-wrap:wrap">' +
+            '<div style="display:flex;align-items:center;gap:8px;width:100%">' +
             '<div class="t-att-detail-avatar" style="background:'+avatarPalette[i%7]+'">'+r.name[0]+'</div>' +
             '<div style="flex:1"><div class="t-att-detail-name">'+r.name+'</div><div class="t-att-detail-cls">'+r.clsKey+'</div></div>' +
             '<span class="att-summary-chip chip-'+r.status+'">'+r.status+'</span>' +
             '<button onclick="openAttEditModal(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'))" style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#a07040;cursor:pointer;font-family:inherit;flex-shrink:0">✏️ 수정</button>' +
             '<button onclick="deleteMonthlyAtt(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'))" style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:3px 8px;font-size:.68rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">🗑️</button>' +
+            '</div>' +
+            (isAbsence ?
+              '<div style="width:100%;display:flex;gap:6px;padding:4px 0 2px 36px;align-items:center">' +
+                '<input id="'+reasonId+'" type="text" value="'+reason.replace(/"/g,'&quot;')+'" placeholder="결석 사유 메모 (선택)" ' +
+                  'style="flex:1;padding:5px 10px;border:1.5px solid #ffcdd2;border-radius:8px;font-size:.75rem;font-family:inherit;outline:none;color:var(--brown);background:#fff8f8" ' +
+                  'onblur="saveMonthlyAbsReason(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'),this.value)">' +
+                '<button onclick="saveMonthlyAbsReason(\''+who+'\',decodeURIComponent(\''+safeClsKey+'\'),decodeURIComponent(\''+safeName+'\'),decodeURIComponent(\''+safeDk+'\'),document.getElementById(\''+reasonId+'\').value)" ' +
+                  'style="background:#fce4ec;border:1px solid #f48fb1;border-radius:7px;padding:4px 9px;font-size:.7rem;font-weight:700;color:#c2185b;cursor:pointer;font-family:inherit;flex-shrink:0">저장</button>' +
+              '</div>'
+            : '') +
           '</div>';
         }).join('');
       });
@@ -6910,6 +6924,17 @@ function renderMonthlyAtt(who,el){
   }
   el.innerHTML='<div class="t-att-cal-wrap"><div class="t-att-cal-header"><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',-1)">◀</button><span class="t-att-cal-label">'+tAttCalYear+'년 '+(tAttCalMonth+1)+'월</span><button class="t-att-cal-nav" onclick="changeTAttMonth(\''+who+'\',1)">▶</button></div><div class="t-att-cal-grid">'+DOW.map(function(d){return '<div class="t-att-cal-dow">'+d+'</div>';}).join('')+cells+'</div><div class="t-att-cal-detail" id="att-cal-detail-'+who+'">'+detail+'</div></div>'+renderMakeupNeeded(who);
 }
+function saveMonthlyAbsReason(who, clsKey, name, dk, reason) {
+  reason = (reason||'').trim();
+  if(!window.absenceReasons[clsKey]) window.absenceReasons[clsKey]={};
+  if(!window.absenceReasons[clsKey][name]) window.absenceReasons[clsKey][name]={};
+  window.absenceReasons[clsKey][name][dk] = reason;
+  if(window._fbSet) window._fbSet('absenceReasons/'+clsKey.replace(/\//g,'_')+'_'+name+'_'+dk, {clsKey:clsKey,name:name,dateKey:dk,reason:reason});
+  // 저장 피드백
+  var el = document.getElementById('abs-reason-monthly-'+encodeURIComponent(clsKey+'-'+name));
+  if(el) { el.style.borderColor='#a5d6a7'; setTimeout(function(){ el.style.borderColor='#ffcdd2'; }, 1200); }
+}
+
 function toggleAttAddPanel(who, dk) {
   var panel = document.getElementById('att-add-panel');
   var btn = document.getElementById('att-add-toggle-btn');
