@@ -842,13 +842,13 @@ var makeupTime = '15:00';
 
 /* ====== CONSTANTS ====== */
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
-var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드'];
+var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B'];
 var CLASS_CAPACITY = 8; // 반별 정원
 var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
-var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드':580000};
+var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -873,7 +873,8 @@ var classStudents = {
   '픽처북-월/수':[],'픽처북-화/목':[],
   '리더스북-월/수':[],'리더스북-화/목':[],
   '챕터북-월/수':[],'챕터북-화/목':[],
-  '노블-월/수':[],'노블-화/목':[],
+  '노블 베이직-월/수':[],'노블 베이직-화/목':[],
+  '노블 플러스-월/수':[],'노블 플러스-화/목':[],
   '비욘드A-월/수':[],'비욘드A-화/목':[],
   '비욘드B-월/수':[],'비욘드B-화/목':[]
 };
@@ -7503,6 +7504,11 @@ function permanentDelete(who, id) {
   // 8. 보강 일정 삭제
   if(makeupSchedules[name]) delete makeupSchedules[name];
 
+  // 9. 원비 데이터 삭제 (로컬)
+  Object.keys(tuitionData).forEach(function(ym){
+    if(tuitionData[ym] && tuitionData[ym][name]) delete tuitionData[ym][name];
+  });
+
   // 9. 데일리리포트 삭제
   if(dailyReports[who]) {
     Object.keys(dailyReports[who]).forEach(function(dk){
@@ -7529,18 +7535,31 @@ function permanentDelete(who, id) {
     window._fbDel('bookRecords/'+name);
     // 상담 기록 삭제
     window._fbDel('counsel/'+name);
-    // 리포트 삭제 (Firebase에서 해당 학생 리포트 전부)
     if(window._fbDb) {
+      // 리포트 삭제
       window._fbDb.collection('reports').where('name','==',name).get().then(function(snap){
         snap.forEach(function(doc){ doc.ref.delete(); });
       });
-      // 출결 삭제
+      // 출결 삭제 (attendance 컬렉션에서 name 포함 문서 전부)
       window._fbDb.collection('attendance').where('name','==',name).get().then(function(snap){
         snap.forEach(function(doc){ doc.ref.delete(); });
       });
       // 결석 사유 삭제
       window._fbDb.collection('absenceReasons').where('name','==',name).get().then(function(snap){
         snap.forEach(function(doc){ doc.ref.delete(); });
+      });
+      // classAttendance 경로 삭제 (clsKey_name_dateKey 패턴)
+      window._fbDb.collection('attendance').get().then(function(snap){
+        snap.forEach(function(doc){
+          var d = doc.data();
+          if(d.name === name) doc.ref.delete();
+        });
+      });
+      // 원비 삭제
+      Object.keys(tuitionData).forEach(function(ym){
+        if(tuitionData[ym] && tuitionData[ym][name]) {
+          window._fbDb.collection('tuition').doc(ym+'_'+name).delete();
+        }
       });
     }
   }
