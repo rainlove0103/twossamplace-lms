@@ -220,15 +220,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 </head>
 <body>
 
-<!-- 새로고침 자동로그인 로딩 오버레이 -->
-<div id="auto-login-loading" style="display:none;position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#f3f0ff 0%,#fff8ee 50%,#f0fff8 100%);align-items:center;justify-content:center;flex-direction:column;gap:16px">
-  <div style="font-size:3rem;animation:bounce 1.2s ease-in-out infinite">💌</div>
-  <div style="font-family:'Gaegu',cursive;font-size:1.8rem;font-weight:700;color:var(--brown)">투쌤플레이스</div>
-  <div style="font-size:.9rem;color:var(--text-soft)">로딩 중이에요...</div>
-</div>
-
 <!-- LANDING / LOGIN -->
-<div id="landing" class="page">
+<div id="landing" class="page active">
   <div class="landing-inner">
     <span class="logo-emoji">💌</span>
     <div class="brand-name">투쌤플레이스</div>
@@ -364,19 +357,6 @@ var bookRecords = {};
 
 var currentParent = null; // {name, who, attCode, clsKey}
 var parentCalYear = new Date().getFullYear();
-// 새로고침 시 자동로그인 처리: localStorage에 정보 있으면 로딩 화면 먼저 표시
-(function(){
-  var saved = localStorage.getItem('parentLogin');
-  if(saved) {
-    var overlay = document.getElementById('auto-login-loading');
-    if(overlay) overlay.style.display = 'flex';
-  } else {
-    // 로그인 정보 없으면 landing 바로 표시
-    var landing = document.getElementById('landing');
-    if(landing) landing.classList.add('active');
-  }
-})();
-
 var parentCalMonth = new Date().getMonth();
 var reportTab = 'daily';
 var reportYear = new Date().getFullYear();
@@ -603,24 +583,23 @@ function populateStudentSelect() {
 }
 
 function autoLogin() {
-  var overlay = document.getElementById('auto-login-loading');
   var saved = localStorage.getItem('parentLogin');
-  if(!saved) {
-    if(overlay) overlay.style.display = 'none';
-    showPage('landing');
-    return;
-  }
+  if(!saved) return;
   try {
     var info = JSON.parse(saved);
     currentParent = info;
     renderDashboard();
     showPage('dashboard');
-  } catch(e){
-    localStorage.removeItem('parentLogin');
-    showPage('landing');
-  }
-  if(overlay) overlay.style.display = 'none';
+  } catch(e){}
 }
+
+// 새로고침 시 로그인 화면 깜빡임 방지: localStorage에 정보 있으면 즉시 dashboard 표시
+(function(){
+  try {
+    var saved = localStorage.getItem('parentLogin');
+    if(saved) showPage('dashboard');
+  } catch(e){}
+})();
 
 /* ====== 로그인 ====== */
 function parentLogin() {
