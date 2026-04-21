@@ -844,7 +844,7 @@ var makeupTime = '15:00';
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
 var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B','초등부','중등부'];
 var CLASS_CAPACITY = 8; // 반별 정원
-var CLASS_DAYS = {'중등부':['화/목']}; // 중등부는 화/목만
+var CLASS_DAYS = {}; // 클래스별 허용 요일 (현재 모든 클래스 월/수·화/목 동일)
 function getAllCdKeys() {
   return CLASSES.reduce(function(acc,c){
     var days = CLASS_DAYS[c] || DAY_GROUPS;
@@ -885,7 +885,7 @@ var classStudents = {
   '비욘드A-월/수':[],'비욘드A-화/목':[],
   '비욘드B-월/수':[],'비욘드B-화/목':[],
   '초등부-월/수':[],'초등부-화/목':[],
-  '중등부-화/목':[]
+  '중등부-월/수':[],'중등부-화/목':[]
 };
 window.classStudents = classStudents;
 currentClass = CLASSES[0];
@@ -4240,6 +4240,7 @@ function renderDailyReport(who) {
     // 리포트 작성 폼
     var r = getDailyReport(who, dk, reportSelStu);
     var clsName = reportSelClass.split('-')[0], dayName = reportSelClass.split('-').slice(1).join('-');
+    var isBetaCls = (reportSelClass && (reportSelClass.indexOf('초등부')>-1 || reportSelClass.indexOf('중등부')>-1));
 
     html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">' +
       '<button onclick="'+(reportFromFirst ? 'reportSelClass=null;reportSelStu=null;reportFromFirst=false;' : 'reportSelStu=null;')+'renderReportPanel(\''+who+'\',document.getElementById(\''+who+'-main-content\'))" style="background:#f5ede0;border:none;border-radius:8px;padding:6px 12px;font-size:.8rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">'+(reportFromFirst ? '← 첫 화면' : '← 학생 목록')+'</button>' +
@@ -7609,9 +7610,7 @@ function buildRegForm(who,s){
   var currentGrade=s?calcGrade(s):'';
   var gradeOpts=['','1학년','2학년','3학년','4학년','5학년','6학년'].map(function(g){return '<option value="'+g+'"'+(currentGrade===g?' selected':'')+'>'+( g||'학년 선택')+'</option>';}).join('');
   var clsOpts=['',...CLASSES].map(function(c){return '<option value="'+c+'"'+(s&&s.class===c?' selected':'')+'>'+( c||'클래스 선택 *')+'</option>';}).join('');
-  var curCls = s?s.class:'';
-  var availDays = (CLASS_DAYS&&CLASS_DAYS[curCls]) ? CLASS_DAYS[curCls] : DAY_GROUPS;
-  var dayOpts=['',...availDays].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
+  var dayOpts=['',...DAY_GROUPS].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
   var saveFn=isEdit?'saveEdit(\''+who+'\','+s.id+')':'submitRegister(\''+who+'\')';
   var cancelFn=isEdit?'closeEditForm('+s.id+')':'closeRegisterForm(\''+who+'\')';
   var editHeader=isEdit?(function(){
@@ -7853,8 +7852,6 @@ function renderClassBlocks(who){
   DAY_GROUPS.forEach(function(day){
     html += '<div style="display:grid;grid-template-columns:repeat('+CLASSES.length+',1fr);gap:6px;margin-bottom:6px">';
     CLASSES.forEach(function(cls){
-      var _allowedDays = CLASS_DAYS[cls] || DAY_GROUPS;
-      if(_allowedDays.indexOf(day) < 0){ html += '<div></div>'; return; }
       var k = cls+'-'+day;
       var sk = k.replace(/\//g,'_');
       var stuList = classStudents[k]||[];
