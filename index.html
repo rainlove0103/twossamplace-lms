@@ -842,13 +842,20 @@ var makeupTime = '15:00';
 
 /* ====== CONSTANTS ====== */
 var avatarPalette = ['#62d2a2','#ff8fab','#7ec8e3','#c4b5fd','#ffb347','#f48fb1','#80cbc4'];
-var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B'];
+var CLASSES = ['픽처북','리더스북','챕터북','노블 베이직','노블 플러스','비욘드A','비욘드B','초등부','중등부'];
 var CLASS_CAPACITY = 8; // 반별 정원
+var CLASS_DAYS = {'중등부':['화/목']}; // 중등부는 화/목만
+function getAllCdKeys() {
+  return CLASSES.reduce(function(acc,c){
+    var days = CLASS_DAYS[c] || DAY_GROUPS;
+    return acc.concat(days.map(function(d){return c+'-'+d;}));
+  }, []);
+}
 var DAY_GROUPS = ['월/수','화/목'];
 var ATT_OPTIONS = ['등원','하원','지각','결석','보강'];
 var STATUS_LABEL = {active:'재원',pause:'휴원',quit:'퇴원'};
 var STATUS_BADGE  = {active:'badge-active',pause:'badge-pause',quit:'badge-quit'};
-var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000};
+var CLASS_FEE = {'픽처북':350000,'리더스북':380000,'챕터북':430000,'노블 베이직':480000,'노블 플러스':500000,'비욘드A':580000,'비욘드B':580000,'초등부':185000,'중등부':200000};
 
 var todayMidnight = (function(){ var d=new Date(); d.setHours(0,0,0,0); return d; })();
 function daysLater(n){ return new Date(todayMidnight.getTime()+n*86400000); }
@@ -876,7 +883,9 @@ var classStudents = {
   '노블 베이직-월/수':[],'노블 베이직-화/목':[],
   '노블 플러스-월/수':[],'노블 플러스-화/목':[],
   '비욘드A-월/수':[],'비욘드A-화/목':[],
-  '비욘드B-월/수':[],'비욘드B-화/목':[]
+  '비욘드B-월/수':[],'비욘드B-화/목':[],
+  '초등부-월/수':[],'초등부-화/목':[],
+  '중등부-화/목':[]
 };
 window.classStudents = classStudents;
 currentClass = CLASSES[0];
@@ -4154,7 +4163,8 @@ function renderDailyReport(who) {
     // 클래스 카드 목록 - 항상 전체 표시
     html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
     CLASSES.forEach(function(cls){
-      DAY_GROUPS.forEach(function(day){
+      var _days2 = CLASS_DAYS[cls] || DAY_GROUPS;
+      _days2.forEach(function(day){
         var k = cls+'-'+day;
         var stuList = classStudents[k]||[];
         var writtenCount = stuList.filter(function(n){
@@ -4481,7 +4491,8 @@ function renderMonthlyReport(who) {
   var MAX_CAPACITY = 6;
   CLASSES.forEach(function(cls){
     var rowHtml = '';
-    DAY_GROUPS.forEach(function(day){
+    var _clsDays = CLASS_DAYS[cls] || DAY_GROUPS;
+    _clsDays.forEach(function(day){
       var k = cls+'-'+day;
       var stuList = ((window.classStudents||{})[k]||[]).filter(function(n){
         return active.some(function(s){return s.name===n;});
@@ -5356,7 +5367,8 @@ function renderLecStudentAssign(lec, who) {
 
   CLASSES.forEach(function(cls){
     var rowHtml = '';
-    DAY_GROUPS.forEach(function(day){
+    var _clsDays2 = CLASS_DAYS[cls] || DAY_GROUPS;
+    _clsDays2.forEach(function(day){
       var k = cls+'-'+day;
       var stuList = classStudents[k]||[];
       var allClsSel = stuList.length>0 && stuList.every(function(n){return sel.has(n);});
@@ -5545,7 +5557,7 @@ function setVideoDetailTab(tab, lecId, vIdx, who) {
 function buildAssignHtml(lec, v, vIdx, who) {
   var lecId = lec.id;
   var assignHtml = '<div style="margin-bottom:10px">';
-  var cdKeys = CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, [])
+  var cdKeys = getAllCdKeys()
     .filter(function(k){return classStudents[k]&&classStudents[k].length>0;});
   assignHtml += '<div class="form-label" style="margin-bottom:8px">클래스 선택 (클릭하면 펼쳐져요)</div>';
   assignHtml += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">';
@@ -5962,7 +5974,7 @@ function renderTodayClass(who, el) {
   }
 
   // 클래스 카드 목록 (전체 클래스-요일, 학생 없어도 표시)
-  var cdKeys = CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, []);
+  var cdKeys = getAllCdKeys();
 
   // 오늘 수업 여부 표시
   var isMonWed=[1,3].indexOf(todayDow)>-1, isTueThu=[2,4].indexOf(todayDow)>-1;
@@ -6222,7 +6234,7 @@ function renderHwMgmt(who, el) {
     '</div>';
   var html = '<div class="t-section-title">📝 과제 관리</div>' + tabs;
 
-  var cdKeys = CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, []);
+  var cdKeys = getAllCdKeys();
 
   if(hwMgmtTab==='monthly') {
     if(hwDetailKey) { el.innerHTML=html+renderHwDetail(hwDetailKey,who); return; }
@@ -6327,7 +6339,7 @@ function renderHwCalDetail(who) {
   var DOW_KO=['일','월','화','수','목','금','토'];
   var label=(selDt.getMonth()+1)+'월 '+selDt.getDate()+'일 ('+DOW_KO[selDt.getDay()]+') 과제 현황';
 
-  var cdKeys=CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, [])
+  var cdKeys=getAllCdKeys()
     .filter(function(k){return classStudents[k]&&classStudents[k].length>0;});
 
   var hasAny=false;
@@ -6827,7 +6839,8 @@ function renderMonthlyAtt(who,el){
     // 미기록 학생 목록
     var allActiveStudents = [];
     CLASSES.forEach(function(cls){
-      DAY_GROUPS.forEach(function(day){
+      var _days2 = CLASS_DAYS[cls] || DAY_GROUPS;
+      _days2.forEach(function(day){
         var k=cls+'-'+day;
         (classStudents[k]||[]).forEach(function(n){
           var roster=(memberRoster['cookie']||[]).concat(memberRoster['butter']||[]);
@@ -7318,9 +7331,7 @@ function renderClassMgmt(who, el) {
 
   // 2열 그리드로 전체 클래스-요일 카드 표시
   var roster = memberRoster[who]||[];
-  var cdKeys = CLASSES.reduce(function(acc,c){
-    return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));
-  }, []);
+  var cdKeys = getAllCdKeys();
 
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">';
   cdKeys.forEach(function(k) {
@@ -7581,13 +7592,26 @@ function changeStatus(who,id,newStatus){
   var el=document.getElementById(who+'-main-content'); renderStudentMgmt(who,el);
   document.getElementById('tmenu-'+who+'-student').classList.add('active');
 }
+function updateDayOpts(clsSel, who) {
+  var cls = clsSel.value;
+  var days = (window.CLASS_DAYS && CLASS_DAYS[cls]) || DAY_GROUPS;
+  var dayEl = document.getElementById('reg-day-'+who);
+  if(!dayEl) return;
+  dayEl.innerHTML = ['', ...days].map(function(d){
+    return '<option value="'+d+'">'+(d||'요일 선택 *')+'</option>';
+  }).join('');
+  if(days.length===1) dayEl.value = days[0];
+}
+
 function openRegisterForm(who){ document.getElementById('register-form-area-'+who).innerHTML=buildRegForm(who,null); }
 function buildRegForm(who,s){
   var isEdit=!!s;
   var currentGrade=s?calcGrade(s):'';
   var gradeOpts=['','1학년','2학년','3학년','4학년','5학년','6학년'].map(function(g){return '<option value="'+g+'"'+(currentGrade===g?' selected':'')+'>'+( g||'학년 선택')+'</option>';}).join('');
   var clsOpts=['',...CLASSES].map(function(c){return '<option value="'+c+'"'+(s&&s.class===c?' selected':'')+'>'+( c||'클래스 선택 *')+'</option>';}).join('');
-  var dayOpts=['',...DAY_GROUPS].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
+  var curCls = s?s.class:'';
+  var availDays = (CLASS_DAYS&&CLASS_DAYS[curCls]) ? CLASS_DAYS[curCls] : DAY_GROUPS;
+  var dayOpts=['',...availDays].map(function(d){return '<option value="'+d+'"'+(s&&s.day===d?' selected':'')+'>'+( d||'요일 선택 *')+'</option>';}).join('');
   var saveFn=isEdit?'saveEdit(\''+who+'\','+s.id+')':'submitRegister(\''+who+'\')';
   var cancelFn=isEdit?'closeEditForm('+s.id+')':'closeRegisterForm(\''+who+'\')';
   var editHeader=isEdit?(function(){
@@ -7600,7 +7624,7 @@ function buildRegForm(who,s){
   return '<div class="register-form-box'+(isEdit?' edit-box':'')+'">'+editHeader+
     '<div class="register-row"><div><div class="form-label">이름 *</div><input class="register-input" id="reg-name-'+who+'" value="'+(s?s.name:'')+'" placeholder="이름을 입력해요"></div><div><div class="form-label">학생 연락처</div><input class="register-input" id="reg-phone-'+who+'" value="'+(s?s.phone:'')+'" placeholder="010-0000-0000"></div></div>'+
     '<div class="register-row"><div><div class="form-label">학교명</div><input class="register-input" id="reg-school-'+who+'" value="'+(s?s.school:'')+'" placeholder="예: 투쌤초등학교"></div><div><div class="form-label">학년</div><select class="register-select" id="reg-grade-'+who+'">'+gradeOpts+'</select></div></div>'+
-    '<div class="register-row"><div><div class="form-label">클래스 *</div><select class="register-select" id="reg-class-'+who+'">'+clsOpts+'</select></div><div><div class="form-label">요일 *</div><select class="register-select" id="reg-day-'+who+'">'+dayOpts+'</select></div></div>'+
+    '<div class="register-row"><div><div class="form-label">클래스 *</div><select class="register-select" id="reg-class-'+who+'" onchange="updateDayOpts(this,\''+who+'\')">' +clsOpts+'</select></div><div><div class="form-label">요일 *</div><select class="register-select" id="reg-day-'+who+'">'+dayOpts+'</select></div></div>'+
     '<div class="register-row"><div><div class="form-label">등록일</div><input class="register-input" type="date" id="reg-joined-'+who+'" value="'+(s?s.joined.replace(/\./g,'-'):todayKey())+'"></div>'+
     '<div><div class="form-label">보호자 연락처</div><input class="register-input" id="reg-guardian-'+who+'" value="'+(s?s.guardian:'')+'" placeholder="010-0000-0000" oninput="syncAlimtalk(\''+who+'\')"></div></div>'+
     '<div class="register-row"><div><div class="form-label">출결번호 / 비밀번호</div><input class="register-input" id="reg-attcode-'+who+'" value="'+(s?s.attCode||'':'')+'" placeholder="예: 1234"></div>'+
@@ -7829,6 +7853,8 @@ function renderClassBlocks(who){
   DAY_GROUPS.forEach(function(day){
     html += '<div style="display:grid;grid-template-columns:repeat('+CLASSES.length+',1fr);gap:6px;margin-bottom:6px">';
     CLASSES.forEach(function(cls){
+      var _allowedDays = CLASS_DAYS[cls] || DAY_GROUPS;
+      if(_allowedDays.indexOf(day) < 0){ html += '<div></div>'; return; }
       var k = cls+'-'+day;
       var sk = k.replace(/\//g,'_');
       var stuList = classStudents[k]||[];
@@ -7900,7 +7926,7 @@ function syncAllChip(){var el=document.getElementById('recip-전체');if(el)el.c
 function updateRecipPreview(who){
   var el=document.getElementById('recip-preview-'+who);if(!el)return;
   if(noticeRecipients.has('전체')){el.textContent='전체 학생에게 발송됩니다.';return;}
-  var cdKeys=CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, []);
+  var cdKeys=getAllCdKeys();
   var names=Array.from(noticeRecipients).filter(function(k){return cdKeys.indexOf(k)<0;});
   el.innerHTML=names.length?'발송 대상 <strong style="color:var(--cookie)">'+names.length+'명</strong>: '+names.join(', '):'';
 }
@@ -7910,7 +7936,7 @@ function submitNotice(who){
   if(noticeRecipients.size===0){alert('받을 학생을 선택해주세요!');return;}
   if(!title){alert('제목을 입력해주세요!');return;}
   if(!body){alert('내용을 입력해주세요!');return;}
-  var cdKeys=CLASSES.reduce(function(acc,c){return acc.concat(DAY_GROUPS.map(function(d){return c+'-'+d;}));}, []);
+  var cdKeys=getAllCdKeys();
   var finalR;
   if(noticeRecipients.has('전체')){finalR=['전체'];}
   else{
