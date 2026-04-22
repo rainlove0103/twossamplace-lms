@@ -4320,7 +4320,7 @@ function applyClassReport(who, dk, clsKey) {
       if(vals[key]) r[key] = vals[key];
     });
     r.savedAt = savedAt;
-    if(window.fbSaveReport) window.fbSaveReport(who, dk, name);
+    // 메모리에만 저장 (Firebase 반영 안 함)
   });
   // 버튼 피드백
   var btn = document.querySelector('[onclick="applyClassReport(\''+who+'\',\''+dk+'\',\''+clsKey+'\')"]');
@@ -4402,7 +4402,7 @@ function saveDailyReport(who, dk, name) {
   if(scoreEl) r.reviewScore = scoreEl.value.trim();
   var now = new Date();
   r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
-  if(window.fbSaveReport) window.fbSaveReport(who, dk, name);
+  // 메모리에만 저장 (Firebase 반영 안 함 — 학부모 전송 버튼 눌렀을 때만 반영)
   var btn = document.querySelector('[onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
   if(btn){btn.textContent='✅ 저장됨!';setTimeout(function(){btn.textContent='💾 저장';},1500);}
 }
@@ -4683,7 +4683,6 @@ function openMonthlyDetail(who, name, y, m) {
     {key:'lesson',   label:'📖 수업 내용',       hint:'데일리 기록 '+allData.lesson.length+'건'},
     {key:'review',   label:'💡 리뷰 / 이해도',   hint:'데일리 기록 '+allData.review.length+'건'},
     {key:'homework', label:'📝 과제',             hint:'데일리 기록 '+allData.homework.length+'건'},
-    {key:'leddi',    label:(isBetaClsMr?'🎓 클래스5 과제 리포트':'🌐 레디영어 과제 리포트'), hint:'데일리 기록 '+allData.leddi.length+'건'},
     {key:'feedback', label:'💬 피드백 / 코멘트', hint:'데일리 기록 '+allData.feedback.length+'건'},
     {key:'comment',  label:'✏️ 선생님 총평',     hint:'직접 입력'},
   ];
@@ -4793,7 +4792,7 @@ function downloadMonthlyPDF(who, name, y, m) {
 
   // 임시 div 생성
   var container = document.createElement('div');
-  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;font-family:"Noto Sans KR",sans-serif;';
+  container.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;background:white;font-family:"Noto Sans KR",sans-serif;box-sizing:border-box;';
   container.innerHTML = pdfHtml;
   document.body.appendChild(container);
 
@@ -4808,28 +4807,38 @@ function downloadMonthlyPDF(who, name, y, m) {
 
   loadScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', function(){
     loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js', function(){
-      html2canvas(container, {scale:2, useCORS:true, backgroundColor:'#ffffff'}).then(function(canvas){
-        var imgData = canvas.toDataURL('image/jpeg', 0.95);
+      html2canvas(container, {scale:2, useCORS:true, backgroundColor:'#ffffff', width:794, windowWidth:794}).then(function(canvas){
+        var imgData = canvas.toDataURL('image/jpeg', 0.97);
         var pdf = new window.jspdf.jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-        var pdfW = pdf.internal.pageSize.getWidth();
-        var pdfH = pdf.internal.pageSize.getHeight();
+        var pdfW = pdf.internal.pageSize.getWidth();   // 210mm
+        var pdfH = pdf.internal.pageSize.getHeight();  // 297mm
+        // canvas 픽셀 → mm 변환 (794px = 210mm)
+        var scale = pdfW / (794 * 2); // *2 는 html2canvas scale:2 반영
         var imgW = pdfW;
-        var imgH = canvas.height * imgW / canvas.width;
+        var imgH = canvas.height * scale;
 
         if(imgH <= pdfH) {
           pdf.addImage(imgData, 'JPEG', 0, 0, imgW, imgH);
         } else {
           // 여러 페이지로 분할
-          var pageH = pdfH;
-          var heightLeft = imgH;
-          var position = 0;
-          pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
-          heightLeft -= pageH;
-          while(heightLeft > 0) {
-            position = heightLeft - imgH;
-            pdf.addPage();
-            pdf.addImage(imgData, 'JPEG', 0, position, imgW, imgH);
-            heightLeft -= pageH;
+          var pxPerPage = Math.floor(794 * 2 * (pdfH / pdfW)); // 한 페이지 픽셀 높이
+          var totalPx = canvas.height;
+          var pageCount = Math.ceil(totalPx / pxPerPage);
+          for(var pi=0; pi<pageCount; pi++) {
+            if(pi > 0) pdf.addPage();
+            var srcY = pi * pxPerPage;
+            var srcH = Math.min(pxPerPage, totalPx - srcY);
+            // 해당 페이지 슬라이스를 별도 캔버스로 잘라내기
+            var pageCanvas = document.createElement('canvas');
+            pageCanvas.width = canvas.width;
+            pageCanvas.height = pxPerPage;
+            var pctx = pageCanvas.getContext('2d');
+            pctx.fillStyle = '#ffffff';
+            pctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+            pctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH);
+            var pageImg = pageCanvas.toDataURL('image/jpeg', 0.97);
+            var sliceH = srcH * scale;
+            pdf.addImage(pageImg, 'JPEG', 0, 0, imgW, sliceH);
           }
         }
 
@@ -4883,7 +4892,6 @@ function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
     {label:'수업 내용', val:saved.lesson||''},
     {label:'리뷰 / 이해도', val:saved.review||''},
     {label:'과제', val:saved.homework||''},
-    {label:(ctx.isBetaClsMr?'클래스5 과제 리포트':'레디영어 과제 리포트'), val:saved.leddi||''},
     {label:'피드백', val:saved.feedback||''},
   ].map(function(f){
     return '<div style="display:flex;gap:12px;padding:10px 14px;background:#fffbf5;border-radius:7px;border:1px solid #f5ede0;margin-bottom:6px;">' +
@@ -4927,7 +4935,7 @@ function buildMonthlyReportHTML(who, name, y, m, saved, ctx) {
     '</div>';
   }).join('');
 
-  return '<div style="background:white;width:754px;padding:20px;font-family:\'Noto Sans KR\',sans-serif;box-sizing:border-box;">' +
+  return '<div style="background:white;width:100%;padding:20px 24px;font-family:\'Noto Sans KR\',sans-serif;box-sizing:border-box;">' +
 
     // 헤더
     '<div style="background:#fff8ee;border-bottom:2px solid #f5d9b0;padding:18px 22px 14px;margin:-20px -20px 22px;display:flex;justify-content:space-between;align-items:flex-start;">' +

@@ -766,7 +766,7 @@ function countDailyReports(name, y, m) {
   for(var d=1;d<=daysInMonth;d++){
     var dk = fmtDate(y,m,d);
     var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-    if(r && r.released && (r.lesson||r.review||r.homework||r.feedback)) cnt++;
+    if(r && r.released && (r.lesson||r.review||r.homework||r.feedback||r.leddi)) cnt++;
   }
   return cnt;
 }
@@ -1047,7 +1047,8 @@ function openReportDatePicker() {
       var hasReport = !!(dailyReports[who]&&dailyReports[who][dk2]&&dailyReports[who][dk2][name]&&
         dailyReports[who][dk2][name].released &&
         (dailyReports[who][dk2][name].lesson||dailyReports[who][dk2][name].review||
-         dailyReports[who][dk2][name].homework||dailyReports[who][dk2][name].feedback));
+         dailyReports[who][dk2][name].homework||dailyReports[who][dk2][name].feedback||
+         dailyReports[who][dk2][name].leddi));
       var hasFile = (parentReports[name]||[]).some(function(p){ return (p.type==='daily'||p.type==='daily-text')&&p.date===dk2; });
       var hasDot = hasReport || hasFile;
       html += '<div data-d="'+d+'" style="'+
@@ -1143,7 +1144,7 @@ function renderDailyReports() {
 
   // 텍스트 리포트 (reports 컬렉션 — released: true인 것만 표시)
   var r = dailyReports[who]&&dailyReports[who][dk]&&dailyReports[who][dk][name];
-  var hasText = r && r.released && (r.lesson||r.review||r.homework||r.feedback);
+  var hasText = r && r.released && (r.lesson||r.review||r.homework||r.feedback||r.leddi);
 
   // 학부모 공유 리포트 (parentReports 컬렉션)
   var sharedText = (parentReports[name]||[]).find(function(p){
@@ -1191,6 +1192,7 @@ function renderDailyReports() {
     if(displayR.lesson)   html += mkField('📖 수업 내용', displayR.lesson);
     if(displayR.review)   html += mkField('💡 리뷰 / 이해도', displayR.review);
     if(displayR.homework) html += mkField('📝 과제', displayR.homework);
+    if(displayR.leddi)    html += mkLinkField((_isBeta?'🎓 클래스5 과제 리포트':'🌐 레디영어 과제 리포트'), displayR.leddi);
     if(displayR.feedback) html += mkField('💬 선생님 한마디', displayR.feedback);
     html += '</div></div>';
   }
@@ -1251,6 +1253,13 @@ function renderFilePreview(p) {
 
 function mkField(label, text){
   return '<div class="daily-field"><div class="daily-field-label">'+label+'</div><div class="daily-field-text">'+text+'</div></div>';
+}
+function mkLinkField(label, url){
+  var isUrl = /^https?:\/\//.test(url.trim());
+  var content = isUrl
+    ? '<a href="'+url.trim()+'" target="_blank" rel="noopener" style="color:var(--parent);font-weight:700;word-break:break-all;text-decoration:underline">🔗 '+url.trim()+'</a>'
+    : url;
+  return '<div class="daily-field"><div class="daily-field-label">'+label+'</div><div class="daily-field-text">'+content+'</div></div>';
 }
 
 /* ====== 먼슬리 PDF 다운로드 팝업 ====== */
