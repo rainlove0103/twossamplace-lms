@@ -4361,9 +4361,11 @@ function sendDailyToParent(who, dk, name) {
   if(!r.lesson && !r.review && !r.homework && !r.feedback && !r.leddi) {
     alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
+  // r을 직접 복사해서 전달 (window.dailyReports 참조 불일치 방지)
+  var dataSnapshot = Object.assign({}, r);
   var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
   if(btn){ btn.textContent='⏳ 전송 중...'; btn.disabled=true; }
-  Promise.resolve(window.fbSaveReport ? window.fbSaveReport(who, dk, name, true) : null)
+  Promise.resolve(window.fbSaveReport ? window.fbSaveReport(who, dk, name, true, dataSnapshot) : null)
     .then(function(){
       if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; btn.disabled=false;
         setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
@@ -8199,6 +8201,13 @@ window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
   } else {
     data.status = statusOrObj||'';
   }
+  // who 필드 자동 추가 (parent.html 출결 조회에 필요)
+  if(!data.who) {
+    var roster = window.memberRoster || {};
+    ['cookie','butter'].forEach(function(w){
+      if((roster[w]||[]).some(function(s){ return s.name===name; })) data.who = w;
+    });
+  }
   await fbSet('attendance/'+safeKey, data);
 };
 
@@ -8220,9 +8229,10 @@ window.fbSaveHwAssigned = async function(name) {
   await fbSet('hwAssigned/' + name, { hw: JSON.stringify(safe) });
 };
 
-window.fbSaveReport = async function(who, dateKey, name, released) {
-  var r = window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name];
-  if (!r) return;
+window.fbSaveReport = async function(who, dateKey, name, released, dataOverride) {
+  // dataOverride가 있으면 직접 사용, 없으면 window.dailyReports에서 찾기
+  var r = dataOverride || (window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name]);
+  if (!r) { console.warn('fbSaveReport: 데이터 없음', who, dateKey, name); return; }
   if(released) {
     r.released = true;
   } else {
