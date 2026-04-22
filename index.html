@@ -4296,10 +4296,9 @@ function renderDailyReport(who) {
         '<textarea id="rpt-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:64px;margin-bottom:0">'+r[f.key]+'</textarea>' +
         '</div>';
     });
-    html += '<div style="display:flex;justify-content:flex-end;gap:6px;margin-top:12px">' +
-      '<button onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')"
-        style="padding:6px 14px;border:1.5px solid #f0d8b0;border-radius:8px;background:#fffbf5;font-size:.75rem;font-weight:700;color:var(--brown);cursor:pointer;font-family:inherit">💾 저장</button>' +
-      '<button onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:6px 14px;border:none;border-radius:8px;background:linear-gradient(135deg,#62d2a2,#42b89a);font-size:.75rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📤 학부모 전송</button>' +
+    html += '<div class="register-form-actions" style="gap:8px">' +
+      '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="flex:1">💾 저장</button>' +
+      '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="flex:1;background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
       '</div></div>';
   }
 
@@ -4363,7 +4362,7 @@ function sendDailyToParent(who, dk, name) {
     alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
   if(window.fbSaveReport) window.fbSaveReport(who, dk, name, true);
-  var btn = event.target;
+  var btn = document.querySelector('[onclick="sendDailyToParent(''+who+'',''+dk+'',''+name+'')"]');
   if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
 }
 
@@ -4387,10 +4386,9 @@ function sendMonthlyToParent(who, name, y, m) {
     });
     window._fbSet('monthlyReports/'+who+'_'+name+'_'+y+'_'+String(m+1).padStart(2,'0'), safe);
   }
-  var btn = event.target;
+  var btn = document.querySelector('[onclick="sendMonthlyToParent(''+who+'',''+name+'','+y+','+m+')"]');
   if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#1565c0'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
 }
-
 
 function saveDailyReport(who, dk, name) {
   var r = getDailyReport(who, dk, name);
@@ -8207,10 +8205,8 @@ window.fbSaveHwAssigned = async function(name) {
 window.fbSaveReport = async function(who, dateKey, name, released) {
   var r = window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name];
   if (!r) return;
-  // released 파라미터가 명시적으로 true일 때만 설정, 아니면 기존 값 유지
+  if(released) r.released = true;
   var safe = Object.assign({}, r, { who: who, dateKey: dateKey, name: name });
-  if(released === true) safe.released = true;
-  else delete safe.released; // 일반 저장 시 released 제거
   await fbSet('reports/' + who + '_' + dateKey + '_' + name, safe);
 };
 
