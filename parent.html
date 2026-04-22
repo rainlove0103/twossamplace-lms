@@ -1182,7 +1182,7 @@ function renderDailyReports() {
       '</div><span class="report-card-type rtype-daily">데일리</span></div>'+
       '<div class="report-card-body">';
 
-    // 리뷰 점수 / 레디영어(클래스5) 뱃지
+    // 리뷰 점수 / 레디영어 뱃지
     var _stu = (memberRoster[currentParent.who]||[]).find(function(s){return s.name===currentParent.name;});
     var _isBeta = _stu && (_stu.class==='초등부'||_stu.class==='중등부');
     var badges = '';
