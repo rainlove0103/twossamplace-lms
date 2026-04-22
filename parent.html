@@ -361,6 +361,7 @@ var makeupSchedules = {};
 var scheduleDates = {};
 var hwAssigned = {};
 var bookRecords = {};
+var monthlyReports = {};
 
 var currentParent = null; // {name, who, attCode, clsKey}
 var parentCalYear = new Date().getFullYear();
@@ -629,6 +630,15 @@ async function loadAllData() {
     var s10 = await db.collection('bookRecords').get();
     s10.forEach(function(doc){
       try{ bookRecords[doc.id] = JSON.parse(doc.data().books||'[]'); }catch(e){}
+    });
+
+    // 먼슬리 리포트
+    var sMr = await db.collection('monthlyReports').get();
+    sMr.forEach(function(doc){
+      var d = doc.data();
+      if(!d.name) return;
+      if(!monthlyReports[d.name]) monthlyReports[d.name] = [];
+      monthlyReports[d.name].push(d);
     });
 
     populateStudentSelect();

@@ -4296,8 +4296,9 @@ function renderDailyReport(who) {
         '<textarea id="rpt-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:64px;margin-bottom:0">'+r[f.key]+'</textarea>' +
         '</div>';
     });
-    html += '<div class="register-form-actions">' +
+    html += '<div class="register-form-actions" style="justify-content:space-between">' +
       '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')">💾 저장</button>' +
+      '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
       '</div></div>';
   }
 
@@ -4342,6 +4343,80 @@ function toggleLeddiDone(who, dk, name) {
     card.style.border = '1.5px solid '+(r.leddiDone?'#a5d6a7':'#e8ddd0');
     var label = card.querySelector('div');
     if(label) label.style.color = r.leddiDone ? '#2e7d32' : '#a07040';
+  }
+}
+
+function sendDailyToParent(who, dk, name) {
+  // 먼저 현재 폼 내용 저장
+  var r = getDailyReport(who, dk, name);
+  var dateEl = document.getElementById('rpt-lessonDate');
+  if(dateEl) r.lessonDate = dateEl.value;
+  ['lesson','review','homework','leddi','feedback'].forEach(function(key){
+    var el2 = document.getElementById('rpt-'+key);
+    if(el2) r[key] = el2.value.trim();
+  });
+  var scoreEl = document.getElementById('rpt-reviewScore');
+  if(scoreEl) r.reviewScore = scoreEl.value.trim();
+  var now = new Date();
+  r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
+
+  if(!r.lesson && !r.review && !r.homework && !r.feedback) {
+    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!');
+    return;
+  }
+
+  // released: true로 Firebase 저장
+  if(window.fbSaveReport) window.fbSaveReport(who, dk, name, true);
+  var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
+  if(btn){
+    btn.textContent='✅ 전송됨!';
+    btn.style.background='#2e7d32';
+    setTimeout(function(){
+      btn.textContent='📤 학부모 전송';
+      btn.style.background='';
+    },2000);
+  }
+}
+
+function sendMonthlyToParent(who, name, y, m) {
+  // 먼저 저장
+  saveMonthlySummary(who, name, y, m);
+
+  var mrKey = 'mr_'+who+'_'+name+'_'+y+'_'+m;
+  var data = {};
+  ['lesson','review','homework','feedback','comment'].forEach(function(k){
+    var el2 = document.getElementById('mr-'+k);
+    if(el2) data[k] = el2.value;
+  });
+
+  if(!data.lesson && !data.review && !data.homework && !data.feedback && !data.comment) {
+    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!');
+    return;
+  }
+
+  // Firebase에 먼슬리 리포트 저장
+  if(window._fbSet) {
+    var ctx = window._mrContext || {};
+    var safe = Object.assign({}, data, {
+      who: who, name: name, year: y, month: m,
+      type: 'monthly',
+      date: y+'-'+String(m+1).padStart(2,'0'),
+      sentAt: new Date().toISOString(),
+      avgScore: ctx.avgScore||null,
+      leddiPct: ctx.leddiPct||null,
+      attData: ctx.attData||null
+    });
+    window._fbSet('monthlyReports/'+who+'_'+name+'_'+y+'_'+String(m+1).padStart(2,'0'), safe);
+  }
+
+  var btn = document.querySelector('[onclick="sendMonthlyToParent(\''+who+'\',\''+name+'\','+y+','+m+')"]');
+  if(btn){
+    btn.textContent='✅ 전송됨!';
+    btn.style.background='#1565c0';
+    setTimeout(function(){
+      btn.textContent='📤 학부모 전송';
+      btn.style.background='';
+    },2000);
   }
 }
 
@@ -4612,6 +4687,7 @@ function openMonthlyDetail(who, name, y, m) {
     '<div style="font-size:1rem;font-weight:700;color:var(--brown)">'+name+' · '+monthLabel+' 먼슬리리포트</div>' +
     '<button onclick="generateMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')" style="margin-left:auto;background:var(--cookie);border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">✨ AI 요약 생성</button>' +
     '<button onclick="saveMonthlySummary(\''+who+'\',\''+name+'\','+y+','+m+')" style="background:#62d2a2;border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">💾 저장</button>' +
+    '<button onclick="sendMonthlyToParent(\''+who+'\',\''+name+'\','+y+','+m+')" style="background:linear-gradient(135deg,#7ec8e3,#4ba8d4);border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📤 학부모 전송</button>' +
     '<button onclick="downloadMonthlyPDF(\''+who+'\',\''+name+'\','+y+','+m+')" style="background:#5c3d1e;border:none;border-radius:10px;padding:7px 16px;font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">📄 PDF 저장</button>' +
     '</div>';
 
@@ -7657,14 +7733,7 @@ function buildRegForm(who,s){
     '<div><div class="form-label">보호자 연락처</div><input class="register-input" id="reg-guardian-'+who+'" value="'+(s?s.guardian:'')+'" placeholder="010-0000-0000" oninput="syncAlimtalk(\''+who+'\')"></div></div>'+
     '<div class="register-row"><div><div class="form-label">출결번호 / 비밀번호</div><input class="register-input" id="reg-attcode-'+who+'" value="'+(s?s.attCode||'':'')+'" placeholder="예: 1234"></div>'+
     '<div><div class="form-label">알림톡 번호</div><input class="register-input" id="reg-alimtalk-'+who+'" value="'+(s?s.alimtalk||s.guardian||'':'')+'" placeholder="010-0000-0000 (보호자 번호 자동입력)"></div></div>'+
-    (!isEdit?'<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:12px;margin-bottom:4px">'+
-      '<input type="checkbox" id="reg-privacy-'+who+'" style="width:18px;height:18px;margin-top:2px;accent-color:var(--cookie);flex-shrink:0;cursor:pointer">'+
-      '<label for="reg-privacy-'+who+'" style="font-size:.78rem;color:var(--text-mid);line-height:1.6;cursor:pointer">'+
-        '개인정보 수집 및 이용에 동의합니다.<br>'+
-        '<span style="color:var(--text-soft);font-size:.72rem">수집 항목: 이름, 연락처, 학교, 학년 · 목적: 학원 운영 및 출결 관리 · 보유 기간: 원생 재원 기간</span>'+
-        '<br><span style="color:var(--text-soft);font-size:.72rem">※ 수업 중 촬영한 사진 및 영상이 투쌤플레이스 SNS(인스타그램 등)에 게시될 수 있습니다.</span>'+
-      '</label>'+
-    '</div>':'')+'<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
+    '<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
 }
 function syncAlimtalk(who) {
   var guardian = (document.getElementById('reg-guardian-'+who)||{value:''}).value;
@@ -7697,8 +7766,6 @@ function submitRegister(who){
   if(!v.name){document.getElementById('reg-name-'+who).focus();return;}
   if(!v.cls){document.getElementById('reg-class-'+who).focus();return;}
   if(!v.day){document.getElementById('reg-day-'+who).focus();return;}
-  var privacyCb=document.getElementById('reg-privacy-'+who);
-  if(privacyCb&&!privacyCb.checked){privacyCb.closest('div').style.border='1.5px solid #e8547a';privacyCb.focus();alert('개인정보 수집 및 이용에 동의해주세요.');return;}
   var today=new Date(), date=v.joined||(today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0'));
   if(!memberRoster[who]) memberRoster[who]=[];
   var sy=new Date().getMonth()>=2?new Date().getFullYear():new Date().getFullYear()-1;
@@ -8165,9 +8232,10 @@ window.fbSaveHwAssigned = async function(name) {
   await fbSet('hwAssigned/' + name, { hw: JSON.stringify(safe) });
 };
 
-window.fbSaveReport = async function(who, dateKey, name) {
+window.fbSaveReport = async function(who, dateKey, name, released) {
   var r = window.dailyReports[who] && window.dailyReports[who][dateKey] && window.dailyReports[who][dateKey][name];
   if (!r) return;
+  if(released) r.released = true;
   var safe = Object.assign({}, r, { who: who, dateKey: dateKey, name: name });
   await fbSet('reports/' + who + '_' + dateKey + '_' + name, safe);
 };
