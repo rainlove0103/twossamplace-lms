@@ -7657,7 +7657,14 @@ function buildRegForm(who,s){
     '<div><div class="form-label">보호자 연락처</div><input class="register-input" id="reg-guardian-'+who+'" value="'+(s?s.guardian:'')+'" placeholder="010-0000-0000" oninput="syncAlimtalk(\''+who+'\')"></div></div>'+
     '<div class="register-row"><div><div class="form-label">출결번호 / 비밀번호</div><input class="register-input" id="reg-attcode-'+who+'" value="'+(s?s.attCode||'':'')+'" placeholder="예: 1234"></div>'+
     '<div><div class="form-label">알림톡 번호</div><input class="register-input" id="reg-alimtalk-'+who+'" value="'+(s?s.alimtalk||s.guardian||'':'')+'" placeholder="010-0000-0000 (보호자 번호 자동입력)"></div></div>'+
-    '<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
+    (!isEdit?'<div style="display:flex;align-items:flex-start;gap:10px;padding:12px 14px;background:#fffbf5;border:1.5px solid #f0e8dc;border-radius:12px;margin-bottom:4px">'+
+      '<input type="checkbox" id="reg-privacy-'+who+'" style="width:18px;height:18px;margin-top:2px;accent-color:var(--cookie);flex-shrink:0;cursor:pointer">'+
+      '<label for="reg-privacy-'+who+'" style="font-size:.78rem;color:var(--text-mid);line-height:1.6;cursor:pointer">'+
+        '개인정보 수집 및 이용에 동의합니다.<br>'+
+        '<span style="color:var(--text-soft);font-size:.72rem">수집 항목: 이름, 연락처, 학교, 학년 · 목적: 학원 운영 및 출결 관리 · 보유 기간: 원생 재원 기간</span>'+
+        '<br><span style="color:var(--text-soft);font-size:.72rem">※ 수업 중 촬영한 사진 및 영상이 투쌤플레이스 SNS(인스타그램 등)에 게시될 수 있습니다.</span>'+
+      '</label>'+
+    '</div>':'')+'<div class="register-form-actions"><button class="btn-reg-cancel" onclick="'+cancelFn+'">취소</button><button class="btn-reg-submit" onclick="'+saveFn+'">'+(isEdit?'수정 완료':'등록 완료')+'</button></div></div>';
 }
 function syncAlimtalk(who) {
   var guardian = (document.getElementById('reg-guardian-'+who)||{value:''}).value;
@@ -7690,6 +7697,8 @@ function submitRegister(who){
   if(!v.name){document.getElementById('reg-name-'+who).focus();return;}
   if(!v.cls){document.getElementById('reg-class-'+who).focus();return;}
   if(!v.day){document.getElementById('reg-day-'+who).focus();return;}
+  var privacyCb=document.getElementById('reg-privacy-'+who);
+  if(privacyCb&&!privacyCb.checked){privacyCb.closest('div').style.border='1.5px solid #e8547a';privacyCb.focus();alert('개인정보 수집 및 이용에 동의해주세요.');return;}
   var today=new Date(), date=v.joined||(today.getFullYear()+'.'+String(today.getMonth()+1).padStart(2,'0')+'.'+String(today.getDate()).padStart(2,'0'));
   if(!memberRoster[who]) memberRoster[who]=[];
   var sy=new Date().getMonth()>=2?new Date().getFullYear():new Date().getFullYear()-1;
