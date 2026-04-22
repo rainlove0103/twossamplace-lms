@@ -361,7 +361,7 @@ var makeupSchedules = {};
 var scheduleDates = {};
 var hwAssigned = {};
 var bookRecords = {};
-var monthlyReports = {};
+var dataReady = false;
 
 var currentParent = null; // {name, who, attCode, clsKey}
 var parentCalYear = new Date().getFullYear();
@@ -632,15 +632,6 @@ async function loadAllData() {
       try{ bookRecords[doc.id] = JSON.parse(doc.data().books||'[]'); }catch(e){}
     });
 
-    // 먼슬리 리포트
-    var sMr = await db.collection('monthlyReports').get();
-    sMr.forEach(function(doc){
-      var d = doc.data();
-      if(!d.name) return;
-      if(!monthlyReports[d.name]) monthlyReports[d.name] = [];
-      monthlyReports[d.name].push(d);
-    });
-
     populateStudentSelect();
     dataReady = true;
     autoLogin();
@@ -869,7 +860,7 @@ function renderParentCal() {
     var rec = getAttRec(name, who, dk);
     var st = rec ? (typeof rec.val==='object' ? rec.val.status : rec.val) : '';
     var dotHtml = st ? '<div style="width:8px;height:8px;border-radius:50%;background:'+(ATT_DOT_COLOR[st]||'#aaa')+';margin:2px auto 0"></div>' : '';
-    html += '<div class="'+cls+'" onclick="selectParentCalDate(\''+dk+'\')"><div class="p-cal-day-num">'+d+'</div>'+dotHtml+'</div>';
+    html += '<div class="'+cls+'" onclick="selectParentCalDate(&apos;'+dk+'&apos;)"><div class="p-cal-day-num">'+d+'</div>'+dotHtml+'</div>';
   }
   var rem = (firstDay+daysInMonth)%7; rem = rem?7-rem:0;
   for(var j=1;j<=rem;j++) html += '<div class="p-cal-cell cal-other"><div class="p-cal-day-num">'+j+'</div></div>';
