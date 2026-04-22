@@ -4296,9 +4296,9 @@ function renderDailyReport(who) {
         '<textarea id="rpt-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:64px;margin-bottom:0">'+r[f.key]+'</textarea>' +
         '</div>';
     });
-    html += '<div class="register-form-actions" style="justify-content:space-between">' +
-      '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')">💾 저장</button>' +
-      '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
+    html += '<div class="register-form-actions" style="gap:8px">' +
+      '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="flex:1">💾 저장</button>' +
+      '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="flex:1;background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
       '</div></div>';
   }
 
@@ -4347,7 +4347,6 @@ function toggleLeddiDone(who, dk, name) {
 }
 
 function sendDailyToParent(who, dk, name) {
-  // 먼저 현재 폼 내용 저장
   var r = getDailyReport(who, dk, name);
   var dateEl = document.getElementById('rpt-lessonDate');
   if(dateEl) r.lessonDate = dateEl.value;
@@ -4359,66 +4358,38 @@ function sendDailyToParent(who, dk, name) {
   if(scoreEl) r.reviewScore = scoreEl.value.trim();
   var now = new Date();
   r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
-
   if(!r.lesson && !r.review && !r.homework && !r.feedback) {
-    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!');
-    return;
+    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
-
-  // released: true로 Firebase 저장
   if(window.fbSaveReport) window.fbSaveReport(who, dk, name, true);
   var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
-  if(btn){
-    btn.textContent='✅ 전송됨!';
-    btn.style.background='#2e7d32';
-    setTimeout(function(){
-      btn.textContent='📤 학부모 전송';
-      btn.style.background='';
-    },2000);
-  }
+  if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
 }
 
 function sendMonthlyToParent(who, name, y, m) {
-  // 먼저 저장
   saveMonthlySummary(who, name, y, m);
-
-  var mrKey = 'mr_'+who+'_'+name+'_'+y+'_'+m;
   var data = {};
   ['lesson','review','homework','feedback','comment'].forEach(function(k){
     var el2 = document.getElementById('mr-'+k);
     if(el2) data[k] = el2.value;
   });
-
   if(!data.lesson && !data.review && !data.homework && !data.feedback && !data.comment) {
-    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!');
-    return;
+    alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
-
-  // Firebase에 먼슬리 리포트 저장
   if(window._fbSet) {
     var ctx = window._mrContext || {};
     var safe = Object.assign({}, data, {
-      who: who, name: name, year: y, month: m,
-      type: 'monthly',
+      who: who, name: name, year: y, month: m, type: 'monthly',
       date: y+'-'+String(m+1).padStart(2,'0'),
       sentAt: new Date().toISOString(),
-      avgScore: ctx.avgScore||null,
-      leddiPct: ctx.leddiPct||null,
-      attData: ctx.attData||null
+      avgScore: ctx.avgScore||null, leddiPct: ctx.leddiPct||null, attData: ctx.attData||null
     });
     window._fbSet('monthlyReports/'+who+'_'+name+'_'+y+'_'+String(m+1).padStart(2,'0'), safe);
   }
-
   var btn = document.querySelector('[onclick="sendMonthlyToParent(\''+who+'\',\''+name+'\','+y+','+m+')"]');
-  if(btn){
-    btn.textContent='✅ 전송됨!';
-    btn.style.background='#1565c0';
-    setTimeout(function(){
-      btn.textContent='📤 학부모 전송';
-      btn.style.background='';
-    },2000);
-  }
+  if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#1565c0'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
 }
+
 
 function saveDailyReport(who, dk, name) {
   var r = getDailyReport(who, dk, name);
