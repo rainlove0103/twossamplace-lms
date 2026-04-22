@@ -1146,11 +1146,11 @@ function openHwModal(type) {
     if(all.length === 0) {
       el.innerHTML = '<div class="p-hw-empty"><span class="p-hw-empty-ico">🎉</span>오늘 마감 과제가 없어요!</div>';
     } else {
-      el.innerHTML = all.map(function(h, i){
+      el.innerHTML = all.map(function(h){
         var origIdx = hw.indexOf(h);
         var done = !!h.done;
         return '<div class="p-hw-item p-hw-today'+(done?' done':'')+'">' +
-          '<div class="p-hw-cb'+(done?' checked':'')+'" onclick="toggleParentHw(''+name+'','+origIdx+','today')">'+(done?'✓':'')+'</div>' +
+          '<div class="p-hw-cb'+(done?' checked':'')+'" data-idx="'+origIdx+'" data-type="today" onclick="_phwClick(this)">'+(done?'✓':'')+'</div>' +
           '<span style="font-size:1.1rem;flex-shrink:0">'+(h.ico||'📝')+'</span>' +
           '<div style="flex:1">' +
             '<div class="p-hw-name'+(done?' done':'')+'">'+(h.name||'')+'</div>' +
@@ -1174,7 +1174,7 @@ function openHwModal(type) {
         var done = !!h.done;
         var dl = h.deadline ? (h.deadline.getMonth()+1)+'월 '+h.deadline.getDate()+'일 마감' : '';
         return '<div class="p-hw-item p-hw-overdue'+(done?' done':'')+'">' +
-          '<div class="p-hw-cb'+(done?' checked':'')+'" onclick="toggleParentHw(''+name+'','+origIdx+','overdue')">'+(done?'✓':'')+'</div>' +
+          '<div class="p-hw-cb'+(done?' checked':'')+'" data-idx="'+origIdx+'" data-type="overdue" onclick="_phwClick(this)">'+(done?'✓':'')+'</div>' +
           '<span style="font-size:1.1rem;flex-shrink:0">'+(h.ico||'📝')+'</span>' +
           '<div style="flex:1">' +
             '<div class="p-hw-name'+(done?' done':'')+'">'+(h.name||'')+'</div>' +
@@ -1191,6 +1191,12 @@ function openHwModal(type) {
 function closeHwModal() {
   document.getElementById('hw-today-modal').classList.remove('open');
   document.getElementById('hw-overdue-modal').classList.remove('open');
+}
+
+function _phwClick(el) {
+  var idx = parseInt(el.getAttribute("data-idx"));
+  var type = el.getAttribute("data-type");
+  if(currentParent) toggleParentHw(currentParent.name, idx, type);
 }
 
 function toggleParentHw(name, idx, type) {
