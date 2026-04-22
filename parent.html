@@ -1183,11 +1183,9 @@ function renderDailyReports() {
       '<div class="report-card-body">';
 
     // 리뷰 점수 / 레디영어 뱃지
-    var _stu = (memberRoster[currentParent.who]||[]).find(function(s){return s.name===currentParent.name;});
-    var _isBeta = _stu && (_stu.class==='초등부'||_stu.class==='중등부');
     var badges = '';
     if(displayR.reviewScore) badges += '<span style="background:#fff8ee;border:1px solid #f5d9b0;border-radius:100px;padding:2px 10px;font-size:.72rem;font-weight:700;color:#a07040;margin-right:6px">📊 리뷰테스트 '+displayR.reviewScore+'점</span>';
-    if(displayR.leddiDone)   badges += '<span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:100px;padding:2px 10px;font-size:.72rem;font-weight:700;color:#2e7d32">'+(_isBeta?'🎓 클래스5 완료':'🌐 레디영어 완료')+' ✅</span>';
+    if(displayR.leddiDone)   badges += '<span style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:100px;padding:2px 10px;font-size:.72rem;font-weight:700;color:#2e7d32">🌐 레디영어 완료 ✅</span>';
     if(badges) html += '<div style="margin-bottom:12px">'+badges+'</div>';
 
     if(displayR.lesson)   html += mkField('📖 수업 내용', displayR.lesson);
