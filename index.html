@@ -935,8 +935,8 @@ function formatDL(dl){
 }
 function todayKey(){ var d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 function fmtDate(y,m,d){
-  var dt=new Date(y,m,d);
-  return dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');
+  // new Date() 경유 없이 직접 계산 (DST·시간대 오차 방지)
+  return y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
 }
 
 function calcGrade(s){
@@ -4358,12 +4358,20 @@ function sendDailyToParent(who, dk, name) {
   if(scoreEl) r.reviewScore = scoreEl.value.trim();
   var now = new Date();
   r.savedAt = (now.getMonth()+1)+'월 '+now.getDate()+'일 '+now.getHours()+':'+String(now.getMinutes()).padStart(2,'0');
-  if(!r.lesson && !r.review && !r.homework && !r.feedback) {
+  if(!r.lesson && !r.review && !r.homework && !r.feedback && !r.leddi) {
     alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
-  if(window.fbSaveReport) window.fbSaveReport(who, dk, name, true);
   var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
-  if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
+  if(btn){ btn.textContent='⏳ 전송 중...'; btn.disabled=true; }
+  Promise.resolve(window.fbSaveReport ? window.fbSaveReport(who, dk, name, true) : null)
+    .then(function(){
+      if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; btn.disabled=false;
+        setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
+    }).catch(function(e){
+      console.error('전송 오류:', e);
+      if(btn){ btn.textContent='📤 학부모 전송'; btn.disabled=false; }
+      alert('전송 중 오류가 발생했어요. 다시 시도해주세요.');
+    });
 }
 
 function sendMonthlyToParent(who, name, y, m) {
