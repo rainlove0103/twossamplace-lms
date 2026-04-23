@@ -122,7 +122,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .att-chip{font-size:.6rem;font-weight:700;padding:1px 5px;border-radius:100px;display:inline-block;margin:1px;}
 .p-cal-cell{cursor:pointer;transition:background .12s;}
 .p-cal-cell:hover{background:#f3f0ff;}
-.p-att-icon{width:11px;height:11px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1px;font-size:.3rem;font-weight:900;color:white;}
+.p-att-icon{width:8px;height:8px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1px;font-size:.3rem;font-weight:900;color:white;}
 .p-att-icon.ico-출석{background:#66bb6a;}
 .p-att-icon.ico-등원{background:#66bb6a;}
 .p-att-icon.ico-하원{background:#42a5f5;}
@@ -923,7 +923,7 @@ function renderAttDetail() {
     el.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 2px">' +
       legendItems.map(function(it){
         return '<div style="display:flex;align-items:center;gap:4px">'+
-          '<div class="p-att-icon '+it.cls+'" style="width:16px;height:16px"></div>'+
+          '<div class="p-att-icon '+it.cls+'" style="width:8px;height:8px"></div>'+
           '<span style="font-size:.68rem;color:var(--text-soft)">'+it.label+'</span>'+
         '</div>';
       }).join('') +
@@ -1038,7 +1038,7 @@ function renderParentCal() {
       if(isMakeup) st = '보강예정';
     }
     var icoClass = st ? 'ico-'+st.replace(/\+/g,'').replace('예정','') : '';
-    var iconHtml = st ? '<div class="p-att-icon '+icoClass+(st==='보강예정'?' ico-makeup-plan':'')+'"></div>' : '<div style="height:11px"></div>';
+    var iconHtml = st ? '<div class="p-att-icon '+icoClass+(st==='보강예정'?' ico-makeup-plan':'')+'"></div>' : '<div style="height:8px"></div>';
     html += '<div class="'+cls+'" onclick="selectParentCalDate(&apos;'+dk+'&apos;)"><div class="p-cal-day-num">'+d+'</div>'+iconHtml+'</div>';
   }
   var rem = (firstDay+daysInMonth)%7; rem = rem?7-rem:0;
