@@ -835,6 +835,7 @@ var counselCalYear = new Date().getFullYear(), counselCalMonth = new Date().getM
 var counselSelDate = null, counselWriteDate = null, counselWriteType = 'past', counselEditId = null;
 var noticeRecipients = new Set(), expandedClasses = new Set();
 var makeupSchedules = {};
+window.makeupSchedules = makeupSchedules;
 var makeupStudent = null, makeupWho = null;
 var makeupCalYear = new Date().getFullYear(), makeupCalMonth = new Date().getMonth();
 var makeupSelectedDates = new Set();
@@ -8647,6 +8648,15 @@ async function loadAllData() {
     if(!window.absenceReasons[a.clsKey]) window.absenceReasons[a.clsKey]={};
     if(!window.absenceReasons[a.clsKey][a.name]) window.absenceReasons[a.clsKey][a.name]={};
     window.absenceReasons[a.clsKey][a.name][a.dateKey]=a.reason||'';
+  });
+
+  // 보강 일정 로드
+  var mkData = await fbGetCol('makeupSchedules');
+  Object.keys(mkData).forEach(function(name) {
+    try {
+      var dates = mkData[name].dates;
+      window.makeupSchedules[name] = typeof dates==='string' ? JSON.parse(dates) : (dates||[]);
+    } catch(e) {}
   });
 
   // classStudents 복원 (memberRoster 기반)
