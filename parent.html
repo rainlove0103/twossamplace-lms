@@ -936,31 +936,11 @@ function renderAttDetail() {
     var DOW_KO3 = ['일','월','화','수','목','금','토'];
     var dt3 = new Date(parentCalSel+'T00:00:00');
     var lbl3 = (dt3.getMonth()+1)+'월 '+dt3.getDate()+'일 ('+DOW_KO3[dt3.getDay()]+')';
-    var mkup = (makeupSchedules[name]||[]).find(function(s){ return s.date===parentCalSel; });
-    if(mkup) {
-      el.innerHTML = '<div class="p-att-detail-card">'+
-        '<div class="p-att-detail-header">'+
-          '<div style="width:32px;height:32px;border-radius:50%;background:transparent;border:2px dashed #ab47bc;flex-shrink:0"></div>'+
-          '<div style="flex:1">'+
-            '<div style="font-size:.88rem;font-weight:700;color:var(--brown)">'+lbl3+'</div>'+
-            '<span class="att-chip" style="background:#f3e5f5;color:#6a1b9a;margin-top:2px">보강 예정</span>'+
-          '</div>'+
-        '</div>'+
-        '<div class="p-att-detail-body">'+
-          '<div class="p-att-time-row">'+
-            '<div class="p-att-time-dot" style="background:#ab47bc"></div>'+
-            '<span class="p-att-time-label">시간</span>'+
-            '<span class="p-att-time-val">'+(mkup.time||'미정')+'</span>'+
-          '</div>'+
-        '</div>'+
-      '</div>';
-    } else {
-      el.innerHTML = '<div class="p-att-detail-card"><div class="p-att-detail-body" style="text-align:center;padding:16px">'+
-        '<div style="font-size:1.4rem;margin-bottom:6px">📭</div>'+
-        '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:2px">'+lbl3+'</div>'+
-        '<div style="font-size:.72rem;color:var(--text-soft)">출결 기록이 없어요.</div>'+
-      '</div></div>';
-    }
+    el.innerHTML = '<div class="p-att-detail-card"><div class="p-att-detail-body" style="text-align:center;padding:16px">'+
+      '<div style="font-size:1.4rem;margin-bottom:6px">📭</div>'+
+      '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:2px">'+lbl3+'</div>'+
+      '<div style="font-size:.72rem;color:var(--text-soft)">출결 기록이 없어요.</div>'+
+    '</div></div>';
     return;
   }
   var val = rec.val;
@@ -1032,13 +1012,8 @@ function renderParentCal() {
     var cls = 'p-cal-cell'+(isToday?' cal-today':'')+(isSel?' cal-selected':'');
     var rec = getAttRec(name, who, dk);
     var st = rec ? (typeof rec.val==='object' ? rec.val.status : rec.val) : '';
-    // 출결 기록 없으면 보강 예정일인지 확인
-    if(!st) {
-      var isMakeup = (makeupSchedules[name]||[]).some(function(s){ return s.date===dk; });
-      if(isMakeup) st = '보강예정';
-    }
-    var icoClass = st ? 'ico-'+st.replace(/\+/g,'').replace('예정','') : '';
-    var iconHtml = st ? '<div class="p-att-icon '+icoClass+(st==='보강예정'?' ico-makeup-plan':'')+'"></div>' : '<div style="height:8px"></div>';
+    var icoClass = st ? 'ico-'+st.replace(/\+/g,'') : '';
+    var iconHtml = st ? '<div class="p-att-icon '+icoClass+'"></div>' : '<div style="height:8px"></div>';
     html += '<div class="'+cls+'" onclick="selectParentCalDate(&apos;'+dk+'&apos;)"><div class="p-cal-day-num">'+d+'</div>'+iconHtml+'</div>';
   }
   var rem = (firstDay+daysInMonth)%7; rem = rem?7-rem:0;
