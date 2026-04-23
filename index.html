@@ -1038,6 +1038,7 @@ function saveGuideItems(who) {
 }
 
 function removeGuideItem(i, who) {
+  if(!confirm('안내 항목을 삭제할까요?')) return;
   guideItems.splice(i, 1);
   renderGuideEditor(who, document.getElementById(who+'-main-content'));
 }
@@ -2237,7 +2238,7 @@ function showBookCelebration(count) {
   // 배경 클릭으로 닫기
   overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
 }
-function deleteBook(idx){ bookRecords[currentStudent].splice(idx,1); if(window.fbSaveBookRecords) window.fbSaveBookRecords(currentStudent); renderBookModal(currentStudent); }
+function deleteBook(idx){ if(!confirm('독서 기록을 삭제할까요?')) return; bookRecords[currentStudent].splice(idx,1); if(window.fbSaveBookRecords) window.fbSaveBookRecords(currentStudent); renderBookModal(currentStudent); }
 
 /* ====== HW CALENDAR ====== */
 function renderHwCalendar(name){
@@ -3587,6 +3588,8 @@ var calCategories = [
   {id:'lesson',  name:'수업 준비',  color:'#ffb347', bg:'#fff3e0'},
 ];
 var calCatIdSeq = 100;
+window.calCategories = calCategories;
+window.calCatIdSeq = calCatIdSeq;
 
 // 일정 데이터: calEvents[dateKey] = [{id, title, catId, time, done, note}]
 var calEvents = {};
@@ -3839,11 +3842,16 @@ function renderCalWeekly(who) {
     html += '<div style="border-radius:12px;border:2px solid '+(isSel?'var(--cookie)':isT?'#66bb6a':'#f0e8dc')+';background:'+(isSel?'var(--cookie-bg)':isT?'#f0fff8':'white')+';padding:8px 6px;cursor:pointer;min-height:80px;transition:all .15s" onclick="selCalDate(\''+dk+'\',\''+who+'\')">' +
       '<div style="text-align:center;font-size:.68rem;color:var(--text-soft)">'+DOW[d.getDay()]+'</div>' +
       '<div style="text-align:center;font-size:.88rem;font-weight:700;color:'+(isSel?'var(--cookie)':isT?'#2e7d32':'var(--brown)')+';margin-bottom:4px">'+d.getDate()+'</div>';
-    evs.slice(0,3).forEach(function(ev){
+    var wMakeup = Object.keys(window.makeupSchedules||{}).some(function(n){
+      return (window.makeupSchedules[n]||[]).some(function(s){return s.date===dk;});
+    });
+    if(wMakeup) html+='<div style="font-size:.57rem;font-weight:600;padding:2px 4px;border-radius:4px;background:#f3e5f5;color:#6a1b9a;margin-bottom:2px">🔄 보강</div>';
+    evs.slice(0,wMakeup?2:3).forEach(function(ev){
       var cat=getCat(ev.catId);
       html+='<div style="font-size:.57rem;font-weight:600;padding:2px 4px;border-radius:4px;background:'+cat.bg+';color:'+cat.color+';margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(ev.done?'opacity:.4':'')+'">'+ev.title+'</div>';
     });
-    if(evs.length>3) html+='<div style="font-size:.55rem;color:var(--text-soft);text-align:center">+'+( evs.length-3)+'</div>';
+    var wExtra = evs.length-(wMakeup?2:3);
+    if(wExtra>0) html+='<div style="font-size:.55rem;color:var(--text-soft);text-align:center">+'+wExtra+'</div>';
     html+='</div>';
   });
   html += '</div>';
@@ -3928,11 +3936,17 @@ function renderCalMonthly(who) {
     html+='<div class="'+cls+'" onclick="selCalDate(\''+dk2+'\',\''+who+'\')">' +
       '<div class="t-att-cal-day-num" style="color:'+(isM?(isSun?'#ef5350':isSat?'#42a5f5':''):'')+'">'+day2+'</div>';
     if(holiday && isM) html+='<div style="font-size:.5rem;padding:1px 3px;border-radius:3px;background:#fce4ec;color:#c62828;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+holiday+'</div>';
-    evs.slice(0,holiday?1:2).forEach(function(ev){
+    // 보강 일정 표시
+    var hasMakeup = Object.keys(window.makeupSchedules||{}).some(function(n){
+      return (window.makeupSchedules[n]||[]).some(function(s){return s.date===dk2;});
+    });
+    if(hasMakeup && isM) html+='<div style="font-size:.52rem;padding:1px 3px;border-radius:3px;background:#f3e5f5;color:#6a1b9a;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🔄 보강</div>';
+    var maxEvs = holiday ? 0 : hasMakeup ? 1 : 2;
+    evs.slice(0,maxEvs).forEach(function(ev){
       var cat=getCat(ev.catId);
       html+='<div style="font-size:.52rem;padding:1px 3px;border-radius:3px;background:'+cat.bg+';color:'+cat.color+';margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(ev.done?'opacity:.4':'')+'">'+ev.title+'</div>';
     });
-    var extraCnt = evs.length-(holiday?1:2);
+    var extraCnt = evs.length-maxEvs;
     if(extraCnt>0) html+='<div style="font-size:.52rem;color:var(--text-soft);text-align:center">+'+extraCnt+'</div>';
     html+='</div>';
   }
@@ -4077,12 +4091,15 @@ function addCalCat(who) {
   if(!name) return;
   var c=CAL_COLORS[selCalColorIdx]||CAL_COLORS[0];
   calCategories.push({id:'cat'+calCatIdSeq++,name:name,color:c.color,bg:c.bg});
+  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
   var existing=document.getElementById('cal-cat-mgr-box');
   if(existing) existing.remove();
   openCalCatMgr(who);
 }
 function deleteCalCat(id, who) {
+  if(!confirm('캘린더 카테고리를 삭제할까요?')) return;
   calCategories=calCategories.filter(function(c){return c.id!==id;});
+  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
   var existing=document.getElementById('cal-cat-mgr-box');
   if(existing) existing.remove();
   openCalCatMgr(who);
@@ -4091,6 +4108,7 @@ function editCalCat(id, who) {
   var c=calCategories.find(function(c){return c.id===id;}); if(!c) return;
   var newName=prompt('카테고리 이름 수정:', c.name);
   if(newName&&newName.trim()) c.name=newName.trim();
+  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
   var existing=document.getElementById('cal-cat-mgr-box');
   if(existing) existing.remove();
   openCalCatMgr(who);
@@ -5285,6 +5303,7 @@ function deleteLecGroup(gid, who) {
 }
 
 function deleteLecture(id, who) {
+  if(!confirm('강의를 삭제할까요?')) return;
   lectures = lectures.filter(function(l){return l.id!==id;});
   if(window.fbSaveLectures) window.fbSaveLectures();
   renderLectureMgmt(who, document.getElementById(who+'-main-content'));
@@ -5781,6 +5800,7 @@ function addQuiz(lecId, vIdx, who) {
 }
 
 function removeQuiz(lecId, vIdx, qi, who) {
+  if(!confirm('퀴즈를 삭제할까요?')) return;
   var lec = lectures.find(function(l){return l.id===lecId;});
   var v = lec.videos[vIdx];
   v.quizzes.splice(qi,1);
@@ -5968,6 +5988,7 @@ function addNewLecQuiz(lecId) {
 }
 
 function removeNewLecQuiz(lecId, qi) {
+  if(!confirm('퀴즈를 삭제할까요?')) return;
   if(newLecQuizzes[lecId]) newLecQuizzes[lecId].splice(qi,1);
   var listEl=document.getElementById('new-lec-quiz-list-'+lecId);
   if(listEl){
@@ -6031,6 +6052,7 @@ function addLectureVideo(id, who) {
 }
 
 function removeLectureVideo(id, idx, who) {
+  if(!confirm('강의 영상을 삭제할까요?')) return;
   var lec = lectures.find(function(l){return l.id===id;});
   if(!lec) return;
   lec.videos.splice(idx,1);
@@ -6270,6 +6292,7 @@ function addSyllabusDate(k, ym, who) {
 }
 
 function deleteSyllabusDate(k, dk, ym, who) {
+  if(!confirm('해당 날짜를 수업 일정에서 제외할까요?')) return;
   if(!syllabusDeletedDates[k]) syllabusDeletedDates[k] = {};
   if(!syllabusDeletedDates[k][ym]) syllabusDeletedDates[k][ym] = [];
   if(syllabusDeletedDates[k][ym].indexOf(dk) < 0) syllabusDeletedDates[k][ym].push(dk);
@@ -6522,6 +6545,7 @@ function renderHwCalDetail(who) {
 }
 
 function deleteHwFromCal(name, hwId, who) {
+  if(!confirm('과제를 삭제할까요?')) return;
   hwAssigned[name] = (hwAssigned[name]||[]).filter(function(h){return h.id!==hwId;});
   if(window.fbSaveHwAssigned) window.fbSaveHwAssigned(name);
   renderHwMgmt(who, document.getElementById(who+'-main-content'));
@@ -6607,6 +6631,7 @@ function toggleHwAssign(name, hwId, who) {
 }
 
 function removeHwAssign(name, hwId, who) {
+  if(!confirm('부여된 과제를 삭제할까요?')) return;
   hwAssigned[name] = (hwAssigned[name]||[]).filter(function(h){return h.id!==hwId;});
   renderHwMgmt(who, document.getElementById(who+'-main-content'));
 }
@@ -7347,9 +7372,12 @@ function renderMakeupNeeded(who){
       var count=monthEntries.filter(function(e){return ATTENDED.indexOf(e.s)>-1;}).length;
       var late=monthEntries.filter(function(e){return e.s==='지각';}).length;
       var absent=monthEntries.filter(function(e){return e.s==='결석';}).length;
-      if(absent>0){
+      // 보강 완료 횟수 (보강, 보강+하원 상태)
+      var makeupDone=monthEntries.filter(function(e){return e.s==='보강'||e.s==='보강+하원';}).length;
+      var needed=Math.max(0, absent-makeupDone);
+      if(needed>0){
         var parts=clsKey.split('-'), cls2=parts[0], day2=parts.slice(1).join('-');
-        results.push({name:name,cls:cls2,day:day2,count:count,late:late,absent:absent,needed:absent});
+        results.push({name:name,cls:cls2,day:day2,count:count,late:late,absent:absent,makeupDone:makeupDone,needed:needed});
       }
     });
   });
@@ -7358,7 +7386,7 @@ function renderMakeupNeeded(who){
   if(results.length===0) return '<div class="makeup-section"><div class="makeup-header"><span class="makeup-header-title">🎉 보강 필요 학생 없음</span><span class="makeup-header-sub">'+monthLabel+' 결석 학생이 없어요!</span></div></div>';
   var rows=results.map(function(r,i){
     var col=avatarPalette[i%7];
-    return '<div class="makeup-row" style="cursor:pointer" onclick="openMakeupCal(\''+r.name+'\',\''+who+'\')"><div class="makeup-avatar" style="background:'+col+'">'+r.name[0]+'</div><div><div class="makeup-name">'+r.name+'</div><div class="makeup-meta">'+r.cls+' · '+r.day+'</div><div class="makeup-meta">이달 출석 '+r.count+'회 · 지각 '+r.late+'회 · 결석 '+r.absent+'회</div></div><span class="makeup-count">보강 '+r.needed+'회 필요</span></div>';
+    return '<div class="makeup-row" style="cursor:pointer" onclick="openMakeupCal(\''+r.name+'\',\''+who+'\')"><div class="makeup-avatar" style="background:'+col+'">'+r.name[0]+'</div><div><div class="makeup-name">'+r.name+'</div><div class="makeup-meta">'+r.cls+' · '+r.day+'</div><div class="makeup-meta">이달 출석 '+r.count+'회 · 지각 '+r.late+'회 · 결석 '+r.absent+'회 · 보강완료 '+r.makeupDone+'회</div></div><span class="makeup-count">보강 '+r.needed+'회 필요</span></div>';
   }).join('');
   return '<div class="makeup-section"><div class="makeup-header"><span class="makeup-header-title">📋 보강 필요 학생</span><span class="makeup-header-sub">'+monthLabel+' 기준 · 결석 횟수만큼 보강</span></div>'+rows+'</div>';
 }
@@ -7409,6 +7437,7 @@ function saveMakeupDates(){
   renderMakeupCal(); renderAttSub(makeupWho);
 }
 function removeMakeup(name,dk){
+  if(!confirm('보강 일정을 삭제할까요?')) return;
   if(!makeupSchedules[name]) return;
   makeupSchedules[name]=makeupSchedules[name].filter(function(s){return s.date!==dk;});
   if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(name);
@@ -7942,6 +7971,7 @@ function editCounsel(id){
   var p=document.getElementById('counsel-detail-panel');if(p)p.innerHTML=renderCounselDetail();
 }
 function deleteCounsel(id){
+  if(!confirm('상담 기록을 삭제할까요?')) return;
   var sid=parseInt(id), recs=counselRecords[counselStudent]||{};
   Object.keys(recs).forEach(function(dk){recs[dk]=recs[dk].filter(function(r){return r.id!==sid;});if(recs[dk].length===0)delete recs[dk];});
   if(window.fbSaveCounsel) window.fbSaveCounsel(counselStudent);
@@ -8286,6 +8316,10 @@ window.fbSaveCalEvents = async function(dateKey) {
   await fbSet('calEvents/' + dateKey, { events: JSON.stringify(evs) });
 };
 
+window.fbSaveCalCategories = async function() {
+  await fbSet('calCategories/data', { cats: JSON.stringify(window.calCategories) });
+};
+
 window.fbSaveScheduleDates = async function(clsKey, ym) {
   var safeKey = (clsKey+'_'+ym).replace(/[\/-]/g,'_');
   var custom = (window.syllabusCustomDates[clsKey]&&window.syllabusCustomDates[clsKey][ym])||[];
@@ -8470,6 +8504,22 @@ async function loadAllData() {
     if (!window.syllabusData[d.clsKey]) window.syllabusData[d.clsKey] = {};
     window.syllabusData[d.clsKey][d.dateKey] = { plan: d.plan||'', execute: d.execute||'', feedback: d.feedback||'' };
   });
+
+  // 캘린더 카테고리 로드
+  var calCatRaw = await fbGet('calCategories/data');
+  if(calCatRaw && calCatRaw.cats) {
+    try {
+      var loaded = JSON.parse(calCatRaw.cats);
+      if(loaded && loaded.length) {
+        window.calCategories = loaded;
+        // ID 시퀀스 갱신
+        loaded.forEach(function(c){
+          var n = parseInt((c.id||'').replace('cat',''));
+          if(!isNaN(n) && n >= window.calCatIdSeq) window.calCatIdSeq = n+1;
+        });
+      }
+    } catch(e) {}
+  }
 
   var calData = await fbGetCol('calEvents');
   Object.keys(calData).forEach(function(dateKey) {
