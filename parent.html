@@ -132,6 +132,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--cream);color:var(--t
 .p-att-icon.ico-결석{background:#ef5350;}
 .p-att-icon.ico-보강{background:#ab47bc;}
 .p-att-icon.ico-보강하원{background:#ab47bc;}
+.p-att-icon.ico-makeup-plan{background:transparent;border:2px dashed #ab47bc;}
 .p-att-detail-card{background:white;border-radius:16px;border:1.5px solid #ebe7ff;overflow:hidden;animation:popIn .2s cubic-bezier(.34,1.4,.64,1);}
 .p-att-detail-header{display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,#f3f0ff,#ebe7ff);border-bottom:1px solid #ddd8f8;}
 .p-att-detail-body{padding:12px 16px;}
@@ -582,7 +583,10 @@ var reportDate = new Date(); // 데일리 탭용 선택 날짜
       if(!d.name) return;
       if(change.type==='removed') { delete makeupSchedules[d.name]; }
       else { try { makeupSchedules[d.name] = typeof d.dates==='string'?JSON.parse(d.dates):(d.dates||[]); } catch(e){} }
-      if(currentParent && d.name===currentParent.name) renderParentSched();
+      if(currentParent && d.name===currentParent.name) {
+        renderParentSched();
+        renderParentCal();
+      }
     });
   });
 
@@ -919,7 +923,7 @@ function renderAttDetail() {
     el.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;padding:6px 2px">' +
       legendItems.map(function(it){
         return '<div style="display:flex;align-items:center;gap:4px">'+
-          '<div class="p-att-icon '+it.cls+'" style="width:16px;height:16px;font-size:.5rem">'+it.label[0]+'</div>'+
+          '<div class="p-att-icon '+it.cls+'" style="width:16px;height:16px"></div>'+
           '<span style="font-size:.68rem;color:var(--text-soft)">'+it.label+'</span>'+
         '</div>';
       }).join('') +
@@ -932,11 +936,31 @@ function renderAttDetail() {
     var DOW_KO3 = ['일','월','화','수','목','금','토'];
     var dt3 = new Date(parentCalSel+'T00:00:00');
     var lbl3 = (dt3.getMonth()+1)+'월 '+dt3.getDate()+'일 ('+DOW_KO3[dt3.getDay()]+')';
-    el.innerHTML = '<div class="p-att-detail-card"><div class="p-att-detail-body" style="text-align:center;padding:16px">'+
-      '<div style="font-size:1.4rem;margin-bottom:6px">📭</div>'+
-      '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:2px">'+lbl3+'</div>'+
-      '<div style="font-size:.72rem;color:var(--text-soft)">출결 기록이 없어요.</div>'+
-    '</div></div>';
+    var mkup = (makeupSchedules[name]||[]).find(function(s){ return s.date===parentCalSel; });
+    if(mkup) {
+      el.innerHTML = '<div class="p-att-detail-card">'+
+        '<div class="p-att-detail-header">'+
+          '<div style="width:32px;height:32px;border-radius:50%;background:transparent;border:2px dashed #ab47bc;flex-shrink:0"></div>'+
+          '<div style="flex:1">'+
+            '<div style="font-size:.88rem;font-weight:700;color:var(--brown)">'+lbl3+'</div>'+
+            '<span class="att-chip" style="background:#f3e5f5;color:#6a1b9a;margin-top:2px">보강 예정</span>'+
+          '</div>'+
+        '</div>'+
+        '<div class="p-att-detail-body">'+
+          '<div class="p-att-time-row">'+
+            '<div class="p-att-time-dot" style="background:#ab47bc"></div>'+
+            '<span class="p-att-time-label">시간</span>'+
+            '<span class="p-att-time-val">'+(mkup.time||'미정')+'</span>'+
+          '</div>'+
+        '</div>'+
+      '</div>';
+    } else {
+      el.innerHTML = '<div class="p-att-detail-card"><div class="p-att-detail-body" style="text-align:center;padding:16px">'+
+        '<div style="font-size:1.4rem;margin-bottom:6px">📭</div>'+
+        '<div style="font-size:.8rem;font-weight:700;color:var(--brown);margin-bottom:2px">'+lbl3+'</div>'+
+        '<div style="font-size:.72rem;color:var(--text-soft)">출결 기록이 없어요.</div>'+
+      '</div></div>';
+    }
     return;
   }
   var val = rec.val;
@@ -976,7 +1000,7 @@ function renderAttDetail() {
   el.innerHTML =
     '<div class="p-att-detail-card">' +
       '<div class="p-att-detail-header">' +
-        '<div style="width:32px;height:32px;border-radius:50%;background:'+dotColor+';display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;color:white;flex-shrink:0">'+st[0]+'</div>' +
+        '<div style="width:32px;height:32px;border-radius:50%;background:'+dotColor+';flex-shrink:0"></div>' +
         '<div style="flex:1">' +
           '<div style="font-size:.88rem;font-weight:700;color:var(--brown)">'+fullLbl+'</div>' +
           '<span class="att-chip chip-'+st+'" style="margin-top:2px">'+st+'</span>' +
@@ -1008,9 +1032,13 @@ function renderParentCal() {
     var cls = 'p-cal-cell'+(isToday?' cal-today':'')+(isSel?' cal-selected':'');
     var rec = getAttRec(name, who, dk);
     var st = rec ? (typeof rec.val==='object' ? rec.val.status : rec.val) : '';
-    var icoClass = st ? 'ico-'+st.replace(/\+/g,'') : '';
-    var icoLabel = {'등원':'등','하원':'하','등원+하원':'등하','지각':'지','지각+하원':'지','결석':'결','보강':'보','보강+하원':'보'};
-    var iconHtml = st ? '<div class="p-att-icon '+icoClass+'">' + (icoLabel[st]||st[0]) + '</div>' : '<div style="height:22px"></div>';
+    // 출결 기록 없으면 보강 예정일인지 확인
+    if(!st) {
+      var isMakeup = (makeupSchedules[name]||[]).some(function(s){ return s.date===dk; });
+      if(isMakeup) st = '보강예정';
+    }
+    var icoClass = st ? 'ico-'+st.replace(/\+/g,'').replace('예정','') : '';
+    var iconHtml = st ? '<div class="p-att-icon '+icoClass+(st==='보강예정'?' ico-makeup-plan':'')+'"></div>' : '<div style="height:22px"></div>';
     html += '<div class="'+cls+'" onclick="selectParentCalDate(&apos;'+dk+'&apos;)"><div class="p-cal-day-num">'+d+'</div>'+iconHtml+'</div>';
   }
   var rem = (firstDay+daysInMonth)%7; rem = rem?7-rem:0;

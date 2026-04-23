@@ -4296,9 +4296,12 @@ function renderDailyReport(who) {
         '<textarea id="rpt-'+f.key+'" class="notice-textarea" placeholder="'+f.placeholder+'" style="min-height:64px;margin-bottom:0">'+r[f.key]+'</textarea>' +
         '</div>';
     });
-    html += '<div class="register-form-actions">' +
-      '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:7px 18px;font-size:.82rem">💾 저장</button>' +
-      '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:7px 18px;font-size:.82rem;background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px">' +
+      '<button onclick="deleteDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:7px 14px;font-size:.78rem;font-weight:700;color:#b71c1c;background:#fff0f0;border:1.5px solid #ffcdd2;border-radius:100px;cursor:pointer;font-family:inherit;transition:all .15s" onmouseover="this.style.background=\'#ffebee\'" onmouseout="this.style.background=\'#fff0f0\'">🗑 삭제</button>' +
+      '<div style="display:flex;gap:8px">' +
+        '<button class="btn-reg-submit" onclick="saveDailyReport(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:7px 18px;font-size:.82rem">💾 저장</button>' +
+        '<button class="btn-reg-submit" onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+reportSelStu+'\')" style="padding:7px 18px;font-size:.82rem;background:linear-gradient(135deg,#62d2a2,#42b89a)">📤 학부모 전송</button>' +
+      '</div>' +
       '</div></div>';
   }
 
@@ -4346,7 +4349,7 @@ function toggleLeddiDone(who, dk, name) {
   }
 }
 
-function sendDailyToParent(who, dk, name) {
+async function sendDailyToParent(who, dk, name) {
   var r = getDailyReport(who, dk, name);
   var dateEl = document.getElementById('rpt-lessonDate');
   if(dateEl) r.lessonDate = dateEl.value;
@@ -4361,19 +4364,20 @@ function sendDailyToParent(who, dk, name) {
   if(!r.lesson && !r.review && !r.homework && !r.feedback && !r.leddi) {
     alert('전송할 내용이 없어요. 리포트를 먼저 작성해주세요!'); return;
   }
-  // r을 직접 복사해서 전달 (window.dailyReports 참조 불일치 방지)
-  var dataSnapshot = Object.assign({}, r);
-  var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')"]');
+  var btn = document.querySelector('[onclick="sendDailyToParent(\''+who+'\',\''+dk+'\',\''+name+'\')""]');
   if(btn){ btn.textContent='⏳ 전송 중...'; btn.disabled=true; }
-  Promise.resolve(window.fbSaveReport ? window.fbSaveReport(who, dk, name, true, dataSnapshot) : null)
-    .then(function(){
-      if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; btn.disabled=false;
-        setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
-    }).catch(function(e){
-      console.error('전송 오류:', e);
-      if(btn){ btn.textContent='📤 학부모 전송'; btn.disabled=false; }
-      alert('전송 중 오류가 발생했어요. 다시 시도해주세요.');
-    });
+  try {
+    if(!db) throw new Error('Firebase 미연결');
+    var safe = Object.assign({}, r, { who:who, dateKey:dk, name:name, released:true });
+    await db.collection('reports').doc(who+'_'+dk+'_'+name).set(safe, {merge:true});
+    r.released = true;
+    if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#2e7d32'; btn.disabled=false;
+      setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
+  } catch(e) {
+    console.error('전송 오류:', e);
+    if(btn){ btn.textContent='📤 학부모 전송'; btn.disabled=false; }
+    alert('전송 중 오류가 발생했어요. 다시 시도해주세요.');
+  }
 }
 
 function sendMonthlyToParent(who, name, y, m) {
@@ -4398,6 +4402,24 @@ function sendMonthlyToParent(who, name, y, m) {
   }
   var btn = document.querySelector('[onclick="sendMonthlyToParent(\''+who+'\',\''+name+'\','+y+','+m+')"]');
   if(btn){ btn.textContent='✅ 전송됨!'; btn.style.background='#1565c0'; setTimeout(function(){ btn.textContent='📤 학부모 전송'; btn.style.background=''; },2000); }
+}
+
+
+function deleteDailyReport(who, dk, name) {
+  if(!confirm(name + ' 학생의 ' + dk + ' 리포트를 삭제할까요?\n삭제하면 학부모 페이지에서도 사라져요.')) return;
+
+  // 메모리에서 초기화
+  if(window.dailyReports[who] && window.dailyReports[who][dk]) {
+    window.dailyReports[who][dk][name] = {lesson:'',review:'',homework:'',feedback:'',leddi:'',reviewScore:'',leddiDone:false,savedAt:null,released:false};
+  }
+
+  // Firebase에서 삭제
+  var docId = who + '_' + dk + '_' + name;
+  if(window.fbDel) window.fbDel('reports/' + docId);
+
+  // 폼 초기화 후 학생 목록으로 이동
+  reportSelStu = null;
+  renderReportPanel(who, document.getElementById(who+'-main-content'));
 }
 
 function saveDailyReport(who, dk, name) {
