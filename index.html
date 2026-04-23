@@ -7061,9 +7061,8 @@ function setTodayAtt(who,clsKey,name,opt){
   }
 
   // Firebase 저장 (비동기, 메모리와 무관하게 진행)
-  var safeKey = (clsKey+'_'+name+'_'+tk).replace(/[\/-]/g,'_');
   if(newVal===null) {
-    if(window.fbDel) window.fbDel('attendance/'+safeKey);
+    if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,tk));
   } else {
     if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, tk, newVal);
   }
@@ -7231,8 +7230,7 @@ function deleteMonthlyAtt(who, clsKey, name, dk) {
     delete window.classAttendance[clsKey][name][dk];
   }
   // Firebase에서 실제 삭제
-  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
-  if(window.fbDel) window.fbDel('attendance/'+safeKey);
+  if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,dk));
   renderAttSub(who);
 }
 
@@ -7372,7 +7370,11 @@ function openAttEditModal(who, clsKey, name, dk) {
     if(newVal===null || tempStatus==='') delete window.classAttendance[clsKey][name][dk];
     else window.classAttendance[clsKey][name][dk] = newVal;
 
-    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+    if(newVal===null || tempStatus==='') {
+      if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,dk));
+    } else {
+      if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
+    }
 
     // 결석 사유 저장
     var reasonEl = overlay.querySelector('#att-ed-reason');
@@ -7416,10 +7418,13 @@ function applyAttEdit(who, clsKey, name, dk, newStatus) {
     else { newVal={status:newStatus}; newVal[newStatus+'Time']=now; }
   }
 
-  if(newVal===null) delete window.classAttendance[clsKey][name][dk];
-  else window.classAttendance[clsKey][name][dk] = newVal;
-
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal||'');
+  if(newVal===null) {
+    delete window.classAttendance[clsKey][name][dk];
+    if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,dk));
+  } else {
+    window.classAttendance[clsKey][name][dk] = newVal;
+    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, newVal);
+  }
 
   // 모달 버튼 상태 갱신 (applyAttEdit은 더 이상 직접 호출 안 함 - openAttEditModal에서 처리)
   var newCurStatus = newVal ? attStatus(newVal) : '';
@@ -7511,7 +7516,13 @@ function setMonthlyAtt(name, clsKey, dk, opt, year, month) {
   else if(opt==='하원'&&cur==='등원+하원') window.classAttendance[clsKey][name][dk]='등원';
   else if(cur===opt) window.classAttendance[clsKey][name][dk]='';
   else window.classAttendance[clsKey][name][dk]=opt;
-  if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey,name,dk,window.classAttendance[clsKey][name][dk]||'');
+  var setVal = window.classAttendance[clsKey][name][dk];
+  if(!setVal) {
+    delete window.classAttendance[clsKey][name][dk];
+    if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,dk));
+  } else {
+    if(window.fbSaveAttendance) window.fbSaveAttendance(clsKey, name, dk, setVal);
+  }
   renderMonthlyAttModal(name,clsKey,year,month);
   editMonthlyAtt(name,clsKey,dk,year,month);
 }
@@ -7521,8 +7532,7 @@ function deleteMonthlyAttModal(name, clsKey, dk, year, month) {
   if(window.classAttendance[clsKey] && window.classAttendance[clsKey][name]) {
     delete window.classAttendance[clsKey][name][dk];
   }
-  var safeKey = (clsKey+'_'+name+'_'+dk).replace(/[\/-]/g,'_');
-  if(window.fbDel) window.fbDel('attendance/'+safeKey);
+  if(window.fbDel) window.fbDel('attendance/'+getAttSafeKey(clsKey,name,dk));
   renderMonthlyAttModal(name,clsKey,year,month);
 }
 
@@ -8452,8 +8462,16 @@ window.fbDel = async function(path) {
 var fbDel = window.fbDel;
 
 /* ── DB 저장 함수들 ── */
+function getAttSafeKey(clsKey, name, dateKey) {
+  var who = '';
+  var roster = window.memberRoster || {};
+  ['cookie','butter'].forEach(function(w){
+    if((roster[w]||[]).some(function(s){ return s.name===name; })) who = w;
+  });
+  return (who+'_'+clsKey+'_'+name+'_'+dateKey).replace(/[\/-]/g,'_');
+}
+
 window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
-  var safeKey = (clsKey+'_'+name+'_'+dateKey).replace(/[\/-]/g,'_');
   var data = {clsKey:clsKey, name:name, dateKey:dateKey};
   if(typeof statusOrObj === 'object' && statusOrObj !== null) {
     Object.assign(data, statusOrObj);
@@ -8467,6 +8485,8 @@ window.fbSaveAttendance = async function(clsKey, name, dateKey, statusOrObj) {
       if((roster[w]||[]).some(function(s){ return s.name===name; })) data.who = w;
     });
   }
+  // kiosk와 동일하게 who를 safeKey 앞에 포함
+  var safeKey = ((data.who||'')+'_'+clsKey+'_'+name+'_'+dateKey).replace(/[\/-]/g,'_');
   await fbSet('attendance/'+safeKey, data);
 };
 
