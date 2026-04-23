@@ -3707,8 +3707,8 @@ function setCalView(v, who) {
 }
 
 /* 카테고리 도트 목록 */
-function calCatDots() {
-  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">' +
+function calCatDots(who) {
+  return '<div id="cal-cat-dots-'+( who||'' )+'" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">' +
     calCategories.map(function(c){
       return '<span style="font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:100px;background:'+c.bg+';color:'+c.color+'">● '+c.name+'</span>';
     }).join('') + '</div>';
@@ -3728,7 +3728,7 @@ function renderCalDaily(who) {
     '<button onclick="moveCalDay(1,\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;width:32px;height:32px;font-size:.9rem;cursor:pointer;color:var(--cookie)">▶</button>' +
     '</div>';
 
-  html += calCatDots();
+  html += calCatDots(who);
 
   // 일정 목록
   html += '<div style="display:flex;flex-direction:column;gap:6px;margin-bottom:14px">';
@@ -3901,7 +3901,7 @@ function renderCalWeekly(who) {
     '<button onclick="moveCalWeek(1,\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;width:32px;height:32px;font-size:.9rem;cursor:pointer;color:var(--cookie)">▶</button>' +
     '</div>';
 
-  html += calCatDots();
+  html += calCatDots(who);
 
   // 주간 카드 그리드
   html += '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:14px">';
@@ -3992,7 +3992,7 @@ function renderCalMonthly(who) {
     '<button onclick="moveCalMonth(1,\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;width:32px;height:32px;font-size:.9rem;cursor:pointer;color:var(--cookie)">▶</button>' +
     '</div>';
 
-  html += calCatDots();
+  html += calCatDots(who);
   html += '<div class="t-att-cal-grid" style="margin-bottom:14px">' + DOW.map(function(d){return '<div class="t-att-cal-dow">'+d+'</div>';}).join('');
 
   for(var i=0;i<total;i++){
@@ -4080,7 +4080,7 @@ function renderCalDateDetail(who) {
         (mk.time?'<span style="font-size:.7rem;font-weight:700;color:#9c27b0;min-width:34px">'+mk.time+'</span>':'') +
         '<div style="flex:1;font-size:.82rem;font-weight:600;color:#6a1b9a">'+mk.name+' 보강</div>' +
         '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:#e1bee7;color:#6a1b9a">보강</span>' +
-        '<button onclick="editMakeup(\''+mk.name+'\',\''+mk.date+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
+        '<button onclick="openMakeupCal(\''+mk.name+'\',\''+who+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
         '<button onclick="if(confirm(\'보강 일정을 삭제할까요?\'))removeMakeupFromCal(\''+mk.name+'\',\''+mk.date+'\',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
         '</div>';
     });
@@ -4200,7 +4200,11 @@ function buildCalCatMgrHtml(who) {
 function refreshCalCatMgr(who) {
   var box = document.getElementById('cal-cat-mgr-box');
   if(box) box.innerHTML = buildCalCatMgrHtml(who);
-  renderCalendar(who, getCalEl(who));
+  // 캘린더 도트만 갱신 (박스가 사라지지 않도록 renderCalendar 호출 안 함)
+  var dotsEl = document.getElementById('cal-cat-dots-'+who);
+  if(dotsEl) dotsEl.innerHTML = calCategories.map(function(c){
+    return '<span style="font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:100px;background:'+c.bg+';color:'+c.color+'">● '+c.name+'</span>';
+  }).join('');
 }
 
 // 드래그 앤 드롭
