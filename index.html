@@ -3628,18 +3628,49 @@ function calToggleEvent(dk, id) {
   var ev=calGetEvents(dk).find(function(e){return e.id===id;});
   if(ev) { ev.done=!ev.done; if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk); }
 }
+var calEditingId = null; // 현재 편집 중인 이벤트 id
+var calEditingDk = null; // 현재 편집 중인 날짜
+
 function calEditEvent(dk, id, who) {
-  var ev=calGetEvents(dk).find(function(e){return e.id===id;});
+  calEditingId = id;
+  calEditingDk = dk;
+  calSelDate = dk; // 해당 날짜 선택
+  renderCalendar(who, getCalEl(who));
+  // 폼 스크롤
+  var formEl = document.getElementById('cal-edit-form-'+id);
+  if(formEl) formEl.scrollIntoView({behavior:'smooth', block:'center'});
+}
+
+function calCancelEdit(who) {
+  calEditingId = null;
+  calEditingDk = null;
+  renderCalendar(who, getCalEl(who));
+}
+
+function calSubmitEdit(dk, id, who) {
+  var ev = calGetEvents(dk).find(function(e){return e.id===id;});
   if(!ev) return;
-  var newTitle=prompt('일정 제목 수정:', ev.title);
-  if(newTitle===null) return;
-  if(newTitle.trim()) ev.title=newTitle.trim();
-  var newTime=prompt('시간 수정 (비워두면 삭제):', ev.time||'');
-  if(newTime===null) return;
-  ev.time=newTime.trim();
-  var newNote=prompt('메모 수정 (비워두면 삭제):', ev.note||'');
-  if(newNote!==null) ev.note=newNote.trim();
-  if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk);
+  var newTitle = (document.getElementById('cal-edit-title-'+id)||{value:''}).value.trim();
+  if(!newTitle) return;
+  var newCat   = (document.getElementById('cal-edit-cat-'+id)||{value:ev.catId}).value;
+  var newTime  = (document.getElementById('cal-edit-time-'+id)||{value:''}).value;
+  var newNote  = (document.getElementById('cal-edit-note-'+id)||{value:''}).value.trim();
+  var newDk    = (document.getElementById('cal-edit-date-'+id)||{value:dk}).value || dk;
+  // 날짜가 바뀌면 해당 날짜로 이동
+  if(newDk !== dk) {
+    if(!calEvents[newDk]) calEvents[newDk]=[];
+    calEvents[dk] = calEvents[dk].filter(function(e){return e.id!==id;});
+    ev.time = newTime; ev.note = newNote; ev.title = newTitle; ev.catId = newCat;
+    calEvents[newDk].push(ev);
+    calEvents[newDk].sort(function(a,b){return a.time.localeCompare(b.time);});
+    if(window.fbSaveCalEvents) { window.fbSaveCalEvents(dk); window.fbSaveCalEvents(newDk); }
+    calSelDate = newDk;
+  } else {
+    ev.title = newTitle; ev.catId = newCat; ev.time = newTime; ev.note = newNote;
+    calEvents[dk].sort(function(a,b){return a.time.localeCompare(b.time);});
+    if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk);
+  }
+  calEditingId = null; calEditingDk = null;
   renderCalendar(who, getCalEl(who));
 }
 function getCat(catId) {
@@ -3706,7 +3737,9 @@ function renderCalDaily(who) {
   } else {
     events.forEach(function(ev){
       var cat=getCat(ev.catId);
-      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:'+(ev.done?'#f0fff8':'white')+';border:1.5px solid '+(ev.done?'#66bb6a33':cat.color+'33')+'">' +
+      var isEditing = calEditingId===ev.id && calEditingDk===dk;
+      html += '<div id="cal-edit-form-'+ev.id+'">';
+      html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;background:'+(isEditing?'#fff8ee':(ev.done?'#f0fff8':'white'))+';border:1.5px solid '+(isEditing?'var(--cookie)':ev.done?'#66bb6a33':cat.color+'33')+'">' +
         '<div style="width:9px;height:9px;border-radius:50%;background:'+cat.color+';flex-shrink:0"></div>' +
         (ev.time?'<span style="font-size:.72rem;font-weight:700;color:var(--text-soft);min-width:36px">'+ev.time+'</span>':'') +
         '<div style="flex:1">' +
@@ -3715,15 +3748,37 @@ function renderCalDaily(who) {
         '</div>' +
         '<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:18px;height:18px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.65rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
-        '<button onclick="calEditEvent(\''+dk+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.8rem;padding:2px 4px">✏️</button>' +
+        '<button onclick="calEditEvent(\''+dk+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:'+(isEditing?'var(--cookie)':'#b0c4de')+';cursor:pointer;font-size:.8rem;padding:2px 4px">✏️</button>' +
         '<button onclick="calDeleteEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem;padding:2px 4px">🗑️</button>' +
         '</div>';
+      if(isEditing) {
+        var catOpts2 = calCategories.map(function(c){return '<option value="'+c.id+'"'+(c.id===ev.catId?' selected':'')+'>'+c.name+'</option>';}).join('');
+        html += '<div style="background:#fff8ee;border:1.5px solid var(--cookie-lt);border-radius:10px;padding:12px;margin-top:6px">' +
+          '<div style="font-size:.78rem;font-weight:700;color:var(--brown);margin-bottom:10px">✏️ 일정 수정</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+            '<div><div class="form-label" style="font-size:.72rem">제목 *</div><input class="register-input" id="cal-edit-title-'+ev.id+'" value="'+ev.title+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+            '<div><div class="form-label" style="font-size:.72rem">카테고리</div><select class="register-select" id="cal-edit-cat-'+ev.id+'">'+catOpts2+'</select></div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
+            '<div><div class="form-label" style="font-size:.72rem">날짜</div><input class="register-input" type="date" id="cal-edit-date-'+ev.id+'" value="'+dk+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+            '<div><div class="form-label" style="font-size:.72rem">시간</div><input class="register-input" type="time" id="cal-edit-time-'+ev.id+'" value="'+(ev.time||'')+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+          '</div>' +
+          '<div style="margin-bottom:10px"><div class="form-label" style="font-size:.72rem">메모</div><input class="register-input" id="cal-edit-note-'+ev.id+'" value="'+(ev.note||'')+'" placeholder="간단한 메모" style="margin-bottom:0;font-size:.82rem"></div>' +
+          '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+            '<button onclick="calCancelEdit(\''+who+'\')" style="padding:6px 14px;border-radius:100px;border:none;background:#f5ede0;font-size:.78rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">취소</button>' +
+            '<button onclick="calSubmitEdit(\''+dk+'\','+ev.id+',\''+who+'\')" style="padding:6px 14px;border-radius:100px;border:none;background:linear-gradient(135deg,var(--cookie-lt),var(--cookie));font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">💾 저장</button>' +
+          '</div>' +
+        '</div>';
+      }
+      html += '</div>';
     });
   }
   html += '</div>';
 
-  // 일정 추가 폼
-  html += renderCalAddForm(dk, who);
+  // 일정 추가 폼 (편집 중이 아닐 때만)
+  if(!calEditingId || calEditingDk!==dk) {
+    html += renderCalAddForm(dk, who);
+  }
   return html;
 }
 
@@ -3858,10 +3913,13 @@ function renderCalWeekly(who) {
     html += '<div style="border-radius:12px;border:2px solid '+(isSel?'var(--cookie)':isT?'#66bb6a':'#f0e8dc')+';background:'+(isSel?'var(--cookie-bg)':isT?'#f0fff8':'white')+';padding:8px 6px;cursor:pointer;min-height:80px;transition:all .15s" onclick="selCalDate(\''+dk+'\',\''+who+'\')">' +
       '<div style="text-align:center;font-size:.68rem;color:var(--text-soft)">'+DOW[d.getDay()]+'</div>' +
       '<div style="text-align:center;font-size:.88rem;font-weight:700;color:'+(isSel?'var(--cookie)':isT?'#2e7d32':'var(--brown)')+';margin-bottom:4px">'+d.getDate()+'</div>';
-    var wMakeup = Object.keys(window.makeupSchedules||{}).some(function(n){
+    var wMakeupNames = Object.keys(window.makeupSchedules||{}).filter(function(n){
       return (window.makeupSchedules[n]||[]).some(function(s){return s.date===dk;});
     });
-    if(wMakeup) html+='<div style="font-size:.57rem;font-weight:600;padding:2px 4px;border-radius:4px;background:#f3e5f5;color:#6a1b9a;margin-bottom:2px">🔄 보강</div>';
+    var wMakeup = wMakeupNames.length>0;
+    wMakeupNames.forEach(function(n){
+      html+='<div style="font-size:.57rem;font-weight:600;padding:2px 4px;border-radius:4px;background:#f3e5f5;color:#6a1b9a;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n+' 보강</div>';
+    });
     evs.slice(0,wMakeup?2:3).forEach(function(ev){
       var cat=getCat(ev.catId);
       html+='<div style="font-size:.57rem;font-weight:600;padding:2px 4px;border-radius:4px;background:'+cat.bg+';color:'+cat.color+';margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(ev.done?'opacity:.4':'')+'">'+ev.title+'</div>';
@@ -3953,11 +4011,14 @@ function renderCalMonthly(who) {
       '<div class="t-att-cal-day-num" style="color:'+(isM?(isSun?'#ef5350':isSat?'#42a5f5':''):'')+'">'+day2+'</div>';
     if(holiday && isM) html+='<div style="font-size:.5rem;padding:1px 3px;border-radius:3px;background:#fce4ec;color:#c62828;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+holiday+'</div>';
     // 보강 일정 표시
-    var hasMakeup = Object.keys(window.makeupSchedules||{}).some(function(n){
+    var makeupNames = isM ? Object.keys(window.makeupSchedules||{}).filter(function(n){
       return (window.makeupSchedules[n]||[]).some(function(s){return s.date===dk2;});
+    }) : [];
+    var hasMakeup = makeupNames.length>0;
+    makeupNames.forEach(function(n){
+      html+='<div style="font-size:.52rem;padding:1px 3px;border-radius:3px;background:#f3e5f5;color:#6a1b9a;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+n+' 보강</div>';
     });
-    if(hasMakeup && isM) html+='<div style="font-size:.52rem;padding:1px 3px;border-radius:3px;background:#f3e5f5;color:#6a1b9a;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">🔄 보강</div>';
-    var maxEvs = holiday ? 0 : hasMakeup ? 1 : 2;
+    var maxEvs = holiday ? 0 : hasMakeup ? Math.max(0,1-makeupNames.length+1) : 2;
     evs.slice(0,maxEvs).forEach(function(ev){
       var cat=getCat(ev.catId);
       html+='<div style="font-size:.52rem;padding:1px 3px;border-radius:3px;background:'+cat.bg+';color:'+cat.color+';margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+(ev.done?'opacity:.4':'')+'">'+ev.title+'</div>';
@@ -4017,7 +4078,7 @@ function renderCalDateDetail(who) {
       html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#f3e5f5;border:1.5px solid #ce93d8;margin-bottom:5px">' +
         '<div style="width:9px;height:9px;border-radius:50%;background:#9c27b0;flex-shrink:0"></div>' +
         (mk.time?'<span style="font-size:.7rem;font-weight:700;color:#9c27b0;min-width:34px">'+mk.time+'</span>':'') +
-        '<div style="flex:1;font-size:.82rem;font-weight:600;color:#6a1b9a">🔄 '+mk.name+' 보강</div>' +
+        '<div style="flex:1;font-size:.82rem;font-weight:600;color:#6a1b9a">'+mk.name+' 보강</div>' +
         '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:#e1bee7;color:#6a1b9a">보강</span>' +
         '<button onclick="editMakeup(\''+mk.name+'\',\''+mk.date+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
         '<button onclick="if(confirm(\'보강 일정을 삭제할까요?\'))removeMakeupFromCal(\''+mk.name+'\',\''+mk.date+'\',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
@@ -4033,21 +4094,47 @@ function renderCalDateDetail(who) {
     html+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">';
     evs.forEach(function(ev){
       var cat=getCat(ev.catId);
-      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:'+(ev.done?'#f9fffe':'#fafafa')+';border:1.5px solid '+cat.color+'22">' +
+      var isEditing = calEditingId===ev.id && calEditingDk===calSelDate;
+      html+='<div id="cal-edit-form-'+ev.id+'">';
+      // 일정 행
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:'+(isEditing?'#fff8ee':(ev.done?'#f9fffe':'#fafafa'))+';border:1.5px solid '+(isEditing?'var(--cookie)':cat.color+'22')+'">' +
         '<div style="width:9px;height:9px;border-radius:50%;background:'+cat.color+';flex-shrink:0"></div>' +
         (ev.time?'<span style="font-size:.7rem;font-weight:700;color:var(--text-soft);min-width:34px">'+ev.time+'</span>':'') +
         '<div style="flex:1;font-size:.82rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+'</div>' +
         '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:17px;height:17px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.6rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
-        '<button onclick="calEditEvent(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
+        '<button onclick="calEditEvent(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:'+(isEditing?'var(--cookie)':'#b0c4de')+';cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
         '<button onclick="calDeleteEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
         '</div>';
+      // 편집 폼 (편집 모드일 때만)
+      if(isEditing) {
+        var catOpts2 = calCategories.map(function(c){return '<option value="'+c.id+'"'+(c.id===ev.catId?' selected':'')+'>'+c.name+'</option>';}).join('');
+        html += '<div style="background:#fff8ee;border:1.5px solid var(--cookie-lt);border-radius:10px;padding:12px;margin-top:6px">' +
+          '<div style="font-size:.78rem;font-weight:700;color:var(--brown);margin-bottom:10px">✏️ 일정 수정</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">' +
+            '<div><div class="form-label" style="font-size:.72rem">제목 *</div><input class="register-input" id="cal-edit-title-'+ev.id+'" value="'+ev.title+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+            '<div><div class="form-label" style="font-size:.72rem">카테고리</div><select class="register-select" id="cal-edit-cat-'+ev.id+'">'+catOpts2+'</select></div>' +
+          '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">' +
+            '<div><div class="form-label" style="font-size:.72rem">날짜</div><input class="register-input" type="date" id="cal-edit-date-'+ev.id+'" value="'+calSelDate+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+            '<div><div class="form-label" style="font-size:.72rem">시간</div><input class="register-input" type="time" id="cal-edit-time-'+ev.id+'" value="'+(ev.time||'')+'" style="margin-bottom:0;font-size:.82rem"></div>' +
+          '</div>' +
+          '<div style="margin-bottom:10px"><div class="form-label" style="font-size:.72rem">메모</div><input class="register-input" id="cal-edit-note-'+ev.id+'" value="'+(ev.note||'')+'" placeholder="간단한 메모" style="margin-bottom:0;font-size:.82rem"></div>' +
+          '<div style="display:flex;gap:8px;justify-content:flex-end">' +
+            '<button onclick="calCancelEdit(\''+who+'\')" style="padding:6px 14px;border-radius:100px;border:none;background:#f5ede0;font-size:.78rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">취소</button>' +
+            '<button onclick="calSubmitEdit(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="padding:6px 14px;border-radius:100px;border:none;background:linear-gradient(135deg,var(--cookie-lt),var(--cookie));font-size:.78rem;font-weight:700;color:white;cursor:pointer;font-family:inherit">💾 저장</button>' +
+          '</div>' +
+        '</div>';
+      }
+      html+='</div>';
     });
     html+='</div>';
   }
 
-  // 일정 추가 폼 (기간/반복 포함)
-  html += renderCalAddForm(calSelDate, who);
+  // 일정 추가 폼 (편집 중이 아닐 때만)
+  if(!calEditingId || calEditingDk!==calSelDate) {
+    html += renderCalAddForm(calSelDate, who);
+  }
   html += '</div>';
   return html;
 }
@@ -4074,31 +4161,21 @@ var CAL_COLORS=[
   {color:'#ffd740',bg:'#fffde7'},{color:'#40c4ff',bg:'#e1f5fe'},
 ];
 
-function openCalCatMgr(who) {
-  // 토글: 이미 열려있으면 닫기
-  var existing = document.getElementById('cal-cat-mgr-box');
-  if(existing) { existing.remove(); return; }
-
-  var el = getCalEl(who);
-  if(!el) return;
-
-  var box = document.createElement('div');
-  box.id = 'cal-cat-mgr-box';
-  box.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:12px;border:1.5px solid #f0e8dc;box-shadow:0 4px 16px rgba(180,120,40,.08)';
-
+function buildCalCatMgrHtml(who) {
   var html = '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">' +
     '<div style="font-size:.92rem;font-weight:700;color:var(--brown)">🏷️ 카테고리 관리</div>' +
     '<button onclick="openCalCatMgr(\''+who+'\')" style="background:#f5ede0;border:none;border-radius:8px;padding:4px 10px;font-size:.75rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">✕ 닫기</button>' +
   '</div>';
 
-  html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
+  html += '<div id="cal-cat-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
   calCategories.forEach(function(c, idx){
-    var isFirst = idx===0, isLast = idx===calCategories.length-1;
-    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fffbf5;border-radius:10px;border:1.5px solid '+c.color+'33">' +
-      '<div style="display:flex;flex-direction:column;gap:1px">' +
-        '<button onclick="moveCalCat(\''+c.id+'\',-1,\''+who+'\')" style="background:none;border:none;color:'+(isFirst?'#ddd':'var(--text-soft)')+';cursor:'+(isFirst?'default':'pointer')+';font-size:.65rem;padding:0;line-height:1" '+(isFirst?'disabled':'')+'>▲</button>' +
-        '<button onclick="moveCalCat(\''+c.id+'\',1,\''+who+'\')" style="background:none;border:none;color:'+(isLast?'#ddd':'var(--text-soft)')+';cursor:'+(isLast?'default':'pointer')+';font-size:.65rem;padding:0;line-height:1" '+(isLast?'disabled':'')+'>▼</button>' +
-      '</div>' +
+    html += '<div draggable="true" data-cat-id="'+c.id+'" data-cat-idx="'+idx+'" ' +
+      'ondragstart="calCatDragStart(event,'+idx+')" ' +
+      'ondragover="calCatDragOver(event)" ' +
+      'ondrop="calCatDrop(event,'+idx+',\''+who+'\')" ' +
+      'ondragend="calCatDragEnd(event)" ' +
+      'style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fffbf5;border-radius:10px;border:1.5px solid '+c.color+'33;cursor:grab;transition:opacity .15s">' +
+      '<span style="font-size:.8rem;color:#ccc;cursor:grab">⠿</span>' +
       '<div style="width:12px;height:12px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>' +
       '<span style="flex:1;font-size:.84rem;font-weight:600;color:var(--brown)">'+c.name+'</span>' +
       '<button onclick="editCalCat(\''+c.id+'\',\''+who+'\')" style="background:#fff8e1;border:none;border-radius:7px;padding:3px 9px;font-size:.7rem;font-weight:700;color:#e65100;cursor:pointer;font-family:inherit">수정</button>' +
@@ -4115,10 +4192,55 @@ function openCalCatMgr(who) {
     '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">' +
     CAL_COLORS.map(function(c,i){return '<div id="cal-col-'+i+'" onclick="selCalColor('+i+')" style="width:24px;height:24px;border-radius:50%;background:'+c.color+';cursor:pointer;border:3px solid transparent;transition:all .15s"></div>';}).join('') +
     '</div>' +
-    '<button class="btn-reg-submit" style="font-size:.78rem;padding:5px 14px" onclick="addCalCat(\''+who+'\')">+ 추가</button>' +
+    '<button class="btn-reg-submit" style="font-size:.78rem;padding:5px 14px" onclick="addCalCat(\''+who+'\')" >+ 추가</button>' +
   '</div>';
+  return html;
+}
 
-  box.innerHTML = html;
+function refreshCalCatMgr(who) {
+  var box = document.getElementById('cal-cat-mgr-box');
+  if(box) box.innerHTML = buildCalCatMgrHtml(who);
+  renderCalendar(who, getCalEl(who));
+}
+
+// 드래그 앤 드롭
+var calCatDragIdx = null;
+function calCatDragStart(e, idx) {
+  calCatDragIdx = idx;
+  e.target.style.opacity = '0.4';
+  e.dataTransfer.effectAllowed = 'move';
+}
+function calCatDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+}
+function calCatDrop(e, toIdx, who) {
+  e.preventDefault();
+  if(calCatDragIdx === null || calCatDragIdx === toIdx) return;
+  var moved = calCategories.splice(calCatDragIdx, 1)[0];
+  calCategories.splice(toIdx, 0, moved);
+  calCatDragIdx = null;
+  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
+  refreshCalCatMgr(who);
+}
+function calCatDragEnd(e) {
+  e.target.style.opacity = '1';
+  calCatDragIdx = null;
+}
+
+function openCalCatMgr(who) {
+  // 토글: 이미 열려있으면 닫기
+  var existing = document.getElementById('cal-cat-mgr-box');
+  if(existing) { existing.remove(); return; }
+
+  var el = getCalEl(who);
+  if(!el) return;
+
+  var box = document.createElement('div');
+  box.id = 'cal-cat-mgr-box';
+  box.style.cssText = 'background:white;border-radius:16px;padding:18px;margin-top:12px;border:1.5px solid #f0e8dc;box-shadow:0 4px 16px rgba(180,120,40,.08)';
+
+  box.innerHTML = buildCalCatMgrHtml(who);
   el.appendChild(box);
 }
 
@@ -4130,48 +4252,27 @@ function selCalColor(i) {
     el.style.transform = j===i?'scale(1.2)':'scale(1)';
   });
 }
-function moveCalCat(id, dir, who) {
-  var idx = calCategories.findIndex(function(c){return c.id===id;});
-  if(idx<0) return;
-  var newIdx = idx+dir;
-  if(newIdx<0 || newIdx>=calCategories.length) return;
-  var tmp = calCategories[idx];
-  calCategories[idx] = calCategories[newIdx];
-  calCategories[newIdx] = tmp;
-  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
-  // 카테고리 관리 박스 갱신
-  var existing = document.getElementById('cal-cat-mgr-box');
-  if(existing) existing.remove();
-  openCalCatMgr(who);
-  // 캘린더 도트 순서도 갱신
-  renderCalendar(who, getCalEl(who));
-}
+// moveCalCat 제거 (드래그 앤 드롭으로 대체)
 function addCalCat(who) {
   var name=(document.getElementById('cal-cat-name')||{value:''}).value.trim();
   if(!name) return;
   var c=CAL_COLORS[selCalColorIdx]||CAL_COLORS[0];
   calCategories.push({id:'cat'+calCatIdSeq++,name:name,color:c.color,bg:c.bg});
   if(window.fbSaveCalCategories) window.fbSaveCalCategories();
-  var existing=document.getElementById('cal-cat-mgr-box');
-  if(existing) existing.remove();
-  openCalCatMgr(who);
+  refreshCalCatMgr(who);
 }
 function deleteCalCat(id, who) {
   if(!confirm('캘린더 카테고리를 삭제할까요?')) return;
   calCategories=calCategories.filter(function(c){return c.id!==id;});
   if(window.fbSaveCalCategories) window.fbSaveCalCategories();
-  var existing=document.getElementById('cal-cat-mgr-box');
-  if(existing) existing.remove();
-  openCalCatMgr(who);
+  refreshCalCatMgr(who);
 }
 function editCalCat(id, who) {
   var c=calCategories.find(function(c){return c.id===id;}); if(!c) return;
   var newName=prompt('카테고리 이름 수정:', c.name);
   if(newName&&newName.trim()) c.name=newName.trim();
   if(window.fbSaveCalCategories) window.fbSaveCalCategories();
-  var existing=document.getElementById('cal-cat-mgr-box');
-  if(existing) existing.remove();
-  openCalCatMgr(who);
+  refreshCalCatMgr(who);
 }
 /* ====== REPORT PANEL ====== */
 var reportTab = 'daily';
