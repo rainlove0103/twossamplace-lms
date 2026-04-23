@@ -3628,6 +3628,20 @@ function calToggleEvent(dk, id) {
   var ev=calGetEvents(dk).find(function(e){return e.id===id;});
   if(ev) { ev.done=!ev.done; if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk); }
 }
+function calEditEvent(dk, id, who) {
+  var ev=calGetEvents(dk).find(function(e){return e.id===id;});
+  if(!ev) return;
+  var newTitle=prompt('일정 제목 수정:', ev.title);
+  if(newTitle===null) return;
+  if(newTitle.trim()) ev.title=newTitle.trim();
+  var newTime=prompt('시간 수정 (비워두면 삭제):', ev.time||'');
+  if(newTime===null) return;
+  ev.time=newTime.trim();
+  var newNote=prompt('메모 수정 (비워두면 삭제):', ev.note||'');
+  if(newNote!==null) ev.note=newNote.trim();
+  if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk);
+  renderCalendar(who, getCalEl(who));
+}
 function getCat(catId) {
   return calCategories.find(function(c){return c.id===catId;})||{name:'기타',color:'#aaa',bg:'#f5f5f5'};
 }
@@ -3701,6 +3715,7 @@ function renderCalDaily(who) {
         '</div>' +
         '<span style="font-size:.65rem;font-weight:700;padding:2px 7px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:18px;height:18px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.65rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
+        '<button onclick="calEditEvent(\''+dk+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.8rem;padding:2px 4px">✏️</button>' +
         '<button onclick="calDeleteEvent(\''+dk+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.8rem;padding:2px 4px">🗑️</button>' +
         '</div>';
     });
@@ -3989,10 +4004,32 @@ function renderCalDateDetail(who) {
     '<button onclick="calJumpToDay(\''+calSelDate+'\',\''+who+'\')" style="background:#f5ede0;border:none;border-radius:7px;padding:4px 10px;font-size:.72rem;font-weight:700;color:var(--text-mid);cursor:pointer;font-family:inherit">일간 뷰 →</button>' +
     '</div>';
 
+  // 보강 일정 표시
+  var mkups = Object.keys(window.makeupSchedules||{}).reduce(function(arr, name) {
+    (window.makeupSchedules[name]||[]).forEach(function(s){
+      if(s.date===calSelDate) arr.push({name:name, time:s.time, date:s.date});
+    });
+    return arr;
+  }, []);
+  if(mkups.length>0) {
+    html+='<div style="margin-bottom:10px">';
+    mkups.forEach(function(mk){
+      html+='<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:10px;background:#f3e5f5;border:1.5px solid #ce93d8;margin-bottom:5px">' +
+        '<div style="width:9px;height:9px;border-radius:50%;background:#9c27b0;flex-shrink:0"></div>' +
+        (mk.time?'<span style="font-size:.7rem;font-weight:700;color:#9c27b0;min-width:34px">'+mk.time+'</span>':'') +
+        '<div style="flex:1;font-size:.82rem;font-weight:600;color:#6a1b9a">🔄 '+mk.name+' 보강</div>' +
+        '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:#e1bee7;color:#6a1b9a">보강</span>' +
+        '<button onclick="editMakeup(\''+mk.name+'\',\''+mk.date+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
+        '<button onclick="if(confirm(\'보강 일정을 삭제할까요?\'))removeMakeupFromCal(\''+mk.name+'\',\''+mk.date+'\',\''+who+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
+        '</div>';
+    });
+    html+='</div>';
+  }
+
   // 일정 목록
-  if(evs.length===0) {
+  if(evs.length===0 && mkups.length===0) {
     html+='<div style="font-size:.78rem;color:var(--text-soft);padding:8px 0;text-align:center">등록된 일정이 없어요</div>';
-  } else {
+  } else if(evs.length>0) {
     html+='<div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px">';
     evs.forEach(function(ev){
       var cat=getCat(ev.catId);
@@ -4002,6 +4039,7 @@ function renderCalDateDetail(who) {
         '<div style="flex:1;font-size:.82rem;font-weight:600;color:var(--brown);'+(ev.done?'text-decoration:line-through;opacity:.5':'')+'">'+ev.title+'</div>' +
         '<span style="font-size:.62rem;padding:1px 6px;border-radius:100px;background:'+cat.bg+';color:'+cat.color+'">'+cat.name+'</span>' +
         '<div style="width:17px;height:17px;border-radius:5px;border:2px solid '+(ev.done?'#66bb6a':'#ddd')+';background:'+(ev.done?'#66bb6a':'white')+';display:flex;align-items:center;justify-content:center;font-size:.6rem;color:white;cursor:pointer;flex-shrink:0" onclick="calToggleEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))">'+(ev.done?'✓':'')+'</div>' +
+        '<button onclick="calEditEvent(\''+calSelDate+'\','+ev.id+',\''+who+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.75rem;padding:1px 3px">✏️</button>' +
         '<button onclick="calDeleteEvent(\''+calSelDate+'\','+ev.id+');renderCalendar(\''+who+'\',getCalEl(\''+who+'\'))" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.75rem;padding:1px 3px">🗑️</button>' +
         '</div>';
     });
@@ -4054,8 +4092,13 @@ function openCalCatMgr(who) {
   '</div>';
 
   html += '<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">';
-  calCategories.forEach(function(c){
-    html += '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#fffbf5;border-radius:10px;border:1.5px solid '+c.color+'33">' +
+  calCategories.forEach(function(c, idx){
+    var isFirst = idx===0, isLast = idx===calCategories.length-1;
+    html += '<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fffbf5;border-radius:10px;border:1.5px solid '+c.color+'33">' +
+      '<div style="display:flex;flex-direction:column;gap:1px">' +
+        '<button onclick="moveCalCat(\''+c.id+'\',-1,\''+who+'\')" style="background:none;border:none;color:'+(isFirst?'#ddd':'var(--text-soft)')+';cursor:'+(isFirst?'default':'pointer')+';font-size:.65rem;padding:0;line-height:1" '+(isFirst?'disabled':'')+'>▲</button>' +
+        '<button onclick="moveCalCat(\''+c.id+'\',1,\''+who+'\')" style="background:none;border:none;color:'+(isLast?'#ddd':'var(--text-soft)')+';cursor:'+(isLast?'default':'pointer')+';font-size:.65rem;padding:0;line-height:1" '+(isLast?'disabled':'')+'>▼</button>' +
+      '</div>' +
       '<div style="width:12px;height:12px;border-radius:50%;background:'+c.color+';flex-shrink:0"></div>' +
       '<span style="flex:1;font-size:.84rem;font-weight:600;color:var(--brown)">'+c.name+'</span>' +
       '<button onclick="editCalCat(\''+c.id+'\',\''+who+'\')" style="background:#fff8e1;border:none;border-radius:7px;padding:3px 9px;font-size:.7rem;font-weight:700;color:#e65100;cursor:pointer;font-family:inherit">수정</button>' +
@@ -4086,6 +4129,22 @@ function selCalColor(i) {
     el.style.borderColor = j===i?'var(--brown)':'transparent';
     el.style.transform = j===i?'scale(1.2)':'scale(1)';
   });
+}
+function moveCalCat(id, dir, who) {
+  var idx = calCategories.findIndex(function(c){return c.id===id;});
+  if(idx<0) return;
+  var newIdx = idx+dir;
+  if(newIdx<0 || newIdx>=calCategories.length) return;
+  var tmp = calCategories[idx];
+  calCategories[idx] = calCategories[newIdx];
+  calCategories[newIdx] = tmp;
+  if(window.fbSaveCalCategories) window.fbSaveCalCategories();
+  // 카테고리 관리 박스 갱신
+  var existing = document.getElementById('cal-cat-mgr-box');
+  if(existing) existing.remove();
+  openCalCatMgr(who);
+  // 캘린더 도트 순서도 갱신
+  renderCalendar(who, getCalEl(who));
 }
 function addCalCat(who) {
   var name=(document.getElementById('cal-cat-name')||{value:''}).value.trim();
@@ -7418,7 +7477,7 @@ function renderMakeupCal(){
     cells+='<div class="'+cls+'" onclick="toggleMakeupDate(\''+dk+'\')"><div class="mc-day">'+day2+'</div>'+(hasEx?'<div class="mc-dot"></div>':'')+'</div>';
   }
   var existingList=(makeupSchedules[makeupStudent]||[]).filter(function(s){return s.date.startsWith(mPrefix);}).sort(function(a,b){return a.date.localeCompare(b.date);});
-  var existHtml=existingList.length===0?'':'<div style="margin-top:14px"><div style="font-family:\'Noto Sans KR\',sans-serif;font-size:.9rem;color:var(--brown);margin-bottom:8px">등록된 보강 일정</div>'+existingList.map(function(s){var dt=new Date(s.date),lbl=(dt.getMonth()+1)+'월 '+dt.getDate()+'일'+(s.time?' '+s.time:'');return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f0fff8;border-radius:10px;margin-bottom:6px;border-left:3px solid #66bb6a"><span style="font-size:.84rem;color:var(--brown);flex:1">📅 '+lbl+'</span><button onclick="removeMakeup(\''+makeupStudent+'\',\''+s.date+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.82rem;padding:2px 6px;border-radius:6px">🗑️</button></div>';}).join('')+'</div>';
+  var existHtml=existingList.length===0?'':'<div style="margin-top:14px"><div style="font-family:\'Noto Sans KR\',sans-serif;font-size:.9rem;color:var(--brown);margin-bottom:8px">등록된 보강 일정</div>'+existingList.map(function(s){var dt=new Date(s.date),lbl=(dt.getMonth()+1)+'월 '+dt.getDate()+'일'+(s.time?' '+s.time:'');return '<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f0fff8;border-radius:10px;margin-bottom:6px;border-left:3px solid #66bb6a"><span style="font-size:.84rem;color:var(--brown);flex:1">📅 '+lbl+'</span><button onclick="editMakeup(\''+makeupStudent+'\',\''+s.date+'\')" style="background:none;border:none;color:#b0c4de;cursor:pointer;font-size:.82rem;padding:2px 6px;border-radius:6px">✏️</button><button onclick="removeMakeup(\''+makeupStudent+'\',\''+s.date+'\')" style="background:none;border:none;color:#ffb3b3;cursor:pointer;font-size:.82rem;padding:2px 6px;border-radius:6px">🗑️</button></div>';}).join('')+'</div>';
   var selCount=makeupSelectedDates.size;
   var selInfo=selCount>0?'<div style="background:#e8f5e9;border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:.84rem;color:#2e7d32">📅 <strong>'+selCount+'일</strong> 선택: '+Array.from(makeupSelectedDates).sort().map(function(dk){var d=new Date(dk);return (d.getMonth()+1)+'/'+d.getDate();}).join(', ')+'</div>':'<div style="font-size:.8rem;color:var(--text-soft);margin-bottom:10px">날짜를 클릭해서 선택하세요. 여러 날짜를 동시에 선택할 수 있어요!</div>';
   var timeInput='<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:.8rem;font-weight:700;color:var(--text-mid);white-space:nowrap">수업 시간</span><input type="time" id="makeup-time-input" value="'+makeupTime+'" onchange="makeupTime=this.value" style="border:2px solid #f0e8dc;border-radius:8px;padding:6px 10px;font-family:inherit;font-size:.84rem;color:var(--brown);background:#fffbf5;outline:none"></div>';
@@ -7427,15 +7486,57 @@ function renderMakeupCal(){
 }
 function toggleMakeupDate(dk){ if(makeupSelectedDates.has(dk))makeupSelectedDates.delete(dk);else makeupSelectedDates.add(dk); renderMakeupCal(); }
 function changeMakeupMonth(dir){ makeupCalMonth+=dir; if(makeupCalMonth<0){makeupCalMonth=11;makeupCalYear--;}if(makeupCalMonth>11){makeupCalMonth=0;makeupCalYear++;}makeupSelectedDates=new Set(); renderMakeupCal(); }
+function getMakeupCatId() {
+  // 이름에 '보강'이 포함된 카테고리 찾기
+  var cat = calCategories.find(function(c){ return c.name.indexOf('보강')>-1; });
+  return cat ? cat.id : null;
+}
 function saveMakeupDates(){
   if(!makeupSchedules[makeupStudent]) makeupSchedules[makeupStudent]=[];
+  var catId = getMakeupCatId();
   Array.from(makeupSelectedDates).sort().forEach(function(dk){
-    if(!makeupSchedules[makeupStudent].find(function(s){return s.date===dk;}))
+    if(!makeupSchedules[makeupStudent].find(function(s){return s.date===dk;})) {
       makeupSchedules[makeupStudent].push({date:dk,time:makeupTime,note:'보강 수업'});
+      // 보강 카테고리가 있으면 calEvents에도 추가
+      if(catId) {
+        var title = makeupStudent+' 보강';
+        var alreadyInCal = (calGetEvents(dk)||[]).some(function(e){ return e.catId===catId && e.title===title; });
+        if(!alreadyInCal) calAddEvent(dk, title, catId, makeupTime, '');
+      }
+    }
   });
   makeupSelectedDates=new Set();
   if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(makeupStudent);
   renderMakeupCal(); renderAttSub(makeupWho);
+}
+function editMakeup(name, dk) {
+  var s = (makeupSchedules[name]||[]).find(function(x){return x.date===dk;});
+  if(!s) return;
+  var dt = new Date(dk);
+  var lbl = (dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+  var newTime = prompt(lbl+' 보강 시간 수정:', s.time||'');
+  if(newTime === null) return;
+  s.time = newTime.trim();
+  // calEvents에서도 시간 업데이트
+  var catId = getMakeupCatId();
+  var title = name+' 보강';
+  if(catId && calEvents[dk]) {
+    calEvents[dk].forEach(function(e){
+      if(e.catId===catId && e.title===title) e.time = s.time;
+    });
+    if(window.fbSaveCalEvents) window.fbSaveCalEvents(dk);
+  }
+  if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(name);
+  renderMakeupCal();
+  // 하단 캘린더도 갱신
+  if(calendarWho) renderCalendar(calendarWho, getCalEl(calendarWho));
+}
+function removeMakeupFromCal(name, dk, who) {
+  if(!makeupSchedules[name]) return;
+  makeupSchedules[name] = makeupSchedules[name].filter(function(s){return s.date!==dk;});
+  if(window.fbSaveMakeupSchedules) window.fbSaveMakeupSchedules(name);
+  renderCalendar(who, getCalEl(who));
+  renderAttSub(who);
 }
 function removeMakeup(name,dk){
   if(!confirm('보강 일정을 삭제할까요?')) return;
